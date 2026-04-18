@@ -1,0 +1,67 @@
+// Security Sidecar — Intent Verifier (M03).
+// Mirrors src/types.rs and packages/types/src/security.ts.
+// Field / variant names match the Rust side exactly so candid-derive output
+// stays in sync. Regenerate with `dfx generate` after schema changes.
+
+type Asset = variant {
+  Btc;
+  Eth;
+  Usdc;
+};
+
+type Decision = variant {
+  Approve;
+  Hold;
+  Block;
+};
+
+type Reason = variant {
+  BudgetExceeded;
+  RecipientNotWhitelisted;
+  PerTxLimitExceeded;
+  OutsideAllowedHours;
+  SanctionsListMatch;
+  BehavioralAnomaly;
+  GuardInjectionSuspected;
+  ManualReviewRequired;
+};
+
+type AgentPolicy = record {
+  did : text;
+  daily_budget : nat;
+  per_tx_limit : nat;
+  whitelist : vec text;
+  allowed_hours : record { nat8; nat8 };
+};
+
+type TransactionIntent = record {
+  from : text;
+  to : text;
+  asset : Asset;
+  amount : nat;
+  nonce : text;
+  created_at : text;
+};
+
+type VerifyRequest = record {
+  intent : TransactionIntent;
+  guard_confidence : opt float32;
+};
+
+type VerifyResponse = record {
+  decision : Decision;
+  reason : opt Reason;
+};
+
+type SecurityError = variant {
+  PolicyNotFound : text;
+  InvalidPolicy : text;
+  InvalidIntent : text;
+  Storage : text;
+};
+
+service : {
+  set_policy : (AgentPolicy) -> (variant { Ok; Err : SecurityError });
+  get_policy : (text) -> (variant { Ok : AgentPolicy; Err : SecurityError }) query;
+  verify : (VerifyRequest) -> (VerifyResponse);
+};

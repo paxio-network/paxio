@@ -1,15 +1,31 @@
-# M03 Security Sidecar canister — STUB.
-# Real implementation lands in M03 (icp-dev). This stub exists only so the
-# root Cargo workspace loads while M02 (wallet) is being built standalone.
+# M03 Security Sidecar canister.
+# Intent Verifier (deterministic Rust). NO ML deps — see acceptance script
+# step 5. This crate is a member of the root workspace; versions inherited
+# via `.workspace = true`.
 
 [package]
 name = "security_sidecar"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-publish = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+# `rlib` for `cargo test` + downstream Rust callers (Wallet canister will
+# depend on the Intent Verifier types via this crate). The cdylib used by
+# `dfx deploy` is produced separately by:
+#   cargo rustc -p security_sidecar --target wasm32-unknown-unknown --release \
+#     --crate-type cdylib
+# Reason: ic-cdk's update / query macros emit wasm-only link sections that
+# the host linker cannot resolve (see ic-cdk issue #494). Keeping cdylib out
+# of the default crate-type lets `cargo test` and `cargo build` for the host
+# triple succeed without per-target gymnastics.
+crate-type = ["rlib"]
+path = "src/lib.rs"
 
 [dependencies]
+ic-cdk.workspace = true
+ic-cdk-macros.workspace = true
+ic-stable-structures.workspace = true
+candid.workspace = true
+serde.workspace = true
+thiserror.workspace = true
