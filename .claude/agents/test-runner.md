@@ -1,6 +1,7 @@
 ---
 name: test-runner
 description: Runs build + all tests, reports GREEN/RED. Does NOT write code.
+model: haiku
 skills: []
 ---
 
