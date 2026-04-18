@@ -1,0 +1,8 @@
+# Domain subdirectories (per FA) will be created by corresponding milestones:
+# registry/      FA-01 (M01+)
+# fap/           FA-02 (M06+)
+# wallet/        FA-03 (M05+)
+# guard/         FA-04 (M06+)
+# bitcoin/       FA-05 (M29+)
+# compliance/    FA-06 (M10+)
+# intelligence/  FA-07 (M112+)

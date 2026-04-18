@@ -1,0 +1,41 @@
+# Node
+node_modules/
+dist/
+coverage/
+.vite/
+.next/
+
+# Rust
+canisters/target/
+canisters/.dfx/
+target/
+Cargo.lock.orig
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+*.log
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test output
+test-results/
+playwright-report/
+vitest-test-*/
+
+# Frontend
+packages/frontend/*/node_modules/
+packages/frontend/*/.next/
+packages/frontend/*/out/

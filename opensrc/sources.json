@@ -1,0 +1,77 @@
+{
+  "updatedAt": "2026-04-17",
+  "packages": [
+    {
+      "name": "ic-cdk",
+      "version": "0.13.0",
+      "registry": "crates",
+      "path": "repos/github.com/dfinity/ic-cdk",
+      "fetchedAt": "2026-04-17"
+    },
+    {
+      "name": "ic-stable-structures",
+      "version": "0.13.0",
+      "registry": "crates",
+      "path": "repos/github.com/dfinity/stable-structures",
+      "fetchedAt": "2026-04-17"
+    },
+    {
+      "name": "candid",
+      "version": "0.10.0",
+      "registry": "crates",
+      "path": "repos/github.com/dfinity/candid",
+      "fetchedAt": "2026-04-17"
+    },
+    {
+      "name": "bitcoin",
+      "version": "0.32.0",
+      "registry": "crates",
+      "path": "repos/github.com/rust-bitcoin/rust-bitcoin",
+      "fetchedAt": "2026-04-17"
+    }
+  ],
+  "repos": [
+    {
+      "name": "github.com/coinbase/x402",
+      "version": "main",
+      "path": "repos/github.com/coinbase/x402",
+      "fetchedAt": "2026-04-17",
+      "purpose": "x402 protocol specification"
+    },
+    {
+      "name": "github.com/a2aproject/A2A",
+      "version": "main",
+      "path": "repos/github.com/a2aproject/A2A",
+      "fetchedAt": "2026-04-17",
+      "purpose": "Agent-to-Agent protocol"
+    },
+    {
+      "name": "github.com/sudeepb02/awesome-erc8004",
+      "version": "main",
+      "path": "repos/github.com/sudeepb02/awesome-erc8004",
+      "fetchedAt": "2026-04-17",
+      "purpose": "ERC-8004 registry standard"
+    },
+    {
+      "name": "github.com/jedisct1/libsodium",
+      "version": "master",
+      "path": "repos/github.com/jedisct1/libsodium",
+      "fetchedAt": "2026-04-17",
+      "purpose": "Crypto library (chacha20, blake2, ed25519)"
+    },
+    {
+      "name": "github.com/dfinity/ic-hs",
+      "version": "main",
+      "path": "repos/github.com/dfinity/ic-hs",
+      "fetchedAt": "2026-04-17",
+      "purpose": "ICP Haskell reference for threshold ECDSA"
+    },
+    {
+      "name": "github.com/nickvsadquarters/ic-bitcoin",
+      "version": "main",
+      "path": "repos/github.com/nickvsadquarters/ic-bitcoin",
+      "fetchedAt": "2026-04-17",
+      "purpose": "ICP Bitcoin integration examples"
+    }
+  ]
+}

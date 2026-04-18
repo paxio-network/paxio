@@ -1,0 +1,16 @@
+{
+  "name": "@paxio/sdk",
+  "version": "0.0.1",
+  "description": "Paxio SDK — one-line wallet + registry + guard + audit for AI agents",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "files": ["dist", "README.md"],
+  "keywords": ["paxio", "ai-agent", "wallet", "bitcoin", "icp"],
+  "license": "UNLICENSED"
+}

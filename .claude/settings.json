@@ -1,0 +1,65 @@
+{
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+  },
+  "permissions": {
+    "allow": ["Bash", "Read", "Glob", "Grep", "Edit", "Write", "NotebookEdit", "Task"],
+    "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f package.json ]; then npm run typecheck 2>&1 | tail -10; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "files=$(git diff --name-only -- '*.ts' '*.tsx' '*.cjs' '*.js' 2>/dev/null); if [ -n \"$files\" ]; then grep -Hn 'throw new \\|TODO\\|FIXME\\|console\\.log' $files 2>/dev/null | head -5; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if [ -f package.json ]; then npm run typecheck 2>&1 | tail -5; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if git diff --cached --name-only 2>/dev/null | grep -qE '^(\\.claude/|CLAUDE\\.md$|docs/project-state|docs/tech-debt|docs/sprints/|docs/feature-areas/|docs/NOUS_Strategy_v5|docs/NOUS_Development_Roadmap|docs/architecture\\.md$|docs/roadmap\\.md$)'; then echo 'BLOCKED: constitutional documents staged — only architect/user may commit these'; exit 1; fi; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Session ended. Run: git log --oneline -5 && (test -f package.json && npm run typecheck && npm run test -- --run || echo no package.json yet)'"
+          }
+        ]
+      }
+    ]
+  },
+  "compact": {
+    "threshold": 0.5,
+    "skip": ["*.md", "*.json", "*.toml"]
+  }
+}

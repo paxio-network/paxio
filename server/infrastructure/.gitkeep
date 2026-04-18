@@ -1,0 +1,6 @@
+# External infrastructure clients (CommonJS .cjs). Added per milestone:
+#   db.cjs            PostgreSQL (M09+)
+#   redis.cjs         Redis cache/rate-limit (M09+)
+#   qdrant.cjs        Qdrant vector DB (M17)
+#   icp.cjs           @dfinity/agent bindings to canisters (M01+)
+#   guard-client.cjs  HTTP client for guard.paxio.network (M06)

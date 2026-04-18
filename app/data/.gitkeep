@@ -1,0 +1,8 @@
+# Reference JSON files (NOT hardcoded). Populated per milestone.
+# Examples (coming later):
+#   protocol-fees.json       — FA-02 (M40+)
+#   routing-rules.json       — FA-02
+#   agent-sources.json       — FA-01 (M07+)
+#   regulations/             — FA-06 (port from complior, M10+)
+#   pii-patterns/            — FA-06 (M10+)
+#   eval/                    — FA-04/06 (M63)
