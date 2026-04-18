@@ -6,5 +6,8 @@
   "scripts": {
     "test": "echo 'no tests yet in this product'",
     "build": "echo 'no build yet'"
+  },
+  "dependencies": {
+    "@noble/secp256k1": "^3.1.0"
   }
 }
