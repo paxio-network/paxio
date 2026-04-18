@@ -6,3 +6,8 @@ export * from './did.js';
 export * from './capability.js';
 export * from './agent-card.js';
 export * from './errors.js';
+// Phase 0 domain contracts
+export * from './registry.js';
+export * from './wallet.js';
+export * from './security.js';
+export * from './audit-log.js';
