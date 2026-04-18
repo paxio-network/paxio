@@ -30,7 +30,7 @@
 
 | # | Milestone | FA | Roadmap item | Reuse | Agent(s) | Status |
 |---|---|---|---|---|---|---|
-| **M00** | Foundation: монорепо, git, types, interfaces, CI stub | — | «Монорепо setup» | [NEW] | architect | ⬜ |
+| **M00** | Foundation: монорепо, git, types, interfaces, CI stub | — | «Монорепо setup» | [NEW] | architect + backend-dev | ✅ |
 | **M01** | Registry canister MVP: DID, capability, storage, HTTP | FA-01 | «Agent Card v2 JSON Schema», «Registry API v1» | [PORT-bitgent] canisters/registry/ | registry-dev | ⬜ |
 | **M02** | Wallet canister + threshold ECDSA BTC signing | FA-03 | «DKI Canister (Rust)», «ckBTC интеграция» | [PORT-bitgent] canisters/wallet/ + [NEW] BTC L1 finalization | icp-dev | ⬜ |
 | **M03** | Security Sidecar canister MVP (Intent Verifier + Secrets Scanner) | FA-04 | — (preparatory for Phase 1) | [PORT-bitgent] canisters/security/ | icp-dev | ⬜ |

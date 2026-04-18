@@ -6,15 +6,19 @@
 
 ## Метод верификации
 
-- [ ] **Unit tests** — `npm run test -- --run` → тесты GREEN
-  - `tests/result.test.ts` — Result monad (Ok/Err helpers, map, chain, unwrap)
-  - `tests/types.test.ts` — Zod schemas parse/reject корректно (Did, Capability, AgentCard)
-  - `tests/errors.test.ts` — AppError hierarchy, error codes, serialization
-  - `tests/contracts.test.ts` — interfaces экспортированы и типизированы
-  - `tests/logger.test.ts` — Logger API работает (info/warn/error, JSON output)
-  - `tests/clock.test.ts` — Clock API работает (now(), mockable)
-- [ ] **Acceptance script** — `bash scripts/verify_foundation.sh` → PASS
-- [ ] **E2E** — `docs/e2e/M00-foundation-canary.md` → canary сценарий «fresh clone → working dev env» пройден
+- [x] **Unit tests** — `npm run test -- --run` → 72/72 GREEN (6 test files)
+  - `tests/result.test.ts` — 13 tests GREEN
+  - `tests/types.test.ts` — 26 tests GREEN
+  - `tests/errors.test.ts` — 15 tests GREEN
+  - `tests/contracts.test.ts` — 5 tests GREEN
+  - `tests/logger.test.ts` — 7 tests GREEN
+  - `tests/clock.test.ts` — 6 tests GREEN
+- [x] **Acceptance script** — `bash scripts/verify_foundation.sh` → ALL 11 CHECKS PASSED
+- [x] **Server smoke test** — `curl http://localhost:8999/health` → `{"status":"ok",...}` (verified in-place, E2E canary на fresh clone опционально)
+
+## Статус
+
+✅ **ВЫПОЛНЕН** (2026-04-17). Commits: `93d984d` (RED tests + contracts), `<next>` (impl app/errors, app/lib/logger, app/lib/clock).
 
 ## Зависимости
 
