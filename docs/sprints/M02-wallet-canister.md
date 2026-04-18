@@ -65,21 +65,35 @@ products/03-wallet/canister/
     └── wallet_test.rs      # RED specs (already written)
 ```
 
-## Root workspace setup (icp-dev, one-time)
+## Root workspace setup (already done by architect)
 
-Add to a new `Cargo.toml` at repo root:
+`Cargo.toml` at repo root is pre-created with all Phase 0 canister members registered and workspace-wide dependency versions locked. Dev-agents **DO NOT** edit root `Cargo.toml` — they only create their crate `Cargo.toml` under the pre-registered path, using `.workspace = true` to pull deps:
+
 ```toml
-[workspace]
-members = ["products/03-wallet/canister", "products/04-security/canister", "products/06-compliance/canisters/audit-log"]
-resolver = "2"
+# products/03-wallet/canister/Cargo.toml
+[package]
+name = "wallet"
+version.workspace = true
+edition.workspace = true
 
-[workspace.dependencies]
-ic-cdk = "0.13"
-ic-stable-structures = "0.6"
-candid = "0.10"
-serde = { version = "1", features = ["derive"] }
-thiserror = "1"
-tokio = { version = "1", features = ["rt", "macros"] }  # for #[tokio::test]
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["mock-ecdsa"]
+mock-ecdsa = []
+
+[dependencies]
+ic-cdk.workspace = true
+ic-cdk-macros.workspace = true
+ic-stable-structures.workspace = true
+candid.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
 ```
 
 ## Files to implement
