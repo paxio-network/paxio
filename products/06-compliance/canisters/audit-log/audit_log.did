@@ -1,0 +1,71 @@
+// Paxio M04 — Audit Log canister Candid interface (FA-06).
+// Mirrors packages/types/src/audit-log.ts.
+
+type AuditAction = variant {
+  Sign;
+  Verify;
+  Approve;
+  Hold;
+  Block;
+  Register;
+  Claim;
+};
+
+type LogEntryInput = record {
+  tx_id     : text;
+  agent_did : text;
+  action    : AuditAction;
+  amount    : opt nat;
+  asset     : opt text;
+  metadata  : vec record { text; text };
+};
+
+type LogEntry = record {
+  index      : nat64;
+  tx_id      : text;
+  agent_did  : text;
+  action     : AuditAction;
+  amount     : opt nat;
+  asset      : opt text;
+  metadata   : vec record { text; text };
+  timestamp  : nat64;
+  prev_hash  : text;   // 64 hex chars
+  entry_hash : text;   // 64 hex chars
+};
+
+type LogQuery = record {
+  agent_did  : opt text;
+  action     : opt AuditAction;
+  start_time : opt nat64;
+  end_time   : opt nat64;
+  limit      : nat32;
+};
+
+type LogQueryResponse = record {
+  entries : vec LogEntry;
+  total   : nat32;
+};
+
+type ForensicsTrail = record {
+  agent_did   : text;
+  entries     : vec LogEntry;
+  chain_valid : bool;
+  root_hash   : text;
+};
+
+type AuditLogError = variant {
+  EmptyTxId;
+  EmptyAgentDid;
+  StorageError            : text;
+  ChainIntegrityViolated  : record { index : nat64 };
+  SerializationError      : text;
+};
+
+type LogEntryResult = variant { Ok : LogEntry; Err : AuditLogError };
+
+service : {
+  log_entry            : (LogEntryInput) -> (LogEntryResult);
+  get_entries          : (LogQuery)      -> (LogQueryResponse) query;
+  get_forensics_trail  : (text)          -> (ForensicsTrail)   query;
+  verify_chain         : ()              -> (bool)             query;
+}

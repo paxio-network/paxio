@@ -14,7 +14,7 @@ members = [
   "platform/canister-shared",                     # M00c — cross-cutting primitives (AgentId, TxHash)
   "products/03-wallet/canister",                  # M02 — threshold ECDSA wallet (icp-dev)
   "products/04-security/canister",                # M03 — Security Sidecar Intent Verifier (icp-dev)
-  "products/06-compliance/canisters/audit-log",   # M04 stub (real impl arrives on feature/m04-audit-log merge)
+  "products/06-compliance/canisters/audit-log",   # M04 — Audit Log Canister: SHA-256 hash chain (icp-dev)
 ]
 
 [workspace.package]
