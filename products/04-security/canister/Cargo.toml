@@ -1,0 +1,15 @@
+# M03 Security Sidecar canister — STUB.
+# Real implementation lands in M03 (icp-dev). This stub exists only so the
+# root Cargo workspace loads while M02 (wallet) is being built standalone.
+
+[package]
+name = "security_sidecar"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
