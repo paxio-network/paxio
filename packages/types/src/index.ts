@@ -1,5 +1,5 @@
-// Barrel re-exports for app/types/.
-// Consumers import: `import { ok, ZodDid, ... } from 'app/types/index.js';`
+// Barrel re-exports for @paxio/types.
+// Consumers import: `import { ok, ZodDid, ... } from '@paxio/types';`
 
 export * from './result.js';
 export * from './did.js';

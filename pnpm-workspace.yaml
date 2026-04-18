@@ -1,0 +1,12 @@
+# Paxio monorepo — pnpm workspaces
+# Product-first structure: каждый FA = products/<fa>/
+packages:
+  - 'apps/*'
+  - 'apps/frontend/*'
+  - 'products/*'
+  - 'products/*/sdk-ts'
+  - 'products/*/sdk-python'
+  - 'products/*/mcp-server'
+  - 'products/*/guard-client'
+  - 'products/*/github-action'
+  - 'packages/*'

@@ -10,33 +10,33 @@ skills: [typescript-patterns, fastify-best-practices, js-gof, error-handling, zo
 
 | What | Where |
 |------|-------|
-| Fastify server + HTTP routing | `server/*.cjs` |
-| External infrastructure clients | `server/infrastructure/*.cjs` (DB, Redis, Qdrant, ICP, Guard HTTP) |
-| HTTP API handlers | `app/api/*/` |
-| Domain logic (registry, FAP, wallet orch, guard, compliance) | `app/domain/*/` |
+| Fastify server + HTTP routing | `apps/back/server/**/*.cjs` |
+| External infrastructure clients | `apps/back/server/infrastructure/*.cjs` (DB, Redis, Qdrant, ICP, Guard HTTP) |
+| HTTP API handlers | `products/*/app/api/` |
+| Domain logic (registry, FAP, wallet orch, guard, compliance) | `products/*/app/domain/` |
 | Shared utilities | `app/lib/*` |
 | Configuration | `app/config/*` |
 | Reference data (JSON) | `app/data/*.json` |
 | Error hierarchy | `app/errors/*` |
-| Distribution SDK | `packages/sdk/src/*` (`@paxio/sdk`) |
+| Distribution SDK | `products/03-wallet/sdk-ts/src/` (`@paxio/sdk`) |
 
 ## Boundaries
 
 **ALLOWED:**
-- `server/` (все `.cjs` файлы — Fastify, WebSocket, loader, infrastructure)
-- `app/api/` (HTTP handlers)
-- `app/domain/` (бизнес-логика в VM sandbox)
-- `app/lib/` (утилиты)
-- `app/config/` (конфиг)
-- `app/data/` (reference JSON)
-- `app/errors/` (AppError hierarchy)
-- `packages/sdk/src/` (TypeScript `@paxio/sdk`)
+- `apps/back/server/` (все `.cjs` файлы — Fastify, WebSocket, loader, infrastructure)
+- TS `products/*/app/api/` (per FA) (HTTP handlers)
+- TS `products/*/app/domain/` (per FA) (бизнес-логика в VM sandbox)
+- `packages/utils/` (shared utility implementations) (утилиты)
+- `apps/back/app/config/` (конфиг)
+- `apps/back/app/data/` (reference JSON)
+- `packages/errors/` (shared kernel) (AppError hierarchy)
+- `products/03-wallet/sdk-ts/src/` (TypeScript `@paxio/sdk`)
 
 **FORBIDDEN:**
-- `canisters/src/` → icp-dev / registry-dev
-- `packages/frontend/` → frontend-dev
-- `app/types/` → architect only (можно ЧИТАТЬ, не писать)
-- `app/interfaces/` → architect only (реализуешь контракты, не меняешь их)
+- `products/*/canister(s)/` → icp-dev / registry-dev
+- `apps/frontend/` → frontend-dev
+- `@paxio/types` (`packages/types/`) → architect only (можно ЧИТАТЬ, не писать)
+- `@paxio/interfaces` (`packages/interfaces/`) → architect only (реализуешь контракты, не меняешь их)
 - `.claude/`, `CLAUDE.md`, `docs/sprints/`, `docs/feature-areas/` → constitutional
 
 ## server/ vs app/ — критично понимать
@@ -106,9 +106,9 @@ Tests GREEN: N of total
 - Infrastructure clients в `server/infrastructure/`: db, redis, qdrant, icp, guard-client
 
 ### Business Logic (`app/`)
-- `app/api/` — тонкие HTTP handlers с валидацией (Zod) → вызов domain
-- `app/domain/` — pure бизнес-логика, НЕ знает про HTTP/Fastify
-- `app/lib/` — переиспользуемые утилиты (validation, permissions, …)
+- TS `products/*/app/api/` (per FA) — тонкие HTTP handlers с валидацией (Zod) → вызов domain
+- TS `products/*/app/domain/` (per FA) — pure бизнес-логика, НЕ знает про HTTP/Fastify
+- `packages/utils/` (shared utility implementations) — переиспользуемые утилиты (validation, permissions, …)
 
 ### FAP Router (`app/domain/fap/`)
 - Protocol aggregation: x402, MPP, TAP, BTC L1
@@ -139,5 +139,5 @@ npm run typecheck && npm run test -- --run
 
 - НЕ трогай код других агентов (canisters, frontend)
 - НЕ модифицируй тесты — это спецификации от architect
-- НЕ меняй `app/types/` или `app/interfaces/` — это тоже architect
+- НЕ меняй `@paxio/types` (`packages/types/`) или `@paxio/interfaces` (`packages/interfaces/`) — это тоже architect
 - Если нужен change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` формат из scope-guard.md

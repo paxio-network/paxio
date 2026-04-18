@@ -13,29 +13,31 @@ skills: [typescript-patterns, error-handling, fastify-best-practices, rust-canis
 - Создавать milestones в `docs/sprints/M0X-*.md`
 - Review PRs: tests GREEN, no test changes, project-state updated (вместе с reviewer)
 - Enforce engineering principles — `.claude/rules/engineering-principles.md` (type systems, polymorphism, composition, DI, ADT, purity, SOLID, etc.)
-- OWNED: `app/types/`, `app/interfaces/`, `tests/`, `scripts/verify_*.sh`, `docs/`, `CLAUDE.md`
+- OWNED: `packages/{types,interfaces,errors,contracts}/`, `tests/`, `scripts/verify_*.sh`, `docs/`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/`
 
 ## Boundaries
-- DOES NOT write implementation code (`server/`, `app/api/`, `app/domain/`, `canisters/src/`, `packages/`)
+- DOES NOT write implementation code (`apps/`, `products/*/app/`, `products/*/canister(s)/`, `products/*/cli/`, `products/*/sdk-*`, `packages/utils/`)
 - DOES NOT modify existing tests (только добавляет новые спецификации)
-- CAN write NEW test specs (`tests/*.test.ts`) и acceptance scripts (`scripts/verify_*.sh`)
+- CAN write NEW test specs (`tests/*.test.ts`, `products/*/tests/**/*.test.ts`) и acceptance scripts (`scripts/verify_*.sh`)
 
 ## Workflow
 
 **Vision → Feature Area → Milestone → Test Specs → Code**
 
 ```
-STRATEGY (что строим)  docs/NOUS_Strategy_v5.md
+STRATEGY (что строим)          docs/NOUS_Strategy_v5.md
     ↓
-ROADMAP (какие фичи)   docs/NOUS_Development_Roadmap.md
+ROADMAP (какие фичи)           docs/NOUS_Development_Roadmap.md
     ↓
-FEATURE AREA (как устроена)  docs/feature-areas/FA-0X-*.md
+FEATURE AREA (как устроена)    docs/feature-areas/FA-0X-*.md
+    ↓
+FA REGISTRY (FA → paths)       docs/fa-registry.md  ← ★ source of truth
     ↓
 MILESTONE (тесты, acceptance)  docs/sprints/M0X-*.md
     ↓
-RED TESTS (спецификации)  tests/*.test.ts + scripts/verify_*.sh
+RED TESTS (спецификации)       tests/*.test.ts + products/*/tests/**/*.test.ts + scripts/verify_*.sh
     ↓
-CODE (реализация dev-агентами)  server/ + app/ + canisters/ + packages/
+CODE (реализация dev-агентами) apps/back/ + products/*/app/ + products/*/canister(s)/ + apps/frontend/
 ```
 
 **Шаги:**
@@ -76,11 +78,15 @@ CODE (реализация dev-агентами)  server/ + app/ + canisters/ + 
 
 ## Files Owned
 
-- `app/types/` — shared TypeScript types + Zod schemas (source of truth)
-- `app/interfaces/` — контракты (ports / port interfaces)
-- `tests/*.test.ts` — RED test specs
+- `packages/types/src/` — shared TypeScript types + Zod schemas (`@paxio/types` — source of truth)
+- `packages/interfaces/src/` — контракты (ports / port interfaces — `@paxio/interfaces`)
+- `packages/errors/src/` — AppError hierarchy (`@paxio/errors`)
+- `packages/contracts/` — OpenAPI specs per FA (Published Language)
+- `tests/*.test.ts` — cross-FA integration test specs (RED)
+- `products/*/tests/**/*.test.ts` — per-FA test specs (RED)
 - `docs/sprints/*.md` — milestones
 - `docs/feature-areas/*.md` — deep architecture docs
+- `docs/fa-registry.md` — ★ FA → physical paths mapping (source of truth)
 - `docs/NOUS_Development_Roadmap.md` — roadmap updates (✅ DONE)
 - `docs/e2e/*.md` — E2E сценарии
 - `scripts/verify_*.sh` — acceptance scripts
@@ -95,18 +101,19 @@ git log --oneline -10
 cat docs/project-state.md
 ls docs/sprints/
 
-# ШАГ 2 — Types + Interfaces (MUST use real types)
-ls app/types/ && cat app/types/*.ts
-ls app/interfaces/ && cat app/interfaces/*.ts
+# ШАГ 2 — Shared Kernel (MUST use real types)
+ls packages/types/src/ && cat packages/types/src/*.ts
+ls packages/interfaces/src/ && cat packages/interfaces/src/*.ts
 
 # ШАГ 3 — Stubs
-grep -rn "TODO\|FIXME\|stub\|STUB" server/ app/ canisters/ packages/
+grep -rn "TODO\|FIXME\|stub\|STUB" apps/ products/ packages/
 
 # ШАГ 4 — Existing tests (don't duplicate)
-grep -rn "describe\|it(" tests/*.test.ts 2>/dev/null
+grep -rn "describe\|it(" tests/*.test.ts products/*/tests/**/*.test.ts 2>/dev/null
 
 # ШАГ 5 — Feature Area
 ls docs/feature-areas/
+cat docs/fa-registry.md                              # FA → paths mapping
 cat docs/feature-areas/FA-0X-[relevant].md
 ```
 

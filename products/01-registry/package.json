@@ -1,0 +1,10 @@
+{
+  "name": "@paxio/registry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paxio FA-01 product package",
+  "scripts": {
+    "test": "echo 'no tests yet in this product'",
+    "build": "echo 'no build yet'"
+  }
+}

@@ -9,7 +9,7 @@ import {
   mapErr,
   unwrap,
   unwrapOr,
-} from 'app/types/result.js';
+} from '@paxio/types';
 
 describe('Result.ok', () => {
   it('creates Ok variant with value', () => {

@@ -9,8 +9,8 @@ import {
   InternalError,
   RateLimitError,
   ExternalServiceError,
-} from 'app/errors/index.js';
-import { ERROR_CODES } from 'app/types/errors.js';
+} from '@paxio/errors';
+import { ERROR_CODES } from '@paxio/types';
 
 describe('AppError base', () => {
   it('is an Error subclass', () => {
