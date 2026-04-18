@@ -39,13 +39,14 @@ Canister = ТОЛЬКО:
 
 | Bitgent source | Paxio destination | Strategy | Owner | Comment |
 |---|---|---|---|---|
-| `canisters/registry/` | `canisters/src/registry/` | `copy-and-own` | registry-dev | FA-01 canister core |
+| `canisters/registry/` (только reputation subset) | `canisters/src/reputation/` | `copy-and-own (narrow)` | registry-dev | FA-01 §3: **на ICP живёт ТОЛЬКО reputation**. Из bitgent registry canister берём score storage + update logic, отбрасываем Agent Card storage / capability / search — они переезжают в TS (см. ниже) |
+| `canisters/registry/` (agent metadata, capability, search logic) | `app/domain/registry/` + `app/api/registry/` | `port-to-ts` | registry-dev | Rust → TypeScript + PostgreSQL + Qdrant. FA-01 Data Layer: PostgreSQL для metadata, Qdrant для vectors, Redis для cache |
 | `canisters/wallet/` | `canisters/src/wallet/` | `copy-and-own + finish BTC L1` | icp-dev | FA-03, нужно доделать threshold ECDSA BTC signing |
 | `canisters/security/` | `canisters/src/security_sidecar/` | `copy-and-own` | icp-dev | FA-04 Security Sidecar — 90% готово |
 | `canisters/audit_log/` | `canisters/src/audit_log/` | `copy-and-own + augment` | icp-dev | FA-06, augment evidence-chain из Complior |
 | `canisters/shared/` | `canisters/src/shared/` | `copy-and-own` | icp-dev + architect | Общие типы |
 | `canisters/facilitator/` | **НЕТ canister** | `reference-only` | — | Логику переписываем в TS в `app/domain/fap/` |
-| `dfx.json` | `dfx.json` (adapt) | `copy-and-adapt` | architect | Убрать facilitator, добавить reputation + bitcoin_agent |
+| `dfx.json` | `dfx.json` (adapt) | `copy-and-adapt` | architect | Убрать facilitator + registry (celый), добавить reputation (standalone) + bitcoin_agent |
 | `Cargo.toml` workspace | `canisters/Cargo.toml` | `copy-and-adapt` | architect | Rename bitgent→paxio, убрать facilitator |
 | `opensrc/` | `opensrc/` (merge) | `merge` | architect | Объединить с existing Paxio opensrc |
 | `src/declarations/` | `app/types/canister-bindings/` | `regenerate` | architect | TS declarations регенерируются из .did через dfx |
@@ -96,7 +97,7 @@ Canister = ТОЛЬКО:
 
 | FA | Что есть готовое | Что пишем с нуля | Estimate coverage |
 |---|---|---|---|
-| **FA-01 Registry** | Rust canister (bitgent): crawlers, search, reputation, storage, MCP, HTTP | Paxio TS side (`app/domain/registry/`, `app/api/registry/`), Semantic search via Qdrant, Dashboard | 🟢 **70%** |
+| **FA-01 Registry** | Bitgent Rust canister используем как **reference** для business logic + из него **портируем reputation subset** в `canisters/src/reputation/` (единственный canister в FA-01). Agent Card схема, capability system — копируем как типы в TS. | **Бóльшая часть — TS с нуля**: `app/domain/registry/` (DID gen, Agent Card validate, search orchestration), `app/api/registry/` (Fastify handlers), PostgreSQL schema, Qdrant integration, crawlers (M07-M08, M15-M16). На ICP: 1 canister reputation (M31b). | 🟡 **40%** (было «70%» — пересмотрено после FA-01 §3: сам реестр = TS, не Rust) |
 | **FA-02 FAP** | Bitgent facilitator.rs (только как reference) | **Вся** TS реализация: x402 adapter, MPP adapter, router, protocol translation (в `app/domain/fap/`) | 🟡 **20%** (reference only) |
 | **FA-03 Wallet** | Wallet canister (bitgent): key_manager, balance. SDK hooks (complior) | Finish threshold ECDSA BTC L1 signing, Wallet Adapter в @paxio/sdk, MCP Server, HTTP Proxy | 🟡 **45%** |
 | **FA-04 Security Sidecar** | Security canister (bitgent): Intent Verifier, Secrets Scanner, OWASP Scorer, MITRE Modeler, Injection Guard, Rate Limiter, BTC Validator | Behavioral Anomaly Engine, AML/OFAC Oracle через ICP HTTPS Outcall, Multi-sig Gate, Dead Man's Switch | 🟢 **75%** |

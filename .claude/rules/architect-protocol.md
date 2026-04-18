@@ -112,9 +112,9 @@ docs/sprints/M0X-*.md             → КАК реализуем (тесты + з
 - `docs/tech-debt.md` — ТОЛЬКО reviewer записывает
 - `docs/NOUS_Strategy_v5.md` (alias `docs/architecture.md`) — ТОЛЬКО user
 - `server/` — backend-dev
-- `app/{api,domain,lib,config,data,errors}/` — backend-dev
-- `canisters/src/registry/` — registry-dev
-- `canisters/src/{wallet,audit_log,reputation,security_sidecar,bitcoin_agent}/` — icp-dev
+- `app/{api,domain,lib,config,data,errors}/` — backend-dev (кроме `registry/` → registry-dev)
+- `app/{api,domain}/registry/` + `canisters/src/reputation/` — registry-dev (FA-01, TS core + single canister)
+- `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent}/` — icp-dev
 - `packages/frontend/` — frontend-dev
 - `packages/sdk/src/` — backend-dev
 
@@ -123,7 +123,7 @@ docs/sprints/M0X-*.md             → КАК реализуем (тесты + з
 ```markdown
 | # | Задача | Агент | Метод верификации | Файлы |
 |---|---|---|---|---|
-| 1 | ... | backend-dev | unit test: `tests/registry.test.ts::TestX` GREEN | `app/domain/registry/` |
+| 1 | ... | registry-dev | unit test: `tests/registry.test.ts::TestX` GREEN | `app/domain/registry/` |
 | 2 | ... | icp-dev | `cargo test` GREEN + `bash scripts/verify_wallet.sh` PASS | `canisters/src/wallet/` |
 ```
 

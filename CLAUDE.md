@@ -27,8 +27,8 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 |-------|------|
 | architect | Contracts, milestones, test specs, Feature Areas |
 | backend-dev | Fastify `server/`, business logic `app/`, `@paxio/sdk`, Guard HTTP client |
-| icp-dev | ICP canisters (wallet, audit_log, reputation, security_sidecar, bitcoin_agent), Chain Fusion |
-| registry-dev | Registry canister (FA-01) — DID, capabilities, semantic search |
+| icp-dev | ICP canisters (wallet, audit_log, security_sidecar, bitcoin_agent), Chain Fusion |
+| registry-dev | FA-01 Registry: TS core в `app/domain/registry/` + `app/api/registry/` + Reputation canister `canisters/src/reputation/` |
 | frontend-dev | Next.js 15 фронтенды: paxio.network, app.paxio.network, docs.paxio.network |
 | test-runner | Build + test verification |
 | reviewer | Scope check, quality review, project-state/tech-debt update |
@@ -115,12 +115,14 @@ paxio/
 │
 ├── canisters/                    # Rust ICP canisters — icp-dev / registry-dev
 │   └── src/
-│       ├── registry/             # registry-dev (FA-01)
+│       ├── reputation/           # registry-dev (FA-01) — immutable score ONLY (не весь Registry)
 │       ├── wallet/               # icp-dev (FA-03)
 │       ├── audit_log/            # icp-dev (FA-06)
-│       ├── reputation/           # icp-dev (FA-01)
 │       ├── security_sidecar/     # icp-dev (FA-04)
 │       └── bitcoin_agent/        # icp-dev (FA-05)
+│
+│   # NB: Agent Card storage + semantic search = PostgreSQL/Qdrant/Redis (не canister).
+│   # См. FA-01 §3 Data Layer. На ICP только Reputation Engine.
 │
 ├── packages/                     # npm workspaces
 │   ├── sdk/                      # @paxio/sdk (TypeScript) — backend-dev
@@ -146,9 +148,9 @@ paxio/
 | Agent | ALLOWED | FORBIDDEN |
 |-------|---------|-----------|
 | architect | `app/types/`, `app/interfaces/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `canisters/src/`, `packages/` |
-| backend-dev | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читает) |
-| icp-dev | `canisters/src/{wallet,audit_log,reputation,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/registry/`, `server/*.cjs` (кроме infrastructure/icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
-| registry-dev | `canisters/src/registry/` | Everything else |
+| backend-dev | `server/`, `app/api/` (кроме `registry/`), `app/domain/` (кроме `registry/`), `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читает), `app/{api,domain}/registry/` (registry-dev) |
+| icp-dev | `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/reputation/` (registry-dev), `server/*.cjs` (кроме infrastructure/icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
+| registry-dev | `app/api/registry/`, `app/domain/registry/`, `canisters/src/reputation/` | Everything else |
 | frontend-dev | `packages/frontend/` | `server/`, `app/`, `canisters/`, `packages/sdk/src/` |
 | test-runner | READS `tests/`, `scripts/` — запускает. НЕ пишет код. | ANY implementation code |
 | reviewer | ONLY `docs/project-state.md` + `docs/tech-debt.md` (update after APPROVED) | Everything else |

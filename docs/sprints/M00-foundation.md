@@ -44,14 +44,14 @@ Phase 0, «Монорепо setup» (из раздела «АУДИТ СУЩЕС
 
 | Directory | Feature Area | Product |
 |---|---|---|
-| `app/domain/registry/` + `app/api/registry/` + `canisters/src/registry/` | FA-01 | P1 Universal Registry |
+| `app/domain/registry/` + `app/api/registry/` (TS core; на ICP только `canisters/src/reputation/`) | FA-01 | P1 Universal Registry |
 | `app/domain/fap/` + `app/api/fap/` | FA-02 | P2 Meta-Facilitator + FAP |
 | `app/domain/wallet/` + `app/api/wallet/` + `canisters/src/wallet/` | FA-03 | P3 Wallet + Adapter |
 | `app/domain/guard/` + `app/api/guard/` + `server/infrastructure/guard-client.cjs` + `canisters/src/security_sidecar/` | FA-04 | P4 Security (Guard + Sidecar) |
 | `app/domain/bitcoin/` + `canisters/src/bitcoin_agent/` | FA-05 | P5 Bitcoin Agent |
 | `app/domain/compliance/` + `app/api/compliance/` + `canisters/src/audit_log/` | FA-06 | P6 Compliance Layer |
 | `app/domain/intelligence/` + `app/api/intelligence/` | FA-07 | P7 Intelligence |
-| `canisters/src/reputation/` | FA-01 (cross-cutting) | Reputation Engine — used by P1 |
+| `canisters/src/reputation/` | FA-01 | Reputation Engine — единственный canister в FA-01 (immutable scores, no admin key). Owner: **registry-dev**, не icp-dev. |
 | `canisters/src/shared/` | — | Общие Rust-типы для всех canisters |
 | `packages/sdk/` | FA-03 (SDK) | `@paxio/sdk` npm package |
 | `packages/mcp-server/` | cross-cutting | MCP Server (mcp.paxio.network) |

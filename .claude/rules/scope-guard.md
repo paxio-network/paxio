@@ -10,9 +10,9 @@ globs: ["server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**
 | Agent | ALLOWED files | FORBIDDEN |
 |-------|---------------|-----------|
 | **architect** | `app/types/`, `app/interfaces/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `canisters/src/`, `packages/` |
-| **backend-dev** | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читать) |
-| **icp-dev** | `canisters/src/{wallet,audit_log,reputation,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/registry/` (registry-dev), `server/*` (кроме icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
-| **registry-dev** | `canisters/src/registry/` | Everything else |
+| **backend-dev** | `server/`, `app/api/` (кроме `registry/`), `app/domain/` (кроме `registry/`), `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читать), `app/{api,domain}/registry/` (registry-dev) |
+| **icp-dev** | `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/reputation/` (registry-dev), `server/*` (кроме icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
+| **registry-dev** | `app/api/registry/`, `app/domain/registry/`, `canisters/src/reputation/` | Everything else |
 | **frontend-dev** | `packages/frontend/` | `server/`, `app/`, `canisters/`, `packages/sdk/src/` |
 | **test-runner** | READS `tests/`, `scripts/` и запускает их | ANY implementation code — НЕ пишет код |
 | **reviewer** | UPDATES ONLY: `docs/project-state.md`, `docs/tech-debt.md` (после APPROVED) | Everything else |

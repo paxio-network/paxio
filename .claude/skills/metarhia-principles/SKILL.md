@@ -29,9 +29,9 @@ export interface RegistryService {
 
 **Rust:**
 ```rust
-// canisters/src/registry/src/lib.rs — contract + impl
-pub fn register(profile: AgentProfile) -> Result<AgentId, RegistryError> { }
-pub fn resolve(did: &Did) -> Result<DidDocument, RegistryError> { }
+// canisters/src/reputation/src/lib.rs — contract + impl
+pub fn record_transaction(tx: TxRecord) -> Result<ReputationScore, ReputationError> { }
+pub fn get_score(did: &Did) -> Result<ReputationScore, ReputationError> { }
 ```
 
 ## Principle 2: Separate domain and system code

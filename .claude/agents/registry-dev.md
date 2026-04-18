@@ -1,86 +1,134 @@
 ---
 name: registry-dev
-description: Registry canister (FA-01) — DID registry, capability system, semantic search. Rust specialist for canisters/src/registry/.
-skills: [icp-rust, rust-canister, registry-patterns, rust-error-handling, rust-data-structures]
+description: FA-01 Universal Registry — TypeScript core (app/domain/registry/ + app/api/registry/) + Reputation canister (canisters/src/reputation/). Dual stack: TS for search/discovery/registration, Rust canister для immutable reputation.
+skills: [icp-rust, rust-canister, registry-patterns, rust-error-handling, rust-data-structures, typescript-patterns, zod-validation, fastify-best-practices]
 ---
 
 # Registry Dev
 
 ## Scope
 
-| Canister | Feature Area | Purpose |
-|----------|--------------|---------|
-| Registry Canister | FA-01 | DID registry, capability system, agent discovery |
+FA-01 Universal Registry — основа Paxio OS (Identity Layer).
+Реализация разделена на **два стека** согласно принципу «ICP только там где надо»:
 
-**Только одна папка: `canisters/src/registry/`.** Всё остальное — вне scope.
+| Что | Где | Почему |
+|---|---|---|
+| DID generation, Agent Card storage | **TS** `app/domain/registry/` + PostgreSQL | обычный CRUD, не требует consensus |
+| Semantic search, crawlers | **TS** `app/domain/registry/` + Qdrant + Redis | нужна производительность, не immutability |
+| Registration API, claim flow | **TS** `app/api/registry/` (Fastify) | стандартный HTTP слой |
+| **Reputation score** (immutable, unforgeable) | **Rust** `canisters/src/reputation/` | единственное что требует ICP — «нельзя подделать» |
 
-## What is FA-01
+См. `docs/feature-areas/FA-01-registry-architecture.md` §3 Data Layer:
+> «PostgreSQL (agent metadata) · Qdrant (vector embeddings) · Redis (cache) · **ICP Canister (reputation, immutable)**»
 
-Universal Registry — foundation of Paxio OS (Identity Layer):
-- **DID Registry**: W3C DID Core 1.0, `did:paxio:*` method
-- **Capability System**: 5 capabilities (REGISTRY, FACILITATOR, WALLET, SECURITY, INTELLIGENCE)
-- **Agent Discovery**: Semantic search across registered agents (vector search делается на TS side через Qdrant)
-- **Reputation integration**: Registry canister хранит reputation score reference (сам score в `canisters/src/reputation/` — это icp-dev territory)
+## Files Owned
 
-Детали — `docs/feature-areas/FA-01-registry-architecture.md`.
+### TypeScript (основной объём работы)
+- `app/api/registry/` — Fastify handlers: `/find`, `/register`, `/claim/:id`, `/:did`
+- `app/domain/registry/` — pure business logic: DID generation, Agent Card validation, search orchestration, dedup, crawler adapters
+
+### Rust (узкая часть — только reputation)
+- `canisters/src/reputation/` — StableBTreeMap<Did, ReputationScore>, `#[update] record_transaction`, `#[query] get_score`, Sybil detector hooks
 
 ## Boundaries
 
 **ALLOWED:**
-- `canisters/src/registry/` (Rust код, Candid `.did`, tests)
+- `app/api/registry/**` (TS/JS)
+- `app/domain/registry/**` (TS/JS)
+- `canisters/src/reputation/**` (Rust + Candid `.did`)
+- `tests/registry/**` (читать; пишет architect)
 
 **FORBIDDEN:**
-- Все остальные canisters (icp-dev)
-- `server/`, `app/`, `packages/`
-- Vector search / semantic search implementation (это `app/domain/registry/` — backend-dev)
+- Другие canisters (wallet, audit_log, security_sidecar, bitcoin_agent) — icp-dev
+- `canisters/src/registry/` — **НЕ СУЩЕСТВУЕТ**. Весь registry = TS. Не создавай этот каталог.
+- `server/` (infrastructure) — backend-dev
+- `app/types/` + `app/interfaces/` — architect (только читать)
+- Vector DB клиент (`server/infrastructure/qdrant.cjs`) — backend-dev пишет клиент, registry-dev использует через DI в `app/domain/registry/`
 
-## DFX Environment
+## Startup Protocol (ОБЯЗАТЕЛЬНЫЙ)
+
+1. `CLAUDE.md` + `.claude/rules/scope-guard.md`
+2. `docs/tech-debt.md` — 🔴 OPEN на registry-dev?
+3. Контракты: `app/types/agent-card.ts`, `app/types/did.ts`, `app/types/capability.ts`, `app/interfaces/registry.ts` (если есть)
+4. Тесты: `tests/registry*.test.ts` + `canisters/src/reputation/tests.rs`
+5. `docs/project-state.md` + актуальный `docs/sprints/M*.md`
+6. Feature Area: `docs/feature-areas/FA-01-registry-architecture.md` (ЧТО именно TS vs Rust)
+7. Текущий код: `app/{api,domain}/registry/` + `canisters/src/reputation/`
+8. **ВЫВЕДИ ОТЧЁТ** (startup-protocol.md формат — укажи какой stack трогаешь: TS / Rust / оба)
+9. Прогон: `npm run test -- --run` + `cd canisters && cargo test -p reputation`
+10. ТОЛЬКО ПОСЛЕ ОТЧЁТА — код
+
+## TS side — Registry core
+
+### Agent Card validation
+```typescript
+// app/domain/registry/validate.ts (pseudo — ты пишешь .js под VM sandbox)
+import { ZodAgentCard } from 'app/types/agent-card.js';
+import { err, ok, type Result } from 'app/types/result.js';
+
+export const validate_agent_card = (raw: unknown): Result<AgentCard, ValidationError> => {
+  const parsed = ZodAgentCard.safeParse(raw);
+  return parsed.success ? ok(parsed.data) : err(new ValidationError(parsed.error));
+};
+```
+
+### DID generation (W3C DID Core 1.0)
+```
+did:paxio:<network>:<id>
+<network> ∈ {base, eth, polygon, paxio-native, ...}
+<id>      — детерминистичный hash от endpoint + developer
+```
+
+### Search orchestration
+- Vector search через Qdrant (injected client)
+- BM25 fallback через Meilisearch (injected client)
+- Reputation фильтр → inter-service call в canister `reputation` (через `server/infrastructure/icp.cjs`)
+
+## Rust side — Reputation canister
+
+```rust
+// canisters/src/reputation/src/lib.rs
+use ic_stable_structures::{StableBTreeMap, memory_manager::*};
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct ReputationScore {
+    pub score: u32,              // 0..1000
+    pub tx_count: u64,
+    pub delivery_rate: f32,      // 0..1
+    pub dispute_rate: f32,
+    pub updated_at: u64,         // ic_cdk::api::time()
+}
+
+#[ic_cdk::query]
+pub fn get_score(did: Did) -> Result<ReputationScore, ReputationError> { ... }
+
+#[ic_cdk::update]
+pub fn record_transaction(tx: TxRecord) -> Result<ReputationScore, ReputationError> {
+    // Only called from Facilitator canister (authenticated via caller())
+    // Recompute score. NO admin key — только verified tx обновляет.
+}
+```
+
+Design rules:
+- `StableBTreeMap<Did, ReputationScore>` — survives upgrades
+- `panic!` ЗАПРЕЩЁН, только `Result<T, ReputationError>`
+- **НИКАКОГО admin key** — это ключевая гарантия immutability (§9 FA-01)
+- Caller checks: `record_transaction` доступен только из whitelisted canister principals (Facilitator, Audit Log)
+
+## DFX Environment (только для reputation canister)
 
 ```bash
 export AGENT_NAME="registry-dev"
 source scripts/dfx-env.sh
-dfx_start          # replica на порту 4950
-bash scripts/verify_registry.sh
+dfx_start                      # replica на порту 4950
+cd canisters && cargo test -p reputation
+bash scripts/verify_reputation.sh
 dfx_stop
 ```
 
 **ОБЯЗАТЕЛЬНО: перед завершением работы вызови `dfx_stop`.**
 
-## Startup Protocol (ОБЯЗАТЕЛЬНЫЙ)
-
-1. Прочитай `CLAUDE.md` и `.claude/rules/scope-guard.md`
-2. Проверь `docs/tech-debt.md` — есть ли 🔴 OPEN долг на registry-dev?
-3. Прочитай контракты: `canisters/src/registry/*.rs` + `canisters/src/registry/registry.did`
-4. Прочитай тест-спецификации: `tests/canister_tests/registry_tests.rs` или `canisters/src/registry/tests.rs`
-5. Прочитай `docs/project-state.md` + `docs/sprints/M*.md`
-6. Прочитай Feature Area: `docs/feature-areas/FA-01-registry-architecture.md`
-7. Прочитай существующий код: `canisters/src/registry/`
-8. **ВЫВЕДИ ОТЧЁТ**
-9. `cargo test -p registry` — посмотри RED/GREEN
-10. ТОЛЬКО ПОСЛЕ ОТЧЁТА — начинай код
-
-## DID Registry (W3C DID Core 1.0)
-
-```rust
-#[derive(CandidType, Deserialize, Clone)]
-pub struct DidDocument {
-    pub id: Did,
-    pub verification_method: Vec<VerificationMethod>,
-    pub authentication: Vec<VerificationMethod>,
-    pub service: Vec<ServiceEndpoint>,
-}
-
-#[derive(CandidType, Deserialize, Clone)]
-pub struct AgentProfile {
-    pub did: Did,
-    pub name: String,
-    pub capability: Capability,
-    pub reputation_score: f32,
-    pub bitcoin_address: Option<String>,
-}
-```
-
-## Capability system (5 capabilities)
+## Capability system (5 capabilities — определены в TS)
 
 | Capability | Description |
 |------------|-------------|
@@ -90,16 +138,13 @@ pub struct AgentProfile {
 | SECURITY | Threat detection (Guard Agent) |
 | INTELLIGENCE | NLU routing |
 
-## Key design decisions
-
-- Registry is READ-HEAVY: `#[ic_cdk::query]` для search (бесплатно, быстро)
-- Updates are WRITE: `#[ic_cdk::update]` с валидацией
-- Use `StableBTreeMap` для persistent data (переживает upgrades)
-- `Result<T, RegistryError>` везде — `panic!` ЗАПРЕЩЁН
+Каноничный источник — `app/types/capability.ts` (Zod enum). Rust canister reputation НЕ дублирует этот список.
 
 ## No Scope Creep
 
-- НЕ трогай другие canisters — это icp-dev
-- НЕ трогай TS/JS side (`app/`, `server/`) — это backend-dev
-- НЕ модифицируй тесты — только реализуй
+- НЕ создавай `canisters/src/registry/` — этот каталог не существует by design
+- Agent Card storage → **PostgreSQL через TS** (не canister)
+- Semantic search → **Qdrant через TS** (не canister)
+- НЕ трогай других canisters — icp-dev territory
+- НЕ модифицируй тесты — только реализуй по ним
 - Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!`

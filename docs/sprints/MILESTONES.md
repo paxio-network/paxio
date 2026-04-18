@@ -31,20 +31,22 @@
 | # | Milestone | FA | Roadmap item | Reuse | Agent(s) | Status |
 |---|---|---|---|---|---|---|
 | **M00** | Foundation: монорепо, git, types, interfaces, CI stub | — | «Монорепо setup» | [NEW] | architect + backend-dev | ✅ |
-| **M01** | Registry canister MVP: DID, capability, storage, HTTP | FA-01 | «Agent Card v2 JSON Schema», «Registry API v1» | [PORT-bitgent] canisters/registry/ | registry-dev | ⬜ |
+| **M01** | Registry TS core MVP: DID gen, Agent Card validate, PostgreSQL storage, `/find` `/register` API | FA-01 | «Agent Card v2 JSON Schema», «Registry API v1» (keyword v0.1) | [PORT-bitgent→ts] registry logic + [NEW] Fastify layer | registry-dev | ⬜ |
 | **M02** | Wallet canister + threshold ECDSA BTC signing | FA-03 | «DKI Canister (Rust)», «ckBTC интеграция» | [PORT-bitgent] canisters/wallet/ + [NEW] BTC L1 finalization | icp-dev | ⬜ |
 | **M03** | Security Sidecar canister MVP (Intent Verifier + Secrets Scanner) | FA-04 | — (preparatory for Phase 1) | [PORT-bitgent] canisters/security/ | icp-dev | ⬜ |
 | **M04** | Audit Log canister + Evidence Chain port TS→Rust | FA-06 | «P6 Compliance: Complior Engine → paxio-sdk интеграция» | [PORT-bitgent] + [PORT-ts→rust] complior evidence-chain | icp-dev | ⬜ |
 | **M05** | @paxio/sdk alpha (SDK hooks + Wallet Adapter) | FA-03 | «@paxio/sdk alpha (TypeScript)» | [PORT-complior] hooks + [NEW] Wallet Adapter | backend-dev | ⬜ |
 | **M06** | Guard integration: Zod contract + HTTP client + mock | FA-04 | «Guard Service production deploy» (Paxio-side) | [REF-guard] + [NEW] client | architect + backend-dev | ⬜ |
-| **M07** | Registry Tier 1 crawlers: Fetch.ai, ERC-8004, Virtuals, Olas | FA-01 | «TIER 1 — On-chain реестры» | [NEW] | backend-dev | ⬜ |
-| **M08** | Registry Tier 2 crawlers: Smithery, MCP Registry | FA-01 | «TIER 2 — MCP Экосистема» | [NEW] | backend-dev | ⬜ |
-| **M09** | Registry API v1 + Qdrant vector DB setup | FA-01 | «Registry API v1», «Vector DB setup» | [PORT-bitgent] registry + [NEW] Qdrant integration | backend-dev | ⬜ |
+| **M07** | Registry Tier 1 crawlers (TS): Fetch.ai, ERC-8004, Virtuals, Olas | FA-01 | «TIER 1 — On-chain реестры» | [NEW] | registry-dev | ⬜ |
+| **M08** | Registry Tier 2 crawlers (TS): Smithery, MCP Registry | FA-01 | «TIER 2 — MCP Экосистема» | [NEW] | registry-dev | ⬜ |
+| **M09** | Registry semantic search (Qdrant + embedding adapter) | FA-01 | «Registry API v1» (semantic v0.5), «Vector DB setup» | [NEW] | registry-dev + backend-dev (qdrant client) | ⬜ |
 | **M10** | Complior Agent setup: scanner + FRIA + passport | FA-06 | «Complior Engine → paxio-sdk», «did:paxio:complior-agent регистрация» | [PORT-complior] | backend-dev | ⬜ |
 | **M11** | paxio.network Landing v1 | — | «Landing page v1 (Неделя 1-2)» | [NEW] | frontend-dev | ⬜ |
 | **M12** | docs.paxio.network Developer Docs v1 | — | «Developer Docs (Неделя 2-3)» | [NEW] | frontend-dev | ⬜ |
 | **M13** | app.paxio.network Registry Explorer v1 | — | «Registry Explorer v1 (Неделя 3-4)» | [NEW] | frontend-dev | ⬜ |
 | **M14** | Names/org occupation: npm @paxio, PyPI, GitHub, jsr.io, Docker | — | «ЗАНЯТЬ ИМЕНА» | [NEW] | user (не agent task) | ⬜ |
+
+> **Важно по FA-01:** сам Registry (agent metadata, search, crawlers, API) живёт в TS — `app/domain/registry/` + `app/api/registry/` + PostgreSQL + Qdrant + Redis. На ICP выносится **только Reputation score** (immutable, unforgeable). Reputation canister запланирован на Phase 1 (v1.0 Launch по §10 FA-01) — см. M23-bis ниже.
 
 **Verification на конец Phase 0:**
 - [ ] `dfx canister call wallet derive_btc_address '()'` → returns `bc1q...` (real BTC testnet/mainnet)
@@ -82,7 +84,8 @@
 | **M29** | Bitcoin DCA Agent v1 | FA-05 | «Bitcoin DCA Agent v1» | [NEW] | icp-dev | ⬜ |
 | **M30** | Bitcoin Escrow Agent v1 | FA-05 | «Bitcoin Escrow Agent v1» | [NEW] | icp-dev | ⬜ |
 | **M31** | Bitcoin Streaming Payments v1 | FA-05 | «Bitcoin Streaming Payments v1» | [NEW] | icp-dev | ⬜ |
-| **M32** | Reputation Stake v1 | FA-01 + FA-05 | «Reputation Stake v1» | [NEW] + [PORT-bitgent] reputation.rs | icp-dev | ⬜ |
+| **M31b** | **Reputation Canister MVP (ICP)** — immutable score, `record_transaction`, `get_score`, StableBTreeMap, **no admin key** | FA-01 | «ICP Reputation Canister» (§10 v1.0 Launch) | [PORT-bitgent] reputation.rs + [NEW] Paxio integration | **registry-dev** | ⬜ |
+| **M32** | Reputation Stake v1 (depends on M31b) | FA-01 + FA-05 | «Reputation Stake v1» | [NEW] stake logic on top of M31b canister | icp-dev + registry-dev | ⬜ |
 | **M33** | Complior Agent Live: EU AI Act scan + OWASP Cert + FRIA | FA-06 | «EU AI Act scan flow», «OWASP Certificate», «FRIA Generator live» | [PORT-complior] extend | backend-dev | ⬜ |
 | **M34** | Flagship Report «State of AI Compliance 2026» | FA-06 | «Flagship Report» | [NEW] (публикация отчёта) | user | ⬜ |
 | **M35** | Hero Demo (BTC DCA agent видео) | — | «Hero Demo» | [NEW] | frontend-dev + user | ⬜ |

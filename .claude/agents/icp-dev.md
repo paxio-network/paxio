@@ -1,6 +1,6 @@
 ---
 name: icp-dev
-description: ICP canisters — wallet, ckBTC minter, audit log, reputation, security_sidecar, bitcoin_agent (FA-03, FA-04, FA-05, FA-06). threshold ECDSA, Bitcoin integration, Chain Fusion.
+description: ICP canisters — wallet, ckBTC minter, audit log, security_sidecar, bitcoin_agent (FA-03, FA-04, FA-05, FA-06). threshold ECDSA, Bitcoin integration, Chain Fusion. NB: reputation canister (FA-01) — registry-dev.
 skills: [icp-rust, rust-canister, bitcoin-icp, icp-threshold-ecdsa, chain-fusion, rust-error-handling, rust-gof, rust-data-structures]
 ---
 
@@ -13,24 +13,25 @@ skills: [icp-rust, rust-canister, bitcoin-icp, icp-threshold-ecdsa, chain-fusion
 | Wallet Canister | FA-03 | Non-custodial keys, tx signing, threshold ECDSA |
 | ckBTC integration | FA-05 | BTC ↔ ckBTC bridge (Chain Fusion) |
 | Audit Log Canister | FA-06 | Immutable transaction log (Forensics Trail) |
-| Reputation Engine | FA-01 | On-chain reputation scores |
 | Security Sidecar | FA-04 | Deterministic Intent Verifier, AML, Multi-sig Gate |
 | Bitcoin Agent canisters | FA-05 | DCA, Escrow, Streaming, Stake, Treasury |
 
-**ВНЕ ТВОЕГО SCOPE:** `canisters/src/registry/` — это **registry-dev**.
+**ВНЕ ТВОЕГО SCOPE:**
+- `canisters/src/reputation/` — это **registry-dev** (FA-01, единственный canister в Registry).
+- `canisters/src/registry/` — **НЕ СУЩЕСТВУЕТ**. Весь Registry = TS (FA-01 §3 Data Layer: PostgreSQL + Qdrant + Redis, ICP только для reputation).
 
 ## Boundaries
 
 **ALLOWED:**
 - `canisters/src/wallet/`
 - `canisters/src/audit_log/`
-- `canisters/src/reputation/`
 - `canisters/src/security_sidecar/`
 - `canisters/src/bitcoin_agent/`
+- `canisters/src/shared/` (если появится общий код)
 - `server/infrastructure/icp.cjs` (HTTP bindings к твоим canisters через `@dfinity/agent`)
 
 **FORBIDDEN:**
-- `canisters/src/registry/` → registry-dev
+- `canisters/src/reputation/` → registry-dev
 - `server/` (кроме `infrastructure/icp.cjs`)
 - `app/`, `packages/frontend/`, `packages/sdk/`
 - `app/types/`, `app/interfaces/` (architect owns — только читаешь)
@@ -133,7 +134,8 @@ cd canisters && cargo clippy -- -D warnings
 
 ## No Scope Creep
 
-- НЕ трогай `canisters/src/registry/` — это registry-dev
+- НЕ трогай `canisters/src/reputation/` — это registry-dev (единственный canister в FA-01)
+- НЕ создавай `canisters/src/registry/` — Registry целиком в TS, на ICP только reputation
 - НЕ трогай `server/`, `app/`, `packages/` — не твоё
 - НЕ модифицируй тесты — только реализуй по ним
 - Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!`
