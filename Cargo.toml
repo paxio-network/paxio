@@ -1,0 +1,40 @@
+# Root Rust workspace for Paxio canisters.
+# Architect owns this file — dev-agents add their crate sources, NOT new top-level
+# `members` entries. All Phase 0 canister members are pre-registered below.
+
+[workspace]
+resolver = "2"
+members = [
+  "products/03-wallet/canister",                  # M02 — icp-dev
+  "products/04-security/canister",                # M03 — icp-dev
+  "products/06-compliance/canisters/audit-log",   # M04 — icp-dev
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# Internet Computer
+ic-cdk = "0.13"
+ic-cdk-macros = "0.13"
+ic-stable-structures = "0.6"
+candid = "0.10"
+
+# Common Rust
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+thiserror = "1"
+sha2 = "0.10"
+bincode = "1.3"
+
+# Test runtime (for #[tokio::test] in canister tests)
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+debug = false
+strip = true
