@@ -5,8 +5,8 @@
 
 ## Версия
 **Version:** 0.1.0
-**Last Updated:** 2026-04-17
-**Last Commit:** (commits after first milestone)
+**Last Updated:** 2026-04-18
+**Last Commit:** `2b8878e` (M00 Foundation DONE)
 
 ---
 
@@ -19,21 +19,24 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 ## Модули
 
-### Phase 0 (Foundation) — В РАБОТЕ
+### Phase 0 (Foundation) — ✅ DONE
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| P0: Project setup | 🔄 В РАБОТЕ | .claude structure, CI/CD |
-| P0: npm packages | ⬜ НЕ НАЧАТО | @paxio/sdk, validators, ui |
-| P0: Frontend scaffolding | ⬜ НЕ НАЧАТО | Next.js 15 + design system |
-| P0: DKI Canister | ⬜ НЕ НАЧАТО | threshold ECDSA foundation |
-| P0: Guard Agent | ⬜ НЕ НАЧАТО | ML classification foundation |
+| M00: Monorepo bootstrap | ✅ DONE | git init, npm workspaces, tsconfig, vitest, eslint, prettier, CI stub |
+| M00: Types + interfaces | ✅ DONE | Result<T,E>, Did, Capability, AgentCard, ErrorCode, Logger, Clock |
+| M00: AppError hierarchy | ✅ DONE | `app/errors/index.ts` — 9 classes, toJSON() RFC 7807-lite |
+| M00: Logger + Clock impl | ✅ DONE | `app/lib/logger.ts` (pino), `app/lib/clock.ts` (system + fixed) |
+| M00: Server scaffolding | ✅ DONE | `server/main.cjs` + `src/{http,loader,logger,ws}.cjs`, ported from Olympus |
+| M00: Acceptance + E2E | ✅ DONE | `scripts/verify_foundation.sh` 11/11 PASS; `docs/e2e/M00-foundation-canary.md` |
+| P0: DKI Canister | ⬜ НЕ НАЧАТО | threshold ECDSA foundation (M01+) |
+| P0: Guard Agent | ⬜ НЕ НАЧАТО | External Python service (отдельный репо) |
 
 ### Phase 1 (P1 — Universal Registry)
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| FA-01: Registry canister | ⬜ НЕ НАЧАТО | DID registry |
+| FA-01: Registry canister | ⬜ НЕ НАЧАТО | DID registry (M01) |
 | FA-01: Capability system | ⬜ НЕ НАЧАТО | 5 capabilities |
 | FA-01: Frontend UI | ⬜ НЕ НАЧАТО | Agent explorer |
 
@@ -82,32 +85,37 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 ---
 
-## Source Structure
+## Source Structure (фактическое)
 
 ```
 paxio/
-├── engine/                      # TypeScript (Fastify)
-│   └── core/
-│       └── src/
-│           ├── types/           # Shared types (architect owns .h)
-│           ├── http/            # Fastify routes
-│           ├── services/        # Business logic
-│           ├── blockchain/      # ICP bindings
-│           ├── llm/            # Guard Agent integration
-│           └── data/           # Reference JSON (not hardcoded)
-├── canisters/                   # Rust (ICP SDK)
-│   └── src/
-│       ├── wallet/
-│       ├── registry/
-│       ├── audit_log/
-│       ├── reputation/
-│       ├── security_sidecar/
-│       └── bitcoin_agent/
-├── packages/                    # npm packages
-│   └── frontend/              # Next.js 15
-├── services/                   # Python
-│   └── guard/                 # Guard Agent ML
-└── cli/                        # Rust CLI
+├── server/                                    # Fastify infrastructure (CommonJS)
+│   ├── main.cjs                               # entry point
+│   ├── src/{http,loader,logger,ws}.cjs
+│   ├── lib/errors.cjs                         # ⚠ mirrors app/errors/ (TD-01)
+│   └── infrastructure/                        # empty, populated M01+
+├── app/                                       # Business logic (VM sandbox)
+│   ├── types/                                 # architect — Result, Did, Capability, AgentCard, ErrorCode
+│   ├── interfaces/                            # architect — Logger, Clock
+│   ├── errors/                                # ✅ DONE (M00) — AppError hierarchy
+│   ├── lib/                                   # ✅ DONE (M00) — logger.ts, clock.ts
+│   ├── config/                                # empty placeholder
+│   ├── data/                                  # empty placeholder
+│   ├── domain/                                # empty placeholder
+│   └── api/                                   # empty placeholder
+├── canisters/
+│   ├── Cargo.toml                             # workspace root
+│   └── src/shared/                            # placeholder crate
+├── packages/
+│   ├── sdk/                                   # @paxio/sdk skeleton
+│   ├── mcp-server/                            # skeleton
+│   └── frontend/                              # placeholder (M11+)
+├── cli/                                       # placeholder (M14)
+├── tests/                                     # 6 test files, 72 GREEN
+├── scripts/                                   # verify_foundation.sh
+├── docs/                                      # strategy, roadmap, FA, sprints, e2e, product-metrics
+├── opensrc/                                   # pinned external refs
+└── .github/workflows/ci.yml                   # stub
 ```
 
 ---
@@ -116,21 +124,46 @@ paxio/
 
 | Pipeline | Status | Notes |
 |----------|--------|-------|
-| TypeScript typecheck | ⬜ НЕ НАСТРОЕНО | |
-| Unit tests | ⬜ НЕ НАСТРОЕНО | |
-| Canister build | ⬜ НЕ НАСТРОЕНО | dfx |
-| Integration tests | ⬜ НЕ НАСТРОЕНО | |
-| Deploy to testnet | ⬜ НЕ НАСТРОЕНО | |
+| TypeScript typecheck | ✅ STUB READY | `npm run typecheck` GREEN locally, CI job defined |
+| Unit tests | ✅ STUB READY | `npm run test -- --run` 72/72 GREEN, CI job defined |
+| Canister build | ✅ STUB READY | CI job defined, canisters/src/shared only |
+| Integration tests | ⬜ НЕ НАСТРОЕНО | M01+ |
+| Deploy to testnet | ⬜ НЕ НАСТРОЕНО | M10+ |
+
+---
+
+## Metrics (измеренные, M00)
+
+| Метрика | Значение |
+|---|---|
+| Test files | 6 |
+| Tests GREEN | 72/72 (100%) |
+| Typecheck errors | 0 |
+| Acceptance checks | 11/11 PASS |
+| Server cold start | < 2s |
+| `/health` latency | < 5ms (localhost) |
+
+Полная таблица: `docs/product-metrics.md`.
 
 ---
 
 ## Roadmap
 
-Документ: `docs/NOUS_Development_Roadmap.md` (architect обновляет)
+Документ: `docs/NOUS_Development_Roadmap.md` (architect обновляет).
+M00 Foundation отмечен ✅ DONE.
+
+---
+
+## Review History
+
+| Date | Reviewer | Milestone | Result | Commits |
+|------|----------|-----------|--------|---------|
+| 2026-04-18 | reviewer | M00 Foundation | ✅ APPROVED | `93d984d`, `dcc769e`, `2b8878e` |
 
 ---
 
 ## Notes
 
-- Initial project setup in progress
-- Waiting for first milestone specification from architect
+- M00 Foundation завершён. Все 6 тест-файлов GREEN (72/72), acceptance PASS, typecheck clean.
+- 2 единицы tech debt зафиксированы (TD-01 server/app errors sync, TD-02 governance note).
+- Готово к старту M01 (Registry canister MVP, FA-01).
