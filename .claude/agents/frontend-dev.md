@@ -10,11 +10,11 @@ skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, type
 
 | What | Where |
 |------|-------|
-| Marketing site (paxio.network) | `packages/frontend/landing/` |
-| App dashboard (app.paxio.network) | `packages/frontend/app/` |
-| Docs portal (docs.paxio.network) | `packages/frontend/docs/` |
-| Shared components | `packages/frontend/components/` |
-| Design system tokens | `packages/frontend/design/` |
+| Marketing site (paxio.network) | `apps/frontend/landing/` |
+| App dashboard (app.paxio.network) | `apps/frontend/dashboard/` |
+| Docs portal (docs.paxio.network) | `apps/frontend/docs/` |
+| Shared components | `apps/frontend/components/` |
+| Design system tokens | `apps/frontend/design/` |
 
 ## Tech Stack
 
@@ -77,11 +77,11 @@ skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, type
 ## Boundaries
 
 **ALLOWED:**
-- `packages/frontend/` (все Next.js приложения и общие компоненты)
+- `apps/frontend/` (все Next.js приложения и общие компоненты)
 
 **FORBIDDEN:**
-- `server/`, `app/` → backend-dev
-- `canisters/` → icp-dev / registry-dev
+- `apps/back/`, `products/*/app/` → backend-dev
+- `products/*/canister(s)/` → icp-dev / registry-dev
 - `packages/sdk/src/` → backend-dev (SDK core)
 - `app/types/` → architect only (можно ЧИТАТЬ для API types)
 
@@ -92,11 +92,11 @@ skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, type
 1. Прочитай `CLAUDE.md` + `.claude/rules/scope-guard.md`
 2. Проверь `docs/tech-debt.md`
 3. Прочитай контракты (для API types): `app/types/*.ts`
-4. Прочитай дизайн-систему: `packages/frontend/design/` (если есть)
+4. Прочитай дизайн-систему: `apps/frontend/design/` (если есть)
 5. Прочитай `docs/project-state.md` + `docs/sprints/M*.md`
 6. Прочитай Feature Area (если задача относится к конкретному продукту)
 7. Прочитай Frontend TZ: `docs/Paxio_Frontend_TZ.md`
-8. Прочитай существующий код: `packages/frontend/`
+8. Прочитай существующий код: `apps/frontend/`
 9. **ВЫВЕДИ ОТЧЁТ**, затем начинай код
 
 ## Important Notes
@@ -124,6 +124,6 @@ JetBrains Mono для DID strings, wallet addresses, code snippets.
 
 ## No Scope Creep
 
-- НЕ трогай backend код (`server/`, `app/`)
+- НЕ трогай backend код (`apps/back/`, `products/*/app/`)
 - НЕ модифицируй типы (`app/types/`) — только ЧИТАЙ для API схем
 - Если нужен backend change → `!!! SCOPE VIOLATION REQUEST !!!`

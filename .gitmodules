@@ -1,0 +1,3 @@
+[submodule "products/04-security/guard"]
+	path = products/04-security/guard
+	url = https://github.com/a3ka/guard

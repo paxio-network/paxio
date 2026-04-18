@@ -1,13 +1,13 @@
 // AppError hierarchy — Paxio domain-level error types.
-// Codes come from app/types/errors.ts (ERROR_CODES).
-// HTTP status codes from app/types/errors.ts (ERROR_STATUS_CODES).
-// Server-side CommonJS mirror: server/lib/errors.cjs (must stay in sync).
+// Codes come from @paxio/types (ERROR_CODES).
+// HTTP status codes from @paxio/types (ERROR_STATUS_CODES).
+// Server-side CommonJS mirror: apps/back/server/lib/errors.cjs (must stay in sync).
 
 import {
   ERROR_CODES,
   ERROR_STATUS_CODES,
   type ErrorCode,
-} from 'app/types/errors.js';
+} from '@paxio/types';
 
 // Shape of toJSON() output.
 // Follows RFC 7807-lite: top-level `error` wrapper with code + message + statusCode.

@@ -1,13 +1,13 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist/app",
-    "rootDir": "./app",
+    "outDir": "./dist",
+    "rootDir": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false
   },
-  "include": ["app/**/*.ts"],
-  "exclude": ["node_modules", "tests", "dist"]
+  "include": ["packages/*/src/**/*.ts", "products/*/app/**/*.ts"],
+  "exclude": ["node_modules", "tests", "dist", "apps/frontend", "opensrc"]
 }

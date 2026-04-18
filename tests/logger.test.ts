@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createLogger } from 'app/lib/logger.js';
+import { createLogger } from '@paxio/utils/logger';
 
 describe('Logger', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

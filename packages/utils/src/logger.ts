@@ -9,7 +9,7 @@
 //   Consumers opt-in to bindings via .child({ reqId, agent, ... }).
 
 import pino, { type Logger as PinoLogger } from 'pino';
-import type { Logger, LogContext } from 'app/interfaces/logger.js';
+import type { Logger, LogContext } from '@paxio/interfaces';
 
 export interface LoggerOptions {
   level: 'debug' | 'info' | 'warn' | 'error';

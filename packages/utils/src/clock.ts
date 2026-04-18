@@ -3,7 +3,7 @@
 // Always accept Clock as a parameter, pass createSystemClock() in production
 // and createFixedClock(ms) in tests.
 
-import type { Clock } from 'app/interfaces/clock.js';
+import type { Clock } from '@paxio/interfaces';
 
 export const createSystemClock = (): Clock => ({
   now: () => Date.now(),

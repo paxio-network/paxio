@@ -6,11 +6,13 @@
 docs/NOUS_Strategy_v5.md  (alias: docs/architecture.md)   → Product Vision (ЧТО, ЗАЧЕМ, приоритеты)
 docs/NOUS_Development_Roadmap.md (alias: docs/roadmap.md) → Roadmap (КАКИЕ фичи, В КАКОМ порядке)
 docs/feature-areas/FA-0X-*.md                             → Feature Areas (КАК УСТРОЕНА подсистема)
+docs/fa-registry.md                                       → FA → physical paths mapping (source of truth)
 docs/sprints/M0X-*.md                                     → Milestones (ЧТО делаем, test specs, acceptance)
-app/types/ + app/interfaces/                              → Контракты (source of truth, architect)
-tests/**/*.test.ts                                        → Test specs (RED → GREEN, architect)
-server/**/*.cjs + app/**/*.js + canisters/src/**/*.rs     → Реализация (dev-агенты)
-packages/frontend/**                                      → Frontend (Next.js 15, frontend-dev)
+packages/types/ + packages/interfaces/                    → Контракты (Shared Kernel, architect)
+tests/**/*.test.ts + products/*/tests/**/*.test.ts        → Test specs (RED → GREEN, architect)
+apps/back/server/**/*.cjs + products/*/app/**/*.js        → Backend реализация
+canisters/src/**/*.rs + products/*/canister(s)/**/*.rs    → ICP canisters
+apps/frontend/**                                          → Frontend (Next.js 15, frontend-dev)
 ```
 
 ## Workflow
@@ -25,11 +27,11 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 
 | Agent | Role |
 |-------|------|
-| architect | Contracts, milestones, test specs, Feature Areas |
-| backend-dev | Fastify `server/`, business logic `app/`, `@paxio/sdk`, Guard HTTP client |
-| icp-dev | ICP canisters (wallet, audit_log, security_sidecar, bitcoin_agent), Chain Fusion |
-| registry-dev | FA-01 Registry: TS core в `app/domain/registry/` + `app/api/registry/` + Reputation canister `canisters/src/reputation/` |
-| frontend-dev | Next.js 15 фронтенды: paxio.network, app.paxio.network, docs.paxio.network |
+| architect | Contracts (`packages/types`, `packages/interfaces`), milestones, test specs, Feature Areas, `docs/fa-registry.md` |
+| backend-dev | Fastify `apps/back/server/`, TS-часть `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/06-compliance/github-action/` |
+| icp-dev | Rust canisters `products/*/canister(s)/` (кроме FA-01), `products/06-compliance/cli/`, `products/03-wallet/http-proxy/`, `platform/canister-shared/` |
+| registry-dev | FA-01 целиком: `products/01-registry/` (TS `app/` + `canister/` Rust Reputation) |
+| frontend-dev | Next.js 15 фронтенды: `apps/frontend/{landing,dashboard,docs}/` (paxio.network, app.paxio.network, docs.paxio.network) |
 | test-runner | Build + test verification |
 | reviewer | Scope check, quality review, project-state/tech-debt update |
 
@@ -73,86 +75,107 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 7. **Onion dependencies**: `server/` → `app/api/` → `app/domain/` → `app/lib/`. Строго внутрь. `domain/` ничего не знает про HTTP.
 8. **SE principles**: см. `.claude/rules/engineering-principles.md` — полный reference по type systems, polymorphism, composition, DI/IoC, purity, ADT, lazy eval, concurrency, contract programming, SOLID, и ещё 15 темам. Architect enforces при review.
 
-## Project Layout
+## Project Layout — Product-first Monorepo (Turborepo + pnpm + uv)
 
 ```
 paxio/
-├── server/                       # Fastify infrastructure (CommonJS .cjs) — backend-dev
-│   ├── main.cjs                  # entrypoint: bootstraps Fastify, loads app/ через vm.Script
-│   └── src/
-│       ├── http.cjs              # Fastify app + route mounter
-│       ├── ws.cjs                # WebSocket broadcaster
-│       ├── loader.cjs            # VM sandbox loader (frozen context)
-│       ├── telemetry.cjs
-│       └── infrastructure/
-│           ├── db.cjs            # PostgreSQL client
-│           ├── redis.cjs         # Redis client
-│           ├── qdrant.cjs        # Qdrant vector DB client
-│           ├── icp.cjs           # @dfinity/agent HTTP bindings
-│           └── guard-client.cjs  # Guard API HTTP client (retry/circuit-breaker)
+├── apps/                               # Top-level deployable targets
+│   ├── back/                           # Backend monolith (Olympus-style)
+│   │   ├── server/                     # Fastify infra (.cjs) — backend-dev
+│   │   │   ├── main.cjs                # entry: loads products/*/app/**/*.js via vm.Script
+│   │   │   ├── src/{http,ws,loader,logger}.cjs
+│   │   │   ├── lib/errors.cjs          # CJS mirror of @paxio/errors
+│   │   │   └── infrastructure/         # DB, Redis, Qdrant, ICP clients
+│   │   └── app/                        # SHARED app infrastructure for VM sandbox
+│   │       ├── config/                 # frozen config loader
+│   │       └── data/                   # reference JSON (protocol fees, rules)
+│   ├── frontend/                       # Next.js 15 apps — frontend-dev
+│   │   ├── landing/                    # paxio.network
+│   │   ├── dashboard/                  # app.paxio.network (cross-FA UI)
+│   │   └── docs/                       # docs.paxio.network
+│   └── intelligence-ml/                # ml.paxio.network entry → products/07/ml
 │
-├── app/                          # Business logic (VM sandbox .js) — backend-dev
-│   ├── types/                    # Shared domain types + Zod schemas (ARCHITECT ONLY)
-│   ├── interfaces/               # Contracts/ports (ARCHITECT ONLY)
-│   ├── errors/                   # AppError hierarchy
-│   ├── lib/                      # Permissions, validation, utilities
-│   ├── config/                   # Configuration (читает env, возвращает frozen obj)
-│   ├── data/                     # Reference JSON (protocol fees, routing rules, agent sources)
-│   ├── domain/                   # Pure business logic (no I/O)
-│   │   ├── registry/             # FA-01 agent resolution, DID logic
-│   │   ├── fap/                  # FA-02 routing, protocol translation
-│   │   ├── wallet/               # FA-03 balance, tx orchestration
-│   │   ├── guard/                # FA-04 when/how to call Guard API
-│   │   ├── bitcoin-agent/        # FA-05 DCA/Escrow orchestration
-│   │   ├── compliance/           # FA-06 Complior integration
-│   │   └── intelligence/         # FA-07 aggregation
-│   └── api/                      # HTTP handlers (thin, validation → domain)
-│       ├── registry/
-│       ├── fap/
-│       ├── wallet/
-│       ├── guard/                # Paxio-side Guard integration endpoints
-│       └── ...
+├── products/                           # 7 Feature Areas — PRIMARY AXIS
+│   ├── 01-registry/                    # FA-01 Universal Registry — registry-dev
+│   │   ├── app/{api,domain}/           # TS: DID, Agent Card, crawlers, search
+│   │   ├── canister/                   # Rust: Reputation (ONLY ICP piece)
+│   │   └── tests/
+│   ├── 02-facilitator/                 # FA-02 Meta-Facilitator — backend-dev + icp-dev
+│   │   ├── app/{api,domain}/           # TS: FAP Router, Adapters, Translation
+│   │   ├── canisters/                  # Rust: nonce-registry, sdjwt-verifier, evm-verifier
+│   │   └── tests/
+│   ├── 03-wallet/                      # FA-03 Wallet + Adapter — backend-dev + icp-dev
+│   │   ├── app/{api,domain}/           # TS Wallet API
+│   │   ├── canister/                   # Rust: Wallet Canister (threshold ECDSA)
+│   │   ├── sdk-ts/                     # @paxio/sdk (npm)
+│   │   ├── sdk-python/                 # paxio-sdk (PyPI)
+│   │   ├── mcp-server/                 # mcp.paxio.network
+│   │   ├── http-proxy/                 # localhost:8402 (Rust binary)
+│   │   └── tests/
+│   ├── 04-security/                    # FA-04 Security Layer — backend-dev + icp-dev + (a3ka)
+│   │   ├── app/{api,domain}/           # TS: OWASP Scorer, MITRE, Secrets, Anomaly, AML
+│   │   ├── canister/                   # Rust: Security Sidecar (Intent, Forensics, Multi-sig)
+│   │   ├── guard/                      # ⚠ GIT SUBMODULE → github.com/a3ka/guard
+│   │   ├── guard-client/               # @paxio/guard-client (TS ACL)
+│   │   └── tests/
+│   ├── 05-bitcoin-agent/               # FA-05 Bitcoin Agent — icp-dev
+│   │   ├── canisters/                  # Rust: dca, escrow, streaming, stake, treasury,
+│   │   │                               #       yield, payroll, price-trigger, inheritance
+│   │   ├── app/                        # TS helpers
+│   │   └── tests/
+│   ├── 06-compliance/                  # FA-06 Compliance (Complior) — backend-dev + icp-dev
+│   │   ├── app/{api,domain}/           # TS: Complior Engine (scanner, FRIA, passport)
+│   │   ├── canisters/                  # Rust: audit-log, certification-manager
+│   │   ├── cli/                        # Rust CLI (Complior-ported compliance commands)
+│   │   ├── github-action/              # paxio-network/compliance-check@v1
+│   │   └── tests/
+│   └── 07-intelligence/                # FA-07 Intelligence — backend-dev + icp-dev + (ml team)
+│       ├── app/{api,domain}/           # TS: Data Pipeline, Intelligence API
+│       ├── ml/                         # Python: LightGBM + Prophet + SHAP
+│       ├── canister/                   # Rust: Oracle Network (Chain Fusion)
+│       └── tests/
 │
-├── canisters/                    # Rust ICP canisters — icp-dev / registry-dev
-│   └── src/
-│       ├── reputation/           # registry-dev (FA-01) — immutable score ONLY (не весь Registry)
-│       ├── wallet/               # icp-dev (FA-03)
-│       ├── audit_log/            # icp-dev (FA-06)
-│       ├── security_sidecar/     # icp-dev (FA-04)
-│       └── bitcoin_agent/        # icp-dev (FA-05)
+├── packages/                           # Shared Kernel (minimal, stable)
+│   ├── types/                          # @paxio/types — Zod + TS (architect)
+│   ├── interfaces/                     # @paxio/interfaces — port contracts (architect)
+│   ├── errors/                         # @paxio/errors — AppError hierarchy
+│   ├── utils/                          # @paxio/utils — shared implementations (Clock, Logger)
+│   └── contracts/                      # OpenAPI specs per FA — Published Language
 │
-│   # NB: Agent Card storage + semantic search = PostgreSQL/Qdrant/Redis (не canister).
-│   # См. FA-01 §3 Data Layer. На ICP только Reputation Engine.
+├── platform/                           # Cross-cutting technical infrastructure
+│   └── canister-shared/                # Rust shared crate (threshold ECDSA helpers)
 │
-├── packages/                     # npm workspaces
-│   ├── sdk/                      # @paxio/sdk (TypeScript) — backend-dev
-│   ├── mcp-server/               # @paxio/mcp-server (from complior) — backend-dev
-│   └── frontend/                 # Next.js 15 apps — frontend-dev
-│       ├── landing/              # paxio.network
-│       ├── app/                  # app.paxio.network
-│       └── docs/                 # docs.paxio.network
+├── canisters/                          # ⚠ DEPRECATED top-level — canisters живут в products/*/
+│                                       # (оставлен для переходного периода, см. products/)
 │
-├── cli/                          # Rust CLI (from complior, commands only) — icp-dev (Rust)
-├── tests/                        # Unit + integration — ARCHITECT ONLY
-├── scripts/                      # verify_*.sh acceptance scripts — ARCHITECT ONLY
-├── docs/                         # Strategy, Roadmap, FA, sprints, e2e — ARCHITECT
-├── opensrc/                      # Pinned external references (dfinity, x402, a2a, etc.)
-├── .claude/                      # Agent config (CONSTITUTIONAL — architect/user only)
-├── .github/workflows/            # CI/CD
-├── CLAUDE.md                     # Master rules
-└── package.json                  # Workspace root
+├── tests/                              # Cross-FA E2E integration tests — architect
+├── scripts/                            # verify_*.sh acceptance — architect
+├── docs/
+│   ├── fa-registry.md                  # ★ FA → physical paths mapping
+│   ├── feature-areas/                  # 7 FA architecture docs
+│   └── sprints/                        # milestones
+├── opensrc/                            # Pinned external references
+├── .claude/                            # Agent config (CONSTITUTIONAL)
+├── .github/workflows/                  # CI/CD
+│
+├── Cargo.toml                          # ROOT Rust workspace (products/*/canister(s), cli, http-proxy)
+├── pnpm-workspace.yaml                 # TS workspaces (apps/*, products/*, packages/*)
+├── turbo.json                          # Turborepo pipelines
+├── .gitmodules                         # products/04-security/guard submodule
+├── package.json                        # root
+└── CLAUDE.md                           # Master rules
 ```
 
 ## File Ownership
 
 | Agent | ALLOWED | FORBIDDEN |
 |-------|---------|-----------|
-| architect | `app/types/`, `app/interfaces/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `canisters/src/`, `packages/` |
-| backend-dev | `server/`, `app/api/` (кроме `registry/`), `app/domain/` (кроме `registry/`), `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читает), `app/{api,domain}/registry/` (registry-dev) |
-| icp-dev | `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/reputation/` (registry-dev), `server/*.cjs` (кроме infrastructure/icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
-| registry-dev | `app/api/registry/`, `app/domain/registry/`, `canisters/src/reputation/` | Everything else |
-| frontend-dev | `packages/frontend/` | `server/`, `app/`, `canisters/`, `packages/sdk/src/` |
-| test-runner | READS `tests/`, `scripts/` — запускает. НЕ пишет код. | ANY implementation code |
+| architect | `packages/{types,interfaces,errors,contracts}/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/fa-registry.md`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `apps/`, `products/*/app/` (кроме `01-registry`), `products/*/canister(s)/`, `products/*/cli/`, `products/*/sdk-*`, `products/*/mcp-server/`, `packages/utils/` |
+| backend-dev | `apps/back/server/`, `apps/back/app/{config,data}/`, TS-часть `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/04-security/guard-client/`, `products/06-compliance/github-action/`, `packages/utils/` | `products/*/canister(s)/`, `products/*/cli/`, `products/*/http-proxy/`, `apps/frontend/`, `products/04-security/guard/` (submodule), `packages/{types,interfaces,errors,contracts}/` (только читает) |
+| icp-dev | Rust `products/*/canister(s)/` (кроме `products/01-registry/canister/`), `products/03-wallet/http-proxy/`, `products/06-compliance/cli/`, `platform/canister-shared/`, `apps/back/server/infrastructure/icp.cjs` | `products/01-registry/canister/` (registry-dev), TS в `products/*/app/`, `apps/`, `packages/` (только читает) |
+| registry-dev | `products/01-registry/` (весь: `app/`, `canister/`, `tests/`) | Everything else |
+| frontend-dev | `apps/frontend/` | `apps/back/`, `products/`, `canisters/`, `packages/` (кроме чтения `@paxio/types`) |
+| test-runner | READS `tests/`, `products/*/tests/`, `scripts/` — запускает. НЕ пишет код. | ANY implementation code |
 | reviewer | ONLY `docs/project-state.md` + `docs/tech-debt.md` (update after APPROVED) | Everything else |
 
 ## УСТАВНЫЕ ДОКУМЕНТЫ — АБСОЛЮТНЫЙ ЗАПРЕТ для dev-агентов
@@ -166,28 +189,48 @@ Dev-агенты НЕ МОГУТ модифицировать: `.claude/`, `CLAU
 ## Build Commands
 
 ```bash
-# Install
-npm install                                       # workspace root
+# Install (pnpm + Turborepo)
+pnpm install                                      # workspace root (auto инициализирует git submodules)
 
-# Backend (server + app)
-npm run dev:server                                # Fastify с --watch
-npm run server                                    # production
-npm run typecheck                                 # tsc --noEmit для app/types/
-npm run test -- --run                             # vitest unit
-npm run test:integration                          # vitest integration
+# Turborepo — cached + parallel
+pnpm turbo:build                                  # turbo run build (все пакеты)
+pnpm turbo:test                                   # turbo run test
+pnpm turbo:typecheck                              # turbo run typecheck
 
-# Canisters (Rust)
-cd canisters && cargo build --release
-cd canisters && cargo test
-cd canisters && cargo clippy -- -D warnings
+# Quick TS (без turbo)
+pnpm typecheck                                    # tsc --noEmit
+pnpm test -- --run                                # vitest unit
+pnpm test:integration                             # vitest integration
+
+# Backend monolith
+pnpm dev:server                                   # Fastify --watch
+pnpm server                                       # production
+
+# Canisters (Rust — root workspace)
+cargo build --workspace --release
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
+
+# Per-product commands via Turborepo filter
+pnpm turbo run test --filter=@paxio/registry      # только FA-01
+pnpm turbo run build --filter=@paxio/facilitator  # только FA-02
+pnpm turbo run test --filter='./products/*'       # все FA
 
 # Frontend (Next.js)
-cd packages/frontend/landing && npm run dev       # paxio.network
-cd packages/frontend/app && npm run dev           # app.paxio.network
-cd packages/frontend/docs && npm run dev          # docs.paxio.network
+pnpm --filter landing dev                         # paxio.network
+pnpm --filter dashboard dev                       # app.paxio.network
+pnpm --filter docs dev                            # docs.paxio.network
+
+# Python (Intelligence ML)
+cd products/07-intelligence/ml && uv run fastapi dev
 
 # Acceptance scripts
 bash scripts/verify_*.sh
+
+# Changesets — independent versioning per product
+pnpm changeset                                    # describe change
+pnpm changeset version                            # bump versions
+pnpm changeset publish                            # publish only changed packages
 ```
 
 ## Branch Model
@@ -208,20 +251,28 @@ feature/* → dev → main
 
 ## Important Paths
 
-- Backend infrastructure: `server/`
-- Backend business logic: `app/`
-- Shared types (architect): `app/types/`
-- Contracts (architect): `app/interfaces/`
-- Reference data (NOT hardcoded): `app/data/`
-- ICP canisters: `canisters/src/`
-- SDK: `packages/sdk/src/`
-- MCP Server: `packages/mcp-server/src/`
-- Frontend: `packages/frontend/{landing,app,docs}/`
-- CLI: `cli/`
+- Backend infrastructure: `apps/back/server/`
+- Backend shared app infra (VM sandbox): `apps/back/app/{config,data}/`
+- Per-FA backend code: `products/<fa>/app/{api,domain}/`
+- Shared types (architect): `packages/types/src/` — `@paxio/types`
+- Contracts/ports (architect): `packages/interfaces/src/` — `@paxio/interfaces`
+- AppError hierarchy: `packages/errors/src/` — `@paxio/errors`
+- Shared utility impls: `packages/utils/src/` — `@paxio/utils` (Clock, Logger)
+- OpenAPI specs (Published Language): `packages/contracts/`
+- Per-FA canisters: `products/<fa>/canister(s)/`
+- Shared Rust crate: `platform/canister-shared/`
+- FA→paths mapping: `docs/fa-registry.md` (★ source of truth)
+- SDK (TS): `products/03-wallet/sdk-ts/` — `@paxio/sdk`
+- SDK (Python): `products/03-wallet/sdk-python/` — `paxio-sdk` (PyPI)
+- MCP Server: `products/03-wallet/mcp-server/`
+- HTTP Proxy (Rust): `products/03-wallet/http-proxy/`
+- Frontend: `apps/frontend/{landing,dashboard,docs}/`
+- Compliance CLI: `products/06-compliance/cli/`
+- Intelligence ML (Python): `products/07-intelligence/ml/`
+- Guard submodule: `products/04-security/guard/` → `github.com/a3ka/guard` (deploys to guard.paxio.network)
 - External source references: `opensrc/repos/`
-- Tests: `tests/**/*.test.ts` + `canisters/src/**/tests.rs`
+- Tests: `tests/**/*.test.ts` + `products/*/tests/**/*.test.ts` + `products/*/canister(s)/**/tests.rs`
 - Acceptance scripts: `scripts/verify_*.sh`
-- Guard Agent (external): `/home/openclaw/guard/` → deployed to `guard.paxio.network`
 
 ## Принцип «ICP только там где надо»
 

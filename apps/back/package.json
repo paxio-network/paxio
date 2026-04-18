@@ -1,0 +1,16 @@
+{
+  "name": "@paxio/back",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paxio backend — Fastify infrastructure + shared VM sandbox app (Olympus-style)",
+  "main": "./server/main.cjs",
+  "scripts": {
+    "start": "node server/main.cjs",
+    "dev": "node --watch server/main.cjs"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "@fastify/websocket": "^11.0.0",
+    "pino": "^9.0.0"
+  }
+}

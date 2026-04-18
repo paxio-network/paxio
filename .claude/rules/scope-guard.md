@@ -9,20 +9,25 @@ globs: ["server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**
 
 | Agent | ALLOWED files | FORBIDDEN |
 |-------|---------------|-----------|
-| **architect** | `app/types/`, `app/interfaces/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `server/`, `app/api/`, `app/domain/`, `app/lib/`, `canisters/src/`, `packages/` |
-| **backend-dev** | `server/`, `app/api/` (кроме `registry/`), `app/domain/` (кроме `registry/`), `app/lib/`, `app/config/`, `app/data/`, `app/errors/`, `packages/sdk/src/`, `packages/mcp-server/src/` | `canisters/src/`, `packages/frontend/`, `cli/`, `app/types/`, `app/interfaces/` (только читать), `app/{api,domain}/registry/` (registry-dev) |
-| **icp-dev** | `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent,shared}/`, `server/infrastructure/icp.cjs`, `cli/` | `canisters/src/reputation/` (registry-dev), `server/*` (кроме icp.cjs), `app/`, `packages/sdk/`, `packages/mcp-server/`, `packages/frontend/` |
-| **registry-dev** | `app/api/registry/`, `app/domain/registry/`, `canisters/src/reputation/` | Everything else |
-| **frontend-dev** | `packages/frontend/` | `server/`, `app/`, `canisters/`, `packages/sdk/src/` |
-| **test-runner** | READS `tests/`, `scripts/` и запускает их | ANY implementation code — НЕ пишет код |
+| **architect** | `packages/{types,interfaces,errors,contracts}/`, `tests/`, `scripts/verify_*.sh`, `docs/feature-areas/`, `docs/sprints/`, `docs/e2e/`, `docs/fa-registry.md`, `docs/NOUS_Development_Roadmap.md`, `CLAUDE.md`, `.claude/rules/`, `.claude/agents/` | `apps/`, `products/*/app/` (кроме `01-registry/` — но те файлы — только тесты в `products/01-registry/tests/`), `products/*/canister(s)/`, `products/*/cli/`, `products/*/sdk-*`, `products/*/mcp-server/`, `packages/utils/` |
+| **backend-dev** | `apps/back/server/`, `apps/back/app/{config,data}/`, TS `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/04-security/guard-client/`, `products/06-compliance/github-action/`, `packages/utils/` | `products/*/canister(s)/`, `products/*/cli/`, `products/*/http-proxy/`, `apps/frontend/`, `products/04-security/guard/` (submodule), `products/01-registry/` (registry-dev), `packages/{types,interfaces,errors,contracts}/` (только читает) |
+| **icp-dev** | Rust `products/*/canister(s)/` (кроме `products/01-registry/canister/`), `products/03-wallet/http-proxy/`, `products/06-compliance/cli/`, `platform/canister-shared/`, `apps/back/server/infrastructure/icp.cjs` | `products/01-registry/canister/` (registry-dev), TS в `products/*/app/`, `apps/`, `packages/` (только читает) |
+| **registry-dev** | `products/01-registry/` целиком (app + canister + tests) | Everything else |
+| **frontend-dev** | `apps/frontend/` | `apps/back/`, `products/`, `canisters/`, `packages/` (кроме чтения `@paxio/types`) |
+| **test-runner** | READS `tests/`, `products/*/tests/`, `scripts/` — запускает | ANY implementation code — НЕ пишет код |
 | **reviewer** | UPDATES ONLY: `docs/project-state.md`, `docs/tech-debt.md` (после APPROVED) | Everything else |
 
 ### Shared ownership rules
-- `app/types/` — architect owns. Dev-агенты ТОЛЬКО читают, не пишут.
-- `app/interfaces/` — architect owns. Dev-агенты реализуют по контрактам, не меняют сами контракты.
-- `app/data/` — architect определяет структуру (через Zod в `app/types/`). backend-dev наполняет JSON.
-- `packages/sdk/src/` — backend-dev owns (TypeScript SDK `@paxio/sdk`).
-- `packages/frontend/` — frontend-dev owns полностью.
+- `packages/types/` — architect owns. Dev-агенты ТОЛЬКО читают, не пишут.
+- `packages/interfaces/` — architect owns. Dev-агенты реализуют по контрактам, не меняют сами контракты.
+- `packages/errors/` — architect owns (AppError hierarchy — shared across FAs).
+- `packages/contracts/` — architect owns (OpenAPI specs = Published Language).
+- `packages/utils/` — backend-dev owns (Clock, Logger implementations).
+- `apps/back/app/data/` — architect определяет структуру (через Zod в `packages/types/`). backend-dev наполняет JSON.
+- `products/03-wallet/sdk-ts/`, `products/03-wallet/sdk-python/` — backend-dev owns.
+- `apps/frontend/` — frontend-dev owns полностью.
+- `products/04-security/guard/` (submodule) — **external team a3ka**. Paxio dev-агенты **только читают** этот каталог. Contributions → PR в upstream `github.com/a3ka/guard` по отдельному workflow.
+- `products/07-intelligence/ml/` — external ML team. Paxio agents не трогают.
 
 ## УСТАВНЫЕ ДОКУМЕНТЫ — АБСОЛЮТНЫЙ ЗАПРЕТ для ВСЕХ dev-агентов
 
@@ -93,7 +98,7 @@ Why I cannot proceed without it: [конкретная причина]
 Ты реализуешь ТОЛЬКО то, на что architect написал спецификацию.
 Спецификация = ДВА источника (проверь ОБА):
 
-- **Unit тесты** (`tests/*.test.ts`) — RED тесты = задачи Типа 1
+- **Unit тесты** (`tests/*.test.ts` + `products/*/tests/**/*.test.ts`) — RED тесты = задачи Типа 1
 - **Acceptance scripts** (`scripts/verify_*.sh`) — FAIL scripts = задачи Типа 2
 
 Если нет НИ тестов НИ scripts — ты НЕ МОЖЕШЬ решить «я сам реализую это».
