@@ -1,0 +1,61 @@
+// Paxio Wallet Canister — Candid interface (FA-03 §1).
+// Mirrors packages/types/src/wallet.ts. Names MUST stay in sync.
+
+type Asset = variant { Btc; Eth; Usdc };
+
+type TransactionIntent = record {
+  from       : text;   // DID of sender
+  to         : text;   // BTC bech32 or EVM 0x-address (asset-dependent)
+  asset      : Asset;
+  amount     : nat64;  // satoshi / wei / micro-usdc (asset-dependent unit)
+  nonce      : text;   // idempotency key
+  created_at : text;   // ISO-8601 timestamp
+};
+
+type BalanceResponse = record {
+  btc  : nat64;  // satoshi
+  eth  : nat64;  // wei (capped at nat64 for MVP)
+  usdc : nat64;  // micro-USDC (6 decimals)
+};
+
+type SignResponse = record {
+  signature  : text;   // hex-encoded ECDSA signature (64 bytes = 128 hex chars)
+  public_key : text;   // hex-encoded compressed pubkey (33 bytes = 66 hex chars)
+};
+
+type TxDirection = variant { In; Out };
+type TxStatus    = variant { Pending; Confirmed; Failed };
+
+type TxRecord = record {
+  tx_id        : text;
+  asset        : Asset;
+  amount       : nat64;
+  counterparty : text;
+  direction    : TxDirection;
+  status       : TxStatus;
+  timestamp    : text;
+};
+
+type WalletError = variant {
+  ZeroAmount;
+  InvalidBtcAddress      : text;
+  InvalidEvmAddress      : text;
+  InvalidDid             : text;
+  NotFound               : text;
+  CanisterError          : text;
+  SigningFailed          : text;
+};
+
+type DeriveBtcResult     = variant { Ok : text;            Err : WalletError };
+type DeriveEvmResult     = variant { Ok : text;            Err : WalletError };
+type BalanceResult       = variant { Ok : BalanceResponse; Err : WalletError };
+type SignResult          = variant { Ok : SignResponse;    Err : WalletError };
+type TxHistoryResult     = variant { Ok : vec TxRecord;    Err : WalletError };
+
+service : {
+  derive_btc_address : (text) -> (DeriveBtcResult);
+  derive_evm_address : (text) -> (DeriveEvmResult);
+  get_balance        : (text) -> (BalanceResult) query;
+  sign_transaction   : (TransactionIntent) -> (SignResult);
+  get_tx_history     : (text, Asset, nat32) -> (TxHistoryResult) query;
+}
