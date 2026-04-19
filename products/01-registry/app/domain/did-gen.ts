@@ -20,7 +20,14 @@ const NETWORK_RE = /^[a-z0-9]+$/;
  * Generate a deterministic Paxio DID from endpoint + developer + network.
  *
  * Same inputs → same DID (bit-for-bit deterministic).
- * Throws on empty endpoint, empty developer, or invalid network.
+ *
+ * Throws (rather than returning Result) on empty endpoint, empty developer,
+ * or invalid network. Rationale: these are PRECONDITION violations
+ * (programming errors / contract breaks at the call site), not expected
+ * domain error paths. Callers in api/ MUST validate input before invoking
+ * this function — a thrown error here indicates a bug upstream, not a
+ * recoverable runtime condition. See engineering-principles.md §22
+ * (Contract programming) and §6 (precondition vs domain error).
  */
 export const generateDid = (input: GenerateDidInput): Did => {
   const endpoint = input.endpoint.trim();

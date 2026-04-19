@@ -42,7 +42,7 @@
     const result = await domain.registry.verifyClaim(proof);
     if (!result.ok) {
       if (result.error.code === 'claim_invalid_signature') {
-        throw new errors.AuthError(result.error.message);
+        throw new errors.UnauthorizedError(result.error.message);
       }
       if (result.error.code === 'claim_expired') {
         throw new errors.ValidationError(result.error.message);

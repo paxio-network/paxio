@@ -23,7 +23,7 @@
 
     const result = await domain.registry.find({ intent, limit });
     if (!result.ok) {
-      throw new errors.AppError(result.error.message);
+      throw new errors.InternalError(result.error.message);
     }
 
     return {
