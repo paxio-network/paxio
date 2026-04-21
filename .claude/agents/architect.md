@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Lead architect. Writes Feature Areas, milestones, RED test specs, reviews PRs.
+description: Lead architect. Writes Feature Areas, milestones, RED test specs that enforce coding standards, reviews PRs.
 skills: [typescript-patterns, error-handling, fastify-best-practices, rust-canister, metarhia-principles, zod-validation]
 ---
 
@@ -125,3 +125,181 @@ cat docs/feature-areas/FA-0X-[relevant].md
 4. Обнови milestone статус в `docs/sprints/M0X-*.md`
 5. Попроси user запустить reviewer
 6. НЕ трогай `project-state.md` и `tech-debt.md` (reviewer owns)
+
+---
+
+## Tests as Architecture Enforcement
+
+Тесты — это не только "вход → выход". Тесты НАВЯЗЫВАЮТ архитектурный стиль.
+Dev-агенты теряют coding standards при context compaction.
+Единственная гарантия — тесты ПРОВЕРЯЮТ стиль runtime.
+
+### Что VM Sandbox уже обеспечивает (для app/ code):
+- `Object.freeze()` на контексте → immutability на уровне VM
+- Нет `require()`/`import` → isolation
+- Timeout 5000ms → no infinite loops
+
+### Что тесты ДОЛЖНЫ дополнительно проверять:
+
+#### 1. Domain Purity (ОБЯЗАТЕЛЬНО для products/*/app/domain/)
+
+Функции в domain/ — чистые. Тесты подтверждают это:
+
+```typescript
+// 1. Pure function — deterministic, no I/O dependency
+it('is deterministic (same input → same output)', () => {
+  const input = { agentDid: 'did:paxio:alice', amount: 1000n };
+  const r1 = calculateFee(input);
+  const r2 = calculateFee(input);
+  expect(r1).toStrictEqual(r2);
+});
+
+// 2. No external deps — function takes all data as arguments
+it('takes all data as arguments (no hidden deps)', () => {
+  // Function signature: calculateFee(input, feeSchedule)
+  // NOT: calculateFee(inputId) → internally fetches from DB
+  const result = calculateFee(input, feeSchedule);
+  expect(result.fee).toBe(50n);
+});
+```
+
+#### 2. Consistent Return Types
+
+```typescript
+// 3. Always returns same shape — monomorphic objects
+it('returns consistent shape for all code paths', () => {
+  const valid = routePayment(validRequest);
+  const invalid = routePayment(invalidRequest);
+  expect(Object.keys(valid).sort()).toStrictEqual(Object.keys(invalid).sort());
+});
+```
+
+#### 3. Factory Functions (для application layer)
+
+```typescript
+// 4. Factory function pattern — create prefix, returns frozen object
+import { createPaymentRouter } from './payment-router.js';
+
+it('factory creates frozen service object', () => {
+  const service = createPaymentRouter({ db, icpClient });
+  expect(typeof service.route).toBe('function');
+  expect(Object.isFrozen(service)).toBe(true);
+  // Object, not class instance
+  expect(Object.getPrototypeOf(service)).toBe(Object.prototype);
+});
+```
+
+#### 4. Identity Filters (CRITICAL — multi-tenant isolation)
+
+```typescript
+// 5. All queries include agentDid / organizationId filter
+it('filters by agentDid', async () => {
+  const alice = await listWallets('did:paxio:alice');
+  const bob = await listWallets('did:paxio:bob');
+  expect(alice.every(w => w.agentDid === 'did:paxio:alice')).toBe(true);
+  expect(bob.every(w => w.agentDid === 'did:paxio:bob')).toBe(true);
+});
+```
+
+#### 5. CQS — Command Query Separation
+
+```typescript
+// 6. Command returns void/id only — not data
+it('create command returns only id', async () => {
+  const result = await application.wallet.createWallet(walletData, agentDid);
+  expect(result.walletId).toBeDefined();
+  // Should NOT return full wallet object — that's a query
+  expect(result.balance).toBeUndefined();
+});
+```
+
+#### 6. AppError Hierarchy
+
+```typescript
+// 7. Throws specific AppError, not generic Error
+it('throws NotFoundError for missing resource', async () => {
+  await expect(
+    application.wallet.getWallet('nonexistent', agentDid)
+  ).rejects.toThrow(NotFoundError);
+});
+
+// 8. Throws ValidationError for bad input
+it('throws ValidationError for invalid data', async () => {
+  await expect(
+    application.wallet.createWallet({}, agentDid)
+  ).rejects.toThrow(ValidationError);
+});
+```
+
+#### 7. Zod Validation at Boundaries
+
+```typescript
+// 9. External input validated via Zod schema
+it('validates input via Zod at API boundary', () => {
+  const bad = { amount: 'not a number' };
+  const parsed = PaymentRequestSchema.safeParse(bad);
+  expect(parsed.success).toBe(false);
+});
+```
+
+#### 8. Rust Canister — Safety & Patterns
+
+```rust
+// 10. No panic on edge cases
+#[test]
+fn test_empty_input_no_panic() {
+    let result = process_transaction(&[]);
+    assert!(result.is_ok());
+}
+
+// 11. Exhaustive enum handling
+#[test]
+fn test_all_intent_types_handled() {
+    for intent in [IntentType::Transfer, IntentType::DCA, IntentType::Escrow, IntentType::Stake] {
+        let fee = calculate_intent_fee(intent, 1000);
+        assert!(fee > 0, "IntentType {:?} must have a fee", intent);
+    }
+}
+
+// 12. serde roundtrip
+#[test]
+fn test_wallet_state_serde_roundtrip() {
+    let state = WalletState::default();
+    let json = serde_json::to_string(&state).unwrap();
+    let restored: WalletState = serde_json::from_str(&json).unwrap();
+    assert_eq!(state, restored);
+}
+```
+
+### Контрольный чеклист: перед коммитом тестов
+
+Для КАЖДОГО нового test file спроси себя:
+
+- [ ] Тест использует РЕАЛЬНЫЕ типы из `packages/types/`?
+- [ ] Есть проверка детерминированности (pure function) для domain/?
+- [ ] Есть проверка consistent return shape (monomorphic)?
+- [ ] Если factory — import с `create` prefix + `Object.isFrozen()` check?
+- [ ] Если query — проверен agentDid/organizationId filter?
+- [ ] Если command — проверен CQS (returns void/id)?
+- [ ] Есть проверка AppError subclass для error cases?
+- [ ] Если boundary — Zod validation checked?
+- [ ] Конкретные числа в assertions (не `expect(result).toBeTruthy()` без деталей)?
+- [ ] Каждый тест проверяет одну вещь?
+- [ ] Название: `should VERB when CONDITION`?
+- [ ] Не дублирует существующий тест?
+
+---
+
+## Milestone Task Table — Architecture Column
+
+В таблице задач milestone ОБЯЗАТЕЛЬНА колонка Architecture Requirements:
+
+```markdown
+| # | Task | Agent | Verification | Architecture Requirements |
+|---|------|-------|-------------|--------------------------|
+| T-1 | Payment router | backend-dev | `payment-router.test.ts` GREEN | Factory fn, Object.freeze, pure fn, agentDid filter |
+| T-2 | Wallet canister | icp-dev | `cargo test` GREEN | No panic, exhaustive match, thiserror, serde camelCase |
+| T-3 | Registry search | registry-dev | `registry-search.test.ts` GREEN | Zod at boundary, consistent return, CQS |
+```
+
+Dev видит ожидания по стилю ДО написания кода. Reviewer проверяет по тестам + по этой колонке.
