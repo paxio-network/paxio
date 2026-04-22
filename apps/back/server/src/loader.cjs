@@ -77,12 +77,27 @@ const loadApplication = async (appPath, serverContext) => {
   };
 
   // Layer 1: lib (permissions, validation helpers, Zod schemas)
+  // Try top-level lib/ first, then per-product lib/
   const libPath = path.join(appPath, 'lib');
   let lib = {};
   try {
     lib = await loadDir(libPath, sandbox);
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
+  }
+  // Also scan lib/ inside each product's app/
+  const productsEntries = await fsp.readdir(appPath, { withFileTypes: true });
+  for (const entry of productsEntries) {
+    if (!entry.isDirectory()) continue;
+    const productAppLib = path.join(appPath, entry.name, 'app', 'lib');
+    try {
+      const productLib = await loadDir(productAppLib, sandbox);
+      for (const [name, module] of Object.entries(productLib)) {
+        lib[`${entry.name}/${name}`] = module;
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
   }
   sandbox.lib = Object.freeze(lib);
 
@@ -94,15 +109,37 @@ const loadApplication = async (appPath, serverContext) => {
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
+  // Also scan domain/ inside each product's app/
+  for (const entry of productsEntries) {
+    if (!entry.isDirectory()) continue;
+    const productAppDomain = path.join(appPath, entry.name, 'app', 'domain');
+    try {
+      const productDomain = await loadDeepDir(productAppDomain, sandbox);
+      domain[entry.name] = Object.freeze(productDomain);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+  }
   sandbox.domain = Object.freeze(domain);
 
-  // Layer 3: api (HTTP handlers)
+  // Layer 3: api (HTTP handlers — also per-product)
   const apiPath = path.join(appPath, 'api');
   let api = {};
   try {
     api = await loadDeepDir(apiPath, sandbox);
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
+  }
+  // Also scan api/ inside each product's app/
+  for (const entry of productsEntries) {
+    if (!entry.isDirectory()) continue;
+    const productAppApi = path.join(appPath, entry.name, 'app', 'api');
+    try {
+      const productApi = await loadDeepDir(productAppApi, sandbox);
+      api[entry.name] = Object.freeze(productApi);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
   }
   sandbox.api = Object.freeze(api);
 

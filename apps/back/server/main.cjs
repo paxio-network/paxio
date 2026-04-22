@@ -24,7 +24,7 @@ const errors = require('./lib/errors.cjs');
 
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
-const APPLICATION_PATH = path.join(__dirname, '..', 'dist', 'app');
+const APPLICATION_PATH = path.join(__dirname, '..', '..', 'dist', 'products');
 
 const loggerConfig = { level: process.env.LOG_LEVEL || 'info' };
 
