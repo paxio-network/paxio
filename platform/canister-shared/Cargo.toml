@@ -1,0 +1,18 @@
+# Paxio canister-shared — cross-cutting Rust primitives for ICP canisters.
+# Содержит ТОЛЬКО то, что нужно ≥2 canister'ам и не является domain-специфичным.
+# Ported minimal set from bitgent/canisters/shared/src/types.rs (строки 1–17).
+# См. docs/sprints/M00c-canister-shared-dfx-env.md.
+
+[package]
+name = "canister-shared"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+candid.workspace = true
+ic-stable-structures.workspace = true
+serde.workspace = true

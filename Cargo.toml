@@ -1,13 +1,20 @@
 # Root Rust workspace for Paxio canisters.
-# Architect owns this file — dev-agents add their crate sources, NOT new top-level
-# `members` entries. All Phase 0 canister members are pre-registered below.
+# Architect owns this file.
+#
+# MEMBERS: add a member entry ONLY when its Cargo.toml exists on disk.
+# Feature branches (feature/m02-wallet-canister, ...) each include their own
+# canister Cargo.toml on their branch — the branch also ships a Cargo.toml that
+# adds its member to this list. Merging the branch into `dev` therefore does
+# TWO things atomically: (a) adds the crate sources, (b) registers the member.
+# This keeps `cargo build --workspace` green on `dev` at every commit.
 
 [workspace]
 resolver = "2"
 members = [
-  "products/03-wallet/canister",                  # M02 — icp-dev
-  "products/04-security/canister",                # M03 — icp-dev
-  "products/06-compliance/canisters/audit-log",   # M04 — icp-dev
+  "platform/canister-shared",                     # M00c — cross-cutting primitives (AgentId, TxHash)
+  # "products/03-wallet/canister",                # M02 — added on feature/m02-wallet-canister merge
+  # "products/04-security/canister",              # M03 — added on feature/m03-security-sidecar merge
+  # "products/06-compliance/canisters/audit-log", # M04 — added on feature/m04-audit-log merge
 ]
 
 [workspace.package]
