@@ -6,7 +6,7 @@
 ## Версия
 **Version:** 0.1.0
 **Last Updated:** 2026-04-22
-**Last Commit:** `a53d1a9` (M01 Registry TS merged into dev)
+**Last Commit:** `cb8ae3b` (M02 Wallet Canister merged into dev)
 
 ---
 
@@ -55,7 +55,8 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| FA-03: Wallet canister | ⬜ НЕ НАЧАТО | Non-custodial BTC |
+| M02: Wallet Canister MVP (FA-03) | ✅ DONE | `products/03-wallet/canister/` — threshold ECDSA (mock-feature), BTC address derivation, stable storage. `cargo test -p wallet --features mock-ecdsa` 8/8 GREEN; `cargo test -p canister-shared` 9/9 GREEN (merge `cb8ae3b`). |
+| FA-03: Wallet SDK + MCP | ⬜ НЕ НАЧАТО | `products/03-wallet/{sdk-ts,sdk-python,mcp-server}/` |
 | FA-09: Reputation canister | ⬜ НЕ НАЧАТО | On-chain scoring |
 
 ### Phase 4 (P4 — Security + Guard)
@@ -107,15 +108,21 @@ paxio/
 │   ├── domain/                                # empty placeholder
 │   └── api/                                   # empty placeholder
 ├── products/
-│   └── 01-registry/
-│       └── app/                               # ✅ DONE (M01) — TS registry core
-│           ├── api/                           # register, resolve, find, claim, count handlers
-│           └── domain/                        # did-gen, registry, search, claim (in-memory)
+│   ├── 01-registry/
+│   │   └── app/                               # ✅ DONE (M01) — TS registry core
+│   │       ├── api/                           # register, resolve, find, claim, count handlers
+│   │       └── domain/                        # did-gen, registry, search, claim (in-memory)
+│   ├── 03-wallet/
+│   │   └── canister/                          # ✅ DONE (M02) — Wallet Rust canister
+│   │       ├── src/{lib,ecdsa,addresses,storage,types,errors}.rs
+│   │       └── wallet.did                     # Candid interface
+│   ├── 04-security/
+│   │   └── canister/                          # ⚠ STUB (M02 prep) — real impl arrives on feature/m03-security-sidecar merge
+│   └── 06-compliance/
+│       └── canisters/audit-log/               # ⚠ STUB (M02 prep) — real impl arrives on feature/m04-audit-log merge
 ├── platform/
 │   └── canister-shared/                       # ✅ DONE (M00c) — AgentId, TxHash primitives
-├── canisters/
-│   ├── Cargo.toml                             # workspace root
-│   └── src/shared/                            # placeholder crate
+├── Cargo.toml                                 # ROOT Rust workspace (platform/canister-shared, products/*/canister(s))
 ├── packages/
 │   ├── sdk/                                   # @paxio/sdk skeleton
 │   ├── mcp-server/                            # skeleton
@@ -171,6 +178,7 @@ M00 Foundation отмечен ✅ DONE.
 | 2026-04-18 | reviewer | M00 Foundation | ✅ APPROVED | `93d984d`, `dcc769e`, `2b8878e` |
 | 2026-04-22 | reviewer | M00c canister-shared | ✅ APPROVED (conditional, TD-03 recorded) | `aa3dfbe` → merged as `3851150` |
 | 2026-04-22 | reviewer | M01 Registry TS (FA-01) | ✅ APPROVED | `7d7951f` → merged as `a53d1a9` (20/20 vitest + acceptance; TD-M01-1/M01-2 ACK) |
+| 2026-04-22 | reviewer | M02 Wallet Canister (FA-03) | ✅ APPROVED | merged as `cb8ae3b` (cargo test -p wallet --features mock-ecdsa 8/8 GREEN; -p canister-shared 9/9 GREEN) |
 
 ---
 
@@ -179,5 +187,6 @@ M00 Foundation отмечен ✅ DONE.
 - M00 Foundation завершён. Все 6 тест-файлов GREEN (72/72), acceptance PASS, typecheck clean.
 - M00c canister-shared merged (`3851150`): AgentId + TxHash primitives в `platform/canister-shared/`, 9 Rust unit tests GREEN, acceptance 22/22 PASS.
 - M01 Registry TS merged (`a53d1a9`): `products/01-registry/app/` (domain + api handlers + in-memory store + semantic search). 20/20 vitest GREEN + acceptance PASS.
+- M02 Wallet Canister merged (`cb8ae3b`): `products/03-wallet/canister/` — threshold ECDSA (behind `mock-ecdsa` feature), BTC address derivation, stable storage. 8/8 wallet tests + 9/9 canister-shared tests GREEN. Cargo.toml on dev now registers M02/M03/M04 members (M03/M04 are stubs from M02 prep commit — real impl arrives on their own branch merges).
 - 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO).
-- Готово к старту M02 (Wallet canister, FA-03, threshold ECDSA).
+- Готово к merge M03 (Security Sidecar Intent Verifier) и M04 (Audit Log).
