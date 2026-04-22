@@ -6,7 +6,7 @@
 ## Версия
 **Version:** 0.1.0
 **Last Updated:** 2026-04-22
-**Last Commit:** `3851150` (M00c canister-shared merged into dev)
+**Last Commit:** `a53d1a9` (M01 Registry TS merged into dev)
 
 ---
 
@@ -38,9 +38,10 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| FA-01: Registry canister | ⬜ НЕ НАЧАТО | DID registry (M01) |
-| FA-01: Capability system | ⬜ НЕ НАЧАТО | 5 capabilities |
-| FA-01: Frontend UI | ⬜ НЕ НАЧАТО | Agent explorer |
+| M01: Registry TS (FA-01 core) | ✅ DONE | `products/01-registry/app/` — DID gen, register/resolve/find/claim/count handlers, in-memory store, semantic search. 20/20 vitest GREEN + acceptance PASS (merge `a53d1a9` `7d7951f`). TD-M01-1/M01-2 ACK. |
+| FA-01: Capability system | ✅ DONE (v0) | 5 capabilities shipped in M01 registry types/search |
+| FA-01: Reputation canister | ⬜ НЕ НАЧАТО | Rust canister (FA-09 milestone) |
+| FA-01: Frontend UI | ⬜ НЕ НАЧАТО | Agent explorer (M11+) |
 
 ### Phase 2 (P2 — Meta-Facilitator)
 
@@ -105,6 +106,11 @@ paxio/
 │   ├── data/                                  # empty placeholder
 │   ├── domain/                                # empty placeholder
 │   └── api/                                   # empty placeholder
+├── products/
+│   └── 01-registry/
+│       └── app/                               # ✅ DONE (M01) — TS registry core
+│           ├── api/                           # register, resolve, find, claim, count handlers
+│           └── domain/                        # did-gen, registry, search, claim (in-memory)
 ├── platform/
 │   └── canister-shared/                       # ✅ DONE (M00c) — AgentId, TxHash primitives
 ├── canisters/
@@ -164,6 +170,7 @@ M00 Foundation отмечен ✅ DONE.
 |------|----------|-----------|--------|---------|
 | 2026-04-18 | reviewer | M00 Foundation | ✅ APPROVED | `93d984d`, `dcc769e`, `2b8878e` |
 | 2026-04-22 | reviewer | M00c canister-shared | ✅ APPROVED (conditional, TD-03 recorded) | `aa3dfbe` → merged as `3851150` |
+| 2026-04-22 | reviewer | M01 Registry TS (FA-01) | ✅ APPROVED | `7d7951f` → merged as `a53d1a9` (20/20 vitest + acceptance; TD-M01-1/M01-2 ACK) |
 
 ---
 
@@ -171,5 +178,6 @@ M00 Foundation отмечен ✅ DONE.
 
 - M00 Foundation завершён. Все 6 тест-файлов GREEN (72/72), acceptance PASS, typecheck clean.
 - M00c canister-shared merged (`3851150`): AgentId + TxHash primitives в `platform/canister-shared/`, 9 Rust unit tests GREEN, acceptance 22/22 PASS.
-- 3 единицы tech debt зафиксированы (TD-01 errors sync, TD-02/TD-03 governance ACK — architect one-shot authorizations).
-- Готово к старту M01 (Registry canister MVP, FA-01).
+- M01 Registry TS merged (`a53d1a9`): `products/01-registry/app/` (domain + api handlers + in-memory store + semantic search). 20/20 vitest GREEN + acceptance PASS.
+- 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO).
+- Готово к старту M02 (Wallet canister, FA-03, threshold ECDSA).

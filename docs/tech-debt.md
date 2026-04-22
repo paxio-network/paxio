@@ -8,6 +8,8 @@
 | TD-01 | `server/lib/errors.cjs` дублирует коды/статусы из `app/types/errors.ts` + `app/errors/index.ts`. Drift risk: изменение одного файла без второго → рассинхронизация HTTP ответов. | backend-dev | 🟡 MED | architect напишет (сравнить `ERROR_CODES` + `ERROR_STATUS_CODES` между TS и CJS) | 🟡 BACKLOG |
 | TD-02 | Server scaffolding (`server/main.cjs`, `server/src/*.cjs`, `server/lib/errors.cjs`) был написан architect'ом в рамках M00 bootstrap — формально вне scope architect'а. Будущие изменения `server/` ДОЛЖНЫ идти через backend-dev. | governance | 🟢 LOW | — (process note, не код) | 🟢 ACK |
 | TD-03 | `platform/canister-shared/` + `scripts/dfx-setup.sh` + `docs/paxio-dev-environment.md` написаны architect'ом в M00c — формально вне scope. Будущие изменения ДОЛЖНЫ идти через icp-dev. Повтор паттерна TD-02. | governance | 🟢 LOW | — (authorization record, не код) | 🟢 ACK |
+| TD-M01-1 | M01 Registry TS использует локальный string-based `Did` + агент id. Когда Reputation canister (FA-09) приземлится, адаптировать `canister-shared::AgentId` как общий primitive между TS registry и Rust reputation. | registry-dev | 🟢 LOW | — (tracked in future FA-09 milestone) | 🟢 ACK |
+| TD-M01-2 | M01 Registry TS хранит агентов in-memory (`Map`) — временная реализация для MVP. Swap на Postgres (персистентность) + Qdrant (vector search для intent) + Redis (hot cache) запланирован в M17 (persistence milestone). | backend-dev | 🟢 INFO | — (tracked in M17) | 🟢 ACK |
 
 ---
 
@@ -28,7 +30,7 @@
 | Модуль | Open TD | Заметки |
 |--------|---------|---------|
 | Foundation (M00) | 1 | TD-01 errors sync; TD-02/TD-03 ACK |
-| Registry (FA-01) | 0 | |
+| Registry (FA-01) | 0 | TD-M01-1 (AgentId adoption) + TD-M01-2 (in-memory → PG/Qdrant/Redis) ACK |
 | Payment Facilitator (FA-02) | 0 | |
 | Wallet (FA-03) | 0 | |
 | Security Sidecar (FA-04) | 0 | |
@@ -58,3 +60,5 @@
 | 2026-04-18 | TD-01 | reviewer | Обнаружено при M00 review: дублирование error codes между server/ (CJS) и app/ (TS). |
 | 2026-04-18 | TD-02 | reviewer | Обнаружено при M00 review: architect написал server/ файлы — будущие изменения только через backend-dev. |
 | 2026-04-22 | TD-03 | reviewer | Обнаружено при M00c review: architect написал `platform/canister-shared/` + dfx-setup + dev-env doc — будущие изменения только через icp-dev. Повтор паттерна TD-02. |
+| 2026-04-22 | TD-M01-1 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: AgentId primitive из canister-shared будет адоптирован когда FA-09 Reputation canister приземлится. |
+| 2026-04-22 | TD-M01-2 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: in-memory store (MVP) → Postgres/Qdrant/Redis swap в M17 persistence milestone. |
