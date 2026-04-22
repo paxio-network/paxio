@@ -6,7 +6,7 @@
 ## Версия
 **Version:** 0.1.0
 **Last Updated:** 2026-04-22
-**Last Commit:** `cb8ae3b` (M02 Wallet Canister merged into dev)
+**Last Commit:** `037f991` (M03 Security Sidecar Intent Verifier cherry-picked into dev)
 
 ---
 
@@ -63,7 +63,7 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| FA-04: Security Sidecar | ⬜ НЕ НАЧАТО | Intent verifier |
+| M03: Security Sidecar Intent Verifier (FA-04) | ✅ DONE | `products/04-security/canister/` — Rust canister, deterministic intent verification. `cargo test -p security_sidecar` 7/7 GREEN, `cargo build -p security_sidecar --release` clean. Landed via cherry-pick of `7f54c84` (now `037f991`) — full merge avoided because branch was 4+ commits stale (M00c/M01/M02 already on dev). Conflicts resolved: crate Cargo.toml + src/lib.rs took theirs (real impl over M02 stub); root Cargo.toml comment updated stub→real. |
 | FA-08: Guard Agent | ⬜ НЕ НАЧАТО | 11 ML classifiers |
 
 ### Phase 5 (P5 — Bitcoin Agent)
@@ -117,7 +117,8 @@ paxio/
 │   │       ├── src/{lib,ecdsa,addresses,storage,types,errors}.rs
 │   │       └── wallet.did                     # Candid interface
 │   ├── 04-security/
-│   │   └── canister/                          # ⚠ STUB (M02 prep) — real impl arrives on feature/m03-security-sidecar merge
+│   │   └── canister/                          # ✅ DONE (M03) — Security Sidecar Intent Verifier
+│   │       └── src/{lib,verifier,storage,types,errors}.rs
 │   └── 06-compliance/
 │       └── canisters/audit-log/               # ⚠ STUB (M02 prep) — real impl arrives on feature/m04-audit-log merge
 ├── platform/
@@ -179,6 +180,7 @@ M00 Foundation отмечен ✅ DONE.
 | 2026-04-22 | reviewer | M00c canister-shared | ✅ APPROVED (conditional, TD-03 recorded) | `aa3dfbe` → merged as `3851150` |
 | 2026-04-22 | reviewer | M01 Registry TS (FA-01) | ✅ APPROVED | `7d7951f` → merged as `a53d1a9` (20/20 vitest + acceptance; TD-M01-1/M01-2 ACK) |
 | 2026-04-22 | reviewer | M02 Wallet Canister (FA-03) | ✅ APPROVED | merged as `cb8ae3b` (cargo test -p wallet --features mock-ecdsa 8/8 GREEN; -p canister-shared 9/9 GREEN) |
+| 2026-04-22 | reviewer | M03 Security Sidecar Intent Verifier (FA-04) | ✅ APPROVED (cherry-pick) | landed as `037f991` (cargo test -p security_sidecar 7/7 GREEN; release build clean). Single-commit salvage from stale `feature/m03-security-sidecar` (`7f54c84`). Conflicts auto-resolved: kept theirs for crate Cargo.toml + src/lib.rs (real impl over M02 stub); root Cargo.toml member comment updated. |
 
 ---
 
@@ -188,5 +190,6 @@ M00 Foundation отмечен ✅ DONE.
 - M00c canister-shared merged (`3851150`): AgentId + TxHash primitives в `platform/canister-shared/`, 9 Rust unit tests GREEN, acceptance 22/22 PASS.
 - M01 Registry TS merged (`a53d1a9`): `products/01-registry/app/` (domain + api handlers + in-memory store + semantic search). 20/20 vitest GREEN + acceptance PASS.
 - M02 Wallet Canister merged (`cb8ae3b`): `products/03-wallet/canister/` — threshold ECDSA (behind `mock-ecdsa` feature), BTC address derivation, stable storage. 8/8 wallet tests + 9/9 canister-shared tests GREEN. Cargo.toml on dev now registers M02/M03/M04 members (M03/M04 are stubs from M02 prep commit — real impl arrives on their own branch merges).
-- 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO).
-- Готово к merge M03 (Security Sidecar Intent Verifier) и M04 (Audit Log).
+- M03 Security Sidecar Intent Verifier landed (`037f991`): `products/04-security/canister/` — deterministic Rust intent verifier. 7/7 cargo tests GREEN, release build clean. Salvaged via cherry-pick (not full merge) because `feature/m03-security-sidecar` branch was 4+ commits stale and would have wiped M00c/M01/M02. Sibling stubs (M02/M04) on the M03 branch were obsolete — real M02 already on dev, M04 awaits its own cherry-pick. No tech debt recorded (code quality clean).
+- 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO). M03 added 0.
+- Готово к merge M04 (Audit Log) — same cherry-pick pattern recommended.

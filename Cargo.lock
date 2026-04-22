@@ -387,6 +387,14 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "security_sidecar"
 version = "0.1.0"
+dependencies = [
+ "candid",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "ic-stable-structures",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "serde"

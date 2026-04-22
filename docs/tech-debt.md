@@ -33,7 +33,7 @@
 | Registry (FA-01) | 0 | TD-M01-1 (AgentId adoption) + TD-M01-2 (in-memory → PG/Qdrant/Redis) ACK |
 | Payment Facilitator (FA-02) | 0 | |
 | Wallet (FA-03) | 0 | |
-| Security Sidecar (FA-04) | 0 | |
+| Security Sidecar (FA-04) | 0 | M03 review (037f991): code quality clean, no debt recorded. |
 | Bitcoin Agent (FA-05) | 0 | |
 | Compliance (FA-06) | 0 | |
 | Intelligence (FA-07) | 0 | |
@@ -62,3 +62,4 @@
 | 2026-04-22 | TD-03 | reviewer | Обнаружено при M00c review: architect написал `platform/canister-shared/` + dfx-setup + dev-env doc — будущие изменения только через icp-dev. Повтор паттерна TD-02. |
 | 2026-04-22 | TD-M01-1 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: AgentId primitive из canister-shared будет адоптирован когда FA-09 Reputation canister приземлится. |
 | 2026-04-22 | TD-M01-2 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: in-memory store (MVP) → Postgres/Qdrant/Redis swap в M17 persistence milestone. |
+| 2026-04-22 | — | reviewer | M03 Security Sidecar Intent Verifier (`037f991`) review: code quality clean, no tech debt recorded. Cherry-pick salvage process noted in project-state.md (not a debt; salvage was correct response to 4+ commit stale branch). |
