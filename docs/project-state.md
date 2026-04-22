@@ -5,8 +5,8 @@
 
 ## Версия
 **Version:** 0.1.0
-**Last Updated:** 2026-04-18
-**Last Commit:** `2b8878e` (M00 Foundation DONE)
+**Last Updated:** 2026-04-22
+**Last Commit:** `3851150` (M00c canister-shared merged into dev)
 
 ---
 
@@ -29,6 +29,8 @@ Paxio Agent Financial OS — некастодиальный финансовый
 | M00: Logger + Clock impl | ✅ DONE | `app/lib/logger.ts` (pino), `app/lib/clock.ts` (system + fixed) |
 | M00: Server scaffolding | ✅ DONE | `server/main.cjs` + `src/{http,loader,logger,ws}.cjs`, ported from Olympus |
 | M00: Acceptance + E2E | ✅ DONE | `scripts/verify_foundation.sh` 11/11 PASS; `docs/e2e/M00-foundation-canary.md` |
+| M00c: canister-shared primitives | ✅ DONE | `platform/canister-shared/` — AgentId, TxHash. `cargo test -p canister-shared` 9 GREEN; `scripts/verify_m00c_canister_shared.sh` 22/22 PASS |
+| M00c: dfx-setup + dev-env doc | ✅ DONE | `scripts/dfx-setup.sh` + `docs/paxio-dev-environment.md` (architect-authored one-shot, TD-03 ACK) |
 | P0: DKI Canister | ⬜ НЕ НАЧАТО | threshold ECDSA foundation (M01+) |
 | P0: Guard Agent | ⬜ НЕ НАЧАТО | External Python service (отдельный репо) |
 
@@ -103,6 +105,8 @@ paxio/
 │   ├── data/                                  # empty placeholder
 │   ├── domain/                                # empty placeholder
 │   └── api/                                   # empty placeholder
+├── platform/
+│   └── canister-shared/                       # ✅ DONE (M00c) — AgentId, TxHash primitives
 ├── canisters/
 │   ├── Cargo.toml                             # workspace root
 │   └── src/shared/                            # placeholder crate
@@ -159,11 +163,13 @@ M00 Foundation отмечен ✅ DONE.
 | Date | Reviewer | Milestone | Result | Commits |
 |------|----------|-----------|--------|---------|
 | 2026-04-18 | reviewer | M00 Foundation | ✅ APPROVED | `93d984d`, `dcc769e`, `2b8878e` |
+| 2026-04-22 | reviewer | M00c canister-shared | ✅ APPROVED (conditional, TD-03 recorded) | `aa3dfbe` → merged as `3851150` |
 
 ---
 
 ## Notes
 
 - M00 Foundation завершён. Все 6 тест-файлов GREEN (72/72), acceptance PASS, typecheck clean.
-- 2 единицы tech debt зафиксированы (TD-01 server/app errors sync, TD-02 governance note).
+- M00c canister-shared merged (`3851150`): AgentId + TxHash primitives в `platform/canister-shared/`, 9 Rust unit tests GREEN, acceptance 22/22 PASS.
+- 3 единицы tech debt зафиксированы (TD-01 errors sync, TD-02/TD-03 governance ACK — architect one-shot authorizations).
 - Готово к старту M01 (Registry canister MVP, FA-01).
