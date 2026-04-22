@@ -31,7 +31,7 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 | backend-dev | Fastify `apps/back/server/`, TS-часть `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/06-compliance/github-action/` |
 | icp-dev | Rust canisters `products/*/canister(s)/` (кроме FA-01), `products/06-compliance/cli/`, `products/03-wallet/http-proxy/`, `platform/canister-shared/` |
 | registry-dev | FA-01 целиком: `products/01-registry/` (TS `app/` + `canister/` Rust Reputation) |
-| frontend-dev | Next.js 15 фронтенды: `apps/frontend/{landing,dashboard,docs}/` (paxio.network, app.paxio.network, docs.paxio.network) |
+| frontend-dev | 8 Next.js 15 apps (`apps/frontend/{marketing,registry,pay,radar,intel,docs,wallet,fleet}/`) + 4 shared frontend packages (`packages/{ui,hooks,api-client,auth}/`) |
 | test-runner | Build + test verification |
 | reviewer | Scope check, quality review, project-state/tech-debt update |
 
@@ -46,6 +46,9 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 | **Backend business logic (`app/`)** | ES modules в VM Sandbox (`vm.Script`), frozen context, НЕТ `require`/`import`/I/O |
 | **Canisters** | Rust + `ic-cdk` 0.13+ + `ic-stable-structures` |
 | **Frontend** | Next.js 15 (App Router) + Tailwind 4 + Radix UI + Framer Motion |
+| **Frontend auth** | Privy (wallet connect + email magic link) — per-app Privy project |
+| **Frontend charts** | Recharts + Tremor (dashboards), D3 (Network Graph) |
+| **Frontend deploy** | Vercel Monorepo Projects — one Vercel project per app, personal account |
 | **Distribution SDK** | `@paxio/sdk` (TypeScript) — одна строка интеграции |
 | **MCP Server** | TypeScript MCP SDK (`@modelcontextprotocol/sdk`) |
 | **DB** | PostgreSQL + Qdrant (vector) + Redis |
@@ -89,10 +92,15 @@ paxio/
 │   │   └── app/                        # SHARED app infrastructure for VM sandbox
 │   │       ├── config/                 # frozen config loader
 │   │       └── data/                   # reference JSON (protocol fees, rules)
-│   ├── frontend/                       # Next.js 15 apps — frontend-dev
-│   │   ├── landing/                    # paxio.network
-│   │   ├── dashboard/                  # app.paxio.network (cross-FA UI)
-│   │   └── docs/                       # docs.paxio.network
+│   ├── frontend/                       # 8 Next.js 15 apps — frontend-dev. Each = separate Vercel project.
+│   │   ├── marketing/                  # paxio.network           — main landing (real data via API client)
+│   │   ├── registry/                   # registry.paxio.network  — Universal Registry explorer
+│   │   ├── pay/                        # pay.paxio.network       — FAP dashboard, routing rules, API console
+│   │   ├── radar/                      # radar.paxio.network     — Intelligence free tier (press magnet, no auth)
+│   │   ├── intel/                      # intel.paxio.network     — Intelligence Terminal (paid, Pro/Enterprise)
+│   │   ├── docs/                       # docs.paxio.network      — platform + SDK docs
+│   │   ├── wallet/                     # wallet.paxio.network    — Wallet + 9 Bitcoin Agents (brand-configurable → Bitgent if split)
+│   │   └── fleet/                      # fleet.paxio.network     — Enterprise fleet dashboard (SSO/SAML)
 │   └── intelligence-ml/                # ml.paxio.network entry → products/07/ml
 │
 ├── products/                           # 7 Feature Areas — PRIMARY AXIS
@@ -135,12 +143,16 @@ paxio/
 │       ├── canister/                   # Rust: Oracle Network (Chain Fusion)
 │       └── tests/
 │
-├── packages/                           # Shared Kernel (minimal, stable)
-│   ├── types/                          # @paxio/types — Zod + TS (architect)
-│   ├── interfaces/                     # @paxio/interfaces — port contracts (architect)
-│   ├── errors/                         # @paxio/errors — AppError hierarchy
-│   ├── utils/                          # @paxio/utils — shared implementations (Clock, Logger)
-│   └── contracts/                      # OpenAPI specs per FA — Published Language
+├── packages/                           # Shared Kernel (stable, cross-cutting)
+│   ├── types/                          # @paxio/types       — Zod + TS (architect)
+│   ├── interfaces/                     # @paxio/interfaces  — port contracts (architect)
+│   ├── errors/                         # @paxio/errors      — AppError hierarchy (architect)
+│   ├── utils/                          # @paxio/utils       — Clock, Logger (backend-dev)
+│   ├── contracts/                      # OpenAPI specs per FA — Published Language (architect)
+│   ├── ui/                             # @paxio/ui          — React components (frontend-dev)
+│   ├── hooks/                          # @paxio/hooks       — useAgent/useWallet/useGuard (frontend-dev)
+│   ├── api-client/                     # @paxio/api-client  — typed REST/WS client (frontend-dev)
+│   └── auth/                           # @paxio/auth        — Privy wrapper + DID helpers (frontend-dev)
 │
 ├── platform/                           # Cross-cutting technical infrastructure
 │   └── canister-shared/                # Rust shared crate (threshold ECDSA helpers)
@@ -174,7 +186,7 @@ paxio/
 | backend-dev | `apps/back/server/`, `apps/back/app/{config,data}/`, TS-часть `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/04-security/guard-client/`, `products/06-compliance/github-action/`, `packages/utils/` | `products/*/canister(s)/`, `products/*/cli/`, `products/*/http-proxy/`, `apps/frontend/`, `products/04-security/guard/` (submodule), `packages/{types,interfaces,errors,contracts}/` (только читает) |
 | icp-dev | Rust `products/*/canister(s)/` (кроме `products/01-registry/canister/`), `products/03-wallet/http-proxy/`, `products/06-compliance/cli/`, `platform/canister-shared/`, `apps/back/server/infrastructure/icp.cjs` | `products/01-registry/canister/` (registry-dev), TS в `products/*/app/`, `apps/`, `packages/` (только читает) |
 | registry-dev | `products/01-registry/` (весь: `app/`, `canister/`, `tests/`) | Everything else |
-| frontend-dev | `apps/frontend/` | `apps/back/`, `products/`, `canisters/`, `packages/` (кроме чтения `@paxio/types`) |
+| frontend-dev | `apps/frontend/` (8 apps), `packages/{ui,hooks,api-client,auth}/` | `apps/back/`, `products/`, `canisters/`, `packages/{types,interfaces,errors,contracts,utils}/` (только читает) |
 | test-runner | READS `tests/`, `products/*/tests/`, `scripts/` — запускает. НЕ пишет код. | ANY implementation code |
 | reviewer | ONLY `docs/project-state.md` + `docs/tech-debt.md` (update after APPROVED) | Everything else |
 
@@ -216,10 +228,15 @@ pnpm turbo run test --filter=@paxio/registry      # только FA-01
 pnpm turbo run build --filter=@paxio/facilitator  # только FA-02
 pnpm turbo run test --filter='./products/*'       # все FA
 
-# Frontend (Next.js)
-pnpm --filter landing dev                         # paxio.network
-pnpm --filter dashboard dev                       # app.paxio.network
+# Frontend (Next.js) — 8 apps, one pnpm filter each
+pnpm --filter marketing dev                       # paxio.network
+pnpm --filter registry dev                        # registry.paxio.network
+pnpm --filter pay dev                             # pay.paxio.network
+pnpm --filter radar dev                           # radar.paxio.network
+pnpm --filter intel dev                           # intel.paxio.network
 pnpm --filter docs dev                            # docs.paxio.network
+pnpm --filter wallet dev                          # wallet.paxio.network
+pnpm --filter fleet dev                           # fleet.paxio.network
 
 # Python (Intelligence ML)
 cd products/07-intelligence/ml && uv run fastapi dev
@@ -244,10 +261,35 @@ feature/* → dev → main
 - **main** — релиз (tagged `v*`)
 - **Merge = ТОЛЬКО user**. Агенты только создают PR. `git push --force` к main/dev — запрещён для всех агентов.
 
-## CI/CD
+## CI/CD (monorepo with path-filter workflows)
 
-- `.github/workflows/ci.yml`: fmt → typecheck → test → cargo test → audit
-- `.github/workflows/release.yml`: on tag `v*` — build + publish `@paxio/sdk`
+**Single `paxio-network/paxio` repo, 9 workflow files, each path-filtered.**
+Only the workflow matching the changed paths runs — full tree never rebuilds on a single-file change. Pattern copied from `complior/.github/workflows/ci.yml` (dorny/paths-filter).
+
+| Workflow | Triggers on paths | Pattern | Deploys to |
+|---|---|---|---|
+| `ci-frontend-<app>.yml` (×8) | `apps/frontend/<app>/**` | Lint + typecheck + build + audit | Vercel (via git webhook) |
+| `ci-backend.yml` | `apps/back/**`, `products/*/app/**`, `packages/**` | Lint + vitest + pg service + audit | — |
+| `deploy-backend.yml` | push `main` + above paths | Docker build → ghcr.io → SSH Hetzner → healthcheck → rollback | `api.paxio.network` (Hetzner) |
+| `ci-canisters.yml` | `products/*/canister(s)/**`, `Cargo.toml` | cargo fmt + clippy + test + wasm build + audit | — |
+| `release-tools.yml` | tag `v*` + SDK paths | Build binaries (5 platforms) → GitHub Release → npm + JSR + PyPI + crates.io | Public registries |
+
+**Reference workflows (copied/adapted from):**
+- Frontend: `/home/openclaw/complior-saas-front/.github/workflows/ci.yml`
+- Backend: `/home/openclaw/PROJECT/.github/workflows/{ci.yml,deploy.yml}`
+- Tools: `/home/openclaw/complior/.github/workflows/{ci.yml,release.yml}`
+
+See [`docs/secrets.md`](./docs/secrets.md) for the full secrets inventory (GitHub, Vercel, Hetzner).
+
+## Why monorepo (Turborepo)
+
+Each deployable is **its own independent Vercel project / Docker image / npm package** — but all live in **one repo** for these concrete wins:
+
+1. **Spin-off readiness.** `git filter-repo --path products/02-facilitator/ --path packages/types/` extracts a FA with full commit history. With polyrepo the history is split across repos and cannot be cleanly merged back for a buyer.
+2. **Per-part CI.** Workflows use `dorny/paths-filter` — change to `apps/frontend/wallet/` only triggers `ci-frontend-wallet.yml`, not a full rebuild. Reduces CI time by ~80% vs full-repo pipelines.
+3. **Shared code without publish roundtrip.** `@paxio/ui` used by 8 frontend apps — one commit propagates to all consumers via workspace protocol, no npm bump needed.
+4. **Vercel Monorepo Projects.** Each `apps/frontend/<app>/` points to a separate Vercel project with its own domain — independent deploys, independent rollbacks, shared build cache via Turborepo Remote Cache.
+5. **Atomic cross-FA refactors.** FA-01 API + FA-02 consumer change in one PR. In polyrepo that's two coordinated PRs with a race window.
 
 ## Important Paths
 

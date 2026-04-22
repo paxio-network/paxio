@@ -5,17 +5,24 @@
 
 ---
 
-## 7 Feature Areas
+## 7 Feature Areas — Backend + Frontend mapping
 
-| FA | Product | Owner | Paths |
-|---|---|---|---|
-| **FA-01** | P1 Universal Registry | registry-dev | `products/01-registry/` (весь: `app/`, `canister/`, `tests/`) |
-| **FA-02** | P2 Meta-Facilitator + FAP | backend-dev + icp-dev | `products/02-facilitator/` (весь) |
-| **FA-03** | P3 Wallet + Adapter | backend-dev + icp-dev | `products/03-wallet/` (весь) |
-| **FA-04** | P4 Security Layer | backend-dev + icp-dev + (a3ka external) | `products/04-security/` (весь, включая git submodule `guard/`) |
-| **FA-05** | P5 Bitcoin Agent | icp-dev | `products/05-bitcoin-agent/` (весь) |
-| **FA-06** | P6 Compliance Layer (Complior) | backend-dev + icp-dev | `products/06-compliance/` (весь) |
-| **FA-07** | P7 Intelligence Layer | backend-dev + icp-dev + (ml team external) | `products/07-intelligence/` (весь) |
+| FA | Product | Backend owner | Backend paths | Frontend app (Paxio platform) | Independent brand site |
+|---|---|---|---|---|---|
+| **FA-01** | P1 Universal Registry | registry-dev | `products/01-registry/` | `apps/frontend/registry/` → `registry.paxio.network` | — |
+| **FA-02** | P2 Meta-Facilitator + FAP | backend-dev + icp-dev | `products/02-facilitator/` | `apps/frontend/pay/` → `pay.paxio.network` | — |
+| **FA-03** | P3 Wallet + Adapter | backend-dev + icp-dev | `products/03-wallet/` | `apps/frontend/wallet/` → `wallet.paxio.network` (brand-configurable) | optional spin-off: `bitgent.*` |
+| **FA-04** | P4 Security Layer | backend-dev + icp-dev + (a3ka external) | `products/04-security/` (incl. submodule `guard/`) | — (no Paxio subdomain — it's a registered agent) | `guard.complior.ai` (Complior team) |
+| **FA-05** | P5 Bitcoin Agent | icp-dev | `products/05-bitcoin-agent/` | inside `apps/frontend/wallet/bitcoin/*` tabs | — |
+| **FA-06** | P6 Compliance Layer (Complior) | backend-dev + icp-dev | `products/06-compliance/` | — (no Paxio subdomain) | `comply.complior.ai` (Complior team) |
+| **FA-07** | P7 Intelligence Layer | backend-dev + icp-dev + (ml team external) | `products/07-intelligence/` | `apps/frontend/{radar,intel}/` → `radar.paxio.network` (free), `intel.paxio.network` (paid) | — |
+
+**Cross-cutting platform frontends** (not owned by any single FA):
+- `apps/frontend/marketing/` → `paxio.network` — main landing, showcases all FAs
+- `apps/frontend/docs/` → `docs.paxio.network` — unified docs for all FAs + SDKs
+- `apps/frontend/fleet/` → `fleet.paxio.network` — enterprise cross-FA dashboard (vendor agents, compliance, incidents)
+
+**Ownership:** all 8 `apps/frontend/*` + 4 frontend-shared packages (`packages/{ui,hooks,api-client,auth}/`) = **frontend-dev**. Backend FA code = respective backend owner.
 
 **ВАЖНО:** таблица CLAUDE.md ранее упоминала FA-08/09/10. Они **растворены** в первые 7:
 - «FA-08 SDK» = `products/03-wallet/sdk-ts/` + `products/03-wallet/sdk-python/` — часть FA-03
@@ -134,27 +141,45 @@
 
 ---
 
-## Shared Kernel (architect)
+## Shared Kernel
 
-| Component | Path | Package |
-|---|---|---|
-| Shared domain types + Zod schemas | `packages/types/src/` | `@paxio/types` |
-| Port contracts (interfaces) | `packages/interfaces/src/` | `@paxio/interfaces` |
-| AppError hierarchy | `packages/errors/src/` | `@paxio/errors` |
-| Shared utility implementations (Clock, Logger) | `packages/utils/src/` | `@paxio/utils` |
-| OpenAPI specs per FA (Published Language) | `packages/contracts/` | (file-based) |
+### Backend-side (architect + backend-dev owned)
+
+| Component | Path | Package | Owner |
+|---|---|---|---|
+| Shared domain types + Zod schemas | `packages/types/src/` | `@paxio/types` | architect |
+| Port contracts (interfaces) | `packages/interfaces/src/` | `@paxio/interfaces` | architect |
+| AppError hierarchy | `packages/errors/src/` | `@paxio/errors` | architect |
+| OpenAPI specs per FA (Published Language) | `packages/contracts/` | (file-based) | architect |
+| Shared utility implementations (Clock, Logger) | `packages/utils/src/` | `@paxio/utils` | backend-dev |
+
+### Frontend-side (frontend-dev owned)
+
+| Component | Path | Package | Owner |
+|---|---|---|---|
+| Shared React components (AgentCard, SourceBadge, LiveTicker, Sparkline, …) | `packages/ui/src/` | `@paxio/ui` | frontend-dev |
+| React hooks (useAgent, useWallet, useGuard, useRegistry, useIntelligence) | `packages/hooks/src/` | `@paxio/hooks` | frontend-dev |
+| Typed REST + WS client for all Paxio APIs | `packages/api-client/src/` | `@paxio/api-client` | frontend-dev |
+| Privy wrapper + DID helpers | `packages/auth/src/` | `@paxio/auth` | frontend-dev |
 
 ---
 
 ## Platform / Technical Infrastructure
 
-| Component | Path | Language |
-|---|---|---|
-| Fastify server + VM sandbox loader | `apps/back/server/` | CommonJS (.cjs) |
-| Shared VM sandbox infrastructure (config, data) | `apps/back/app/` | ES modules (.js) |
-| Shared Rust crate (threshold ECDSA helpers) | `platform/canister-shared/` | Rust |
-| Frontend apps (Next.js 15) | `apps/frontend/{landing,dashboard,docs}/` | TypeScript + React |
-| Intelligence ML entrypoint | `apps/intelligence-ml/` (→ `products/07-intelligence/ml/`) | Python |
+| Component | Path | Language | Domain |
+|---|---|---|---|
+| Fastify server + VM sandbox loader | `apps/back/server/` | CommonJS (.cjs) | `api.paxio.network` (Hetzner) |
+| Shared VM sandbox infrastructure (config, data) | `apps/back/app/` | ES modules (.js) | — |
+| Shared Rust crate (threshold ECDSA helpers) | `platform/canister-shared/` | Rust | — |
+| Frontend marketing | `apps/frontend/marketing/` | TS + React | `paxio.network` |
+| Frontend registry | `apps/frontend/registry/` | TS + React | `registry.paxio.network` |
+| Frontend pay (FAP) | `apps/frontend/pay/` | TS + React | `pay.paxio.network` |
+| Frontend radar (free Intel) | `apps/frontend/radar/` | TS + React | `radar.paxio.network` |
+| Frontend intel (paid Terminal) | `apps/frontend/intel/` | TS + React | `intel.paxio.network` |
+| Frontend docs | `apps/frontend/docs/` | TS + React + MDX | `docs.paxio.network` |
+| Frontend wallet | `apps/frontend/wallet/` | TS + React | `wallet.paxio.network` |
+| Frontend fleet (enterprise) | `apps/frontend/fleet/` | TS + React | `fleet.paxio.network` |
+| Intelligence ML entrypoint | `apps/intelligence-ml/` (→ `products/07-intelligence/ml/`) | Python | `ml.paxio.network` (Hetzner) |
 
 ---
 
