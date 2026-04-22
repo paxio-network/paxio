@@ -6,7 +6,7 @@
 ## Версия
 **Version:** 0.1.0
 **Last Updated:** 2026-04-22
-**Last Commit:** `7ca66b5` (M04 Audit Log cherry-picked into dev — Phase-0 complete)
+**Last Commit:** `54ac343` (M01c backend-partial reviewed — architect-authored, 3 tech debts recorded)
 
 ---
 
@@ -84,6 +84,7 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
+| M01c: Landing backend (FA-07 partial) | 🟡 PARTIAL (architect-authored) | `products/07-intelligence/app/{domain/landing-stats.ts, api/landing-*.js×7}` — `createLandingStats(deps)` factory + 7 REST endpoints. 9/9 vitest GREEN (`landing-stats.test.ts`). **Written by architect (commit `54ac343`) — Level 3 scope violation, TD-04 governance recorded; TD-05 (`nowIso` purity) + TD-06 (Zod bounds) BACKLOG.** Frontend + Redis cache + Zod validation remain for backend-dev. |
 | FA-07: NLU routing | ⬜ НЕ НАЧАТО | Intent parsing |
 | FA-07: Context engine | ⬜ НЕ НАЧАТО | Memory |
 
@@ -184,6 +185,8 @@ M00 Foundation отмечен ✅ DONE.
 | 2026-04-22 | reviewer | M02 Wallet Canister (FA-03) | ✅ APPROVED | merged as `cb8ae3b` (cargo test -p wallet --features mock-ecdsa 8/8 GREEN; -p canister-shared 9/9 GREEN) |
 | 2026-04-22 | reviewer | M03 Security Sidecar Intent Verifier (FA-04) | ✅ APPROVED (cherry-pick) | landed as `037f991` (cargo test -p security_sidecar 7/7 GREEN; release build clean). Single-commit salvage from stale `feature/m03-security-sidecar` (`7f54c84`). Conflicts auto-resolved: kept theirs for crate Cargo.toml + src/lib.rs (real impl over M02 stub); root Cargo.toml member comment updated. |
 | 2026-04-22 | reviewer | M04 Audit Log Canister (FA-06) | ✅ APPROVED (cherry-pick) | landed as `7ca66b5` (`cargo test -p audit_log` 7/7 GREEN; `verify_m04_audit_log.sh` 7/7 PASS). Single-commit salvage from stale `feature/m04-audit-log` (`de90b10`) — same pattern as M03. Conflicts resolved: kept theirs for crate Cargo.toml + src/lib.rs + Cargo.lock; root Cargo.toml comment updated stub→real. No tech debt recorded. |
+| 2026-04-22 | reviewer | M01b Frontend Bootstrap RED spec (`d94feb6`) + milestone docs (`6741f48`) | ✅ APPROVED | architect-scope: `tests/frontend-bootstrap.test.ts` 111 RED (ожидаемые, await frontend-dev) + milestone update. No new tech debt. |
+| 2026-04-22 | reviewer | M01c Landing backend-partial (FA-07) | ✅ APPROVED (conditional) | `54ac343` — architect-authored backend-dev code. Scope: Level 3 violation — TD-04 recorded (governance ACK, same pattern as TD-02/TD-03). Quality: 9/9 vitest GREEN, Result/Factory/DI clean, но TD-05 (impure `nowIso` — Clock DI нужен) и TD-06 (Zod bounds validation) BACKLOG ждут architect-тестов. Frontend (M01c §§4-10), Redis 1s cache wrapper и Zod validation остаются на backend-dev + frontend-dev. |
 
 ---
 
@@ -211,7 +214,7 @@ M00 Foundation отмечен ✅ DONE.
 - M01b Frontend Bootstrap — awaits frontend-dev (8 Next.js apps scaffolding)
 - M01c Landing (paxio.network real-data API) — awaits backend-dev v2 + frontend-dev
 
-**Outstanding tech debt:** 5 entries (1 MED BACKLOG + 4 LOW/INFO ACK), zero added during M03/M04.
+**Outstanding tech debt:** 8 entries (1 MED BACKLOG + 5 LOW/INFO ACK + 2 LOW BACKLOG from M01c review). M01c review added TD-04 (governance), TD-05 (Clock purity), TD-06 (Zod bounds).
 
 ---
 
@@ -225,3 +228,4 @@ M00 Foundation отмечен ✅ DONE.
 - M04 Audit Log Canister landed (`7ca66b5`): `products/06-compliance/canisters/audit-log/` — SHA-256 hash chain, append-only, stable storage. 7/7 cargo tests GREEN, 7/7 acceptance PASS. Same cherry-pick salvage pattern as M03. No tech debt.
 - 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO). M03/M04 added 0.
 - **Phase-0 завершён.** Next cycle: M01b frontend bootstrap + M01c landing (await dev work); M05+ milestones from architect.
+- **M01b/M01c review (2026-04-22, `54ac343`):** architect написал RED-тесты frontend-bootstrap (111 failing, ожидаемые) + backend-partial M01c (landing-stats domain + 7 API handlers). Backend-partial = Level 3 scope violation (backend-dev доступен, но не использован) → TD-04 governance ACK. TD-05 (`nowIso` impure — нужен Clock DI) и TD-06 (Zod query bounds) BACKLOG. 9/9 vitest GREEN на landing-stats. Общий count: **237 TS GREEN + 34 Rust GREEN + 111 RED (intentional M01b spec)**.
