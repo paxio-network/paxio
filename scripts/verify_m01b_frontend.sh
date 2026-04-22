@@ -13,7 +13,7 @@ bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 step() { echo; echo "▶ $1"; }
 
 step "1. 8 frontend apps exist"
-for app in marketing registry pay radar intel docs wallet fleet; do
+for app in landing registry pay radar intel docs wallet fleet; do
   [ -f "apps/frontend/${app}/package.json" ]  && ok "apps/frontend/${app}/package.json" || bad "missing apps/frontend/${app}/package.json"
   [ -f "apps/frontend/${app}/app/page.tsx" ]   && ok "apps/frontend/${app}/app/page.tsx"  || bad "missing apps/frontend/${app}/app/page.tsx"
 done

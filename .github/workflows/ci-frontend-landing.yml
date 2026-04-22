@@ -1,10 +1,10 @@
-name: CI · Frontend · marketing
+name: CI · Frontend · landing
 
 on:
   pull_request:
     branches: [dev, main]
     paths:
-      - 'apps/frontend/marketing/**'
+      - 'apps/frontend/landing/**'
       - 'packages/ui/**'
       - 'packages/hooks/**'
       - 'packages/api-client/**'
@@ -16,11 +16,11 @@ on:
       - 'pnpm-workspace.yaml'
       - 'turbo.json'
       - 'tsconfig.base.json'
-      - '.github/workflows/ci-frontend-marketing.yml'
+      - '.github/workflows/ci-frontend-landing.yml'
   push:
     branches: [dev, main]
     paths:
-      - 'apps/frontend/marketing/**'
+      - 'apps/frontend/landing/**'
       - 'packages/ui/**'
       - 'packages/hooks/**'
       - 'packages/api-client/**'
@@ -31,11 +31,11 @@ on:
       - 'pnpm-lock.yaml'
 
 concurrency:
-  group: ci-fe-marketing-${{ github.ref }}
+  group: ci-fe-landing-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  APP: marketing
+  APP: landing
   PNPM_VERSION: '10.33.0'
   NODE_VERSION: '22'
 
@@ -118,7 +118,7 @@ jobs:
       - run: pnpm audit --audit-level=critical || true  # SOON: strict after deps stable
 
   status-check:
-    name: All Checks Passed · marketing
+    name: All Checks Passed · landing
     runs-on: ubuntu-latest
     needs: [lint, type-check, build, test, security]
     if: always()

@@ -27,7 +27,7 @@
 
 | File | Trigger | Jobs |
 |---|---|---|
-| `ci-frontend-marketing.yml` | PR/push on `apps/frontend/marketing/**` + shared pkgs | lint, typecheck, build, security |
+| `ci-frontend-landing.yml` | PR/push on `apps/frontend/landing/**` + shared pkgs | lint, typecheck, build, security |
 | `ci-frontend-registry.yml` | `apps/frontend/registry/**` | same |
 | `ci-frontend-pay.yml` | `apps/frontend/pay/**` | same |
 | `ci-frontend-radar.yml` | `apps/frontend/radar/**` | same |
@@ -62,7 +62,7 @@
    - `PYPI_TOKEN` (уже у нас в `.env`)
    - `NPM_TOKEN` (user создаёт через npm)
    - `CARGO_TOKEN` (user создаёт через crates.io)
-   - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_MARKETING` (for 1st frontend project)
+   - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_LANDING` (for 1st frontend project)
 
 4. **JSR OIDC** (no token — но репо должен быть привязан):
    - `jsr.io/@paxio` scope → Settings → linked repo: `paxio-network/paxio`
@@ -77,7 +77,7 @@
 4. Build Command: `cd ../../.. && pnpm turbo run build --filter=<app>`
 5. Install Command: `cd ../../.. && pnpm install --frozen-lockfile`
 6. Output Directory: `.next`
-7. Domain: `<app>.paxio.network` (apex for marketing)
+7. Domain: `<app>.paxio.network` (apex for landing)
 8. Environment Variables: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_PRIVY_APP_ID_*`
 9. Copy Project ID → GitHub Secret `VERCEL_PROJECT_ID_<APP>`
 

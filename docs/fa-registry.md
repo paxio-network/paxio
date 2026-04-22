@@ -18,7 +18,7 @@
 | **FA-07** | P7 Intelligence Layer | backend-dev + icp-dev + (ml team external) | `products/07-intelligence/` | `apps/frontend/{radar,intel}/` → `radar.paxio.network` (free), `intel.paxio.network` (paid) | — |
 
 **Cross-cutting platform frontends** (not owned by any single FA):
-- `apps/frontend/marketing/` → `paxio.network` — main landing, showcases all FAs
+- `apps/frontend/landing/` → `paxio.network` — main landing, showcases all FAs
 - `apps/frontend/docs/` → `docs.paxio.network` — unified docs for all FAs + SDKs
 - `apps/frontend/fleet/` → `fleet.paxio.network` — enterprise cross-FA dashboard (vendor agents, compliance, incidents)
 
@@ -171,7 +171,7 @@
 | Fastify server + VM sandbox loader | `apps/back/server/` | CommonJS (.cjs) | `api.paxio.network` (Hetzner) |
 | Shared VM sandbox infrastructure (config, data) | `apps/back/app/` | ES modules (.js) | — |
 | Shared Rust crate (threshold ECDSA helpers) | `platform/canister-shared/` | Rust | — |
-| Frontend marketing | `apps/frontend/marketing/` | TS + React | `paxio.network` |
+| Frontend landing | `apps/frontend/landing/` | TS + React | `paxio.network` |
 | Frontend registry | `apps/frontend/registry/` | TS + React | `registry.paxio.network` |
 | Frontend pay (FAP) | `apps/frontend/pay/` | TS + React | `pay.paxio.network` |
 | Frontend radar (free Intel) | `apps/frontend/radar/` | TS + React | `radar.paxio.network` |

@@ -4,7 +4,7 @@ Each of 8 Next.js apps in `apps/frontend/*` = separate Vercel project in **perso
 
 | App | Vercel project name | Production domain |
 |---|---|---|
-| `apps/frontend/marketing/` | `paxio-marketing` | `paxio.network` (apex) + `www.paxio.network` |
+| `apps/frontend/landing/` | `paxio-landing` | `paxio.network` (apex) + `www.paxio.network` |
 | `apps/frontend/registry/` | `paxio-registry` | `registry.paxio.network` |
 | `apps/frontend/pay/` | `paxio-pay` | `pay.paxio.network` |
 | `apps/frontend/radar/` | `paxio-radar` | `radar.paxio.network` |

@@ -31,7 +31,7 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code (ре�
 | backend-dev | Fastify `apps/back/server/`, TS-часть `products/*/app/` (кроме FA-01), `products/03-wallet/{sdk-ts,sdk-python,mcp-server,guard-client}/`, `products/06-compliance/github-action/` |
 | icp-dev | Rust canisters `products/*/canister(s)/` (кроме FA-01), `products/06-compliance/cli/`, `products/03-wallet/http-proxy/`, `platform/canister-shared/` |
 | registry-dev | FA-01 целиком: `products/01-registry/` (TS `app/` + `canister/` Rust Reputation) |
-| frontend-dev | 8 Next.js 15 apps (`apps/frontend/{marketing,registry,pay,radar,intel,docs,wallet,fleet}/`) + 4 shared frontend packages (`packages/{ui,hooks,api-client,auth}/`) |
+| frontend-dev | 8 Next.js 15 apps (`apps/frontend/{landing,registry,pay,radar,intel,docs,wallet,fleet}/`) + 4 shared frontend packages (`packages/{ui,hooks,api-client,auth}/`) |
 | test-runner | Build + test verification |
 | reviewer | Scope check, quality review, project-state/tech-debt update |
 
@@ -93,7 +93,7 @@ paxio/
 │   │       ├── config/                 # frozen config loader
 │   │       └── data/                   # reference JSON (protocol fees, rules)
 │   ├── frontend/                       # 8 Next.js 15 apps — frontend-dev. Each = separate Vercel project.
-│   │   ├── marketing/                  # paxio.network           — main landing (real data via API client)
+│   │   ├── landing/                    # paxio.network           — main landing (real data via API client)
 │   │   ├── registry/                   # registry.paxio.network  — Universal Registry explorer
 │   │   ├── pay/                        # pay.paxio.network       — FAP dashboard, routing rules, API console
 │   │   ├── radar/                      # radar.paxio.network     — Intelligence free tier (press magnet, no auth)
@@ -229,7 +229,7 @@ pnpm turbo run build --filter=@paxio/facilitator  # только FA-02
 pnpm turbo run test --filter='./products/*'       # все FA
 
 # Frontend (Next.js) — 8 apps, one pnpm filter each
-pnpm --filter marketing dev                       # paxio.network
+pnpm --filter landing dev                       # paxio.network
 pnpm --filter registry dev                        # registry.paxio.network
 pnpm --filter pay dev                             # pay.paxio.network
 pnpm --filter radar dev                           # radar.paxio.network

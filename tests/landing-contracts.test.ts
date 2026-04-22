@@ -1,6 +1,6 @@
-// Contract-level tests for marketing/landing Zod schemas.
+// Contract-level tests for landing Zod schemas (paxio.network).
 // Locks down the on-wire shape so implementation cannot drift.
-// These schemas drive the real-data API at /api/marketing/*.
+// These schemas drive the real-data API at /api/landing/*.
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -13,7 +13,7 @@ import {
   ZodNetworkPair,
   ZodNetworkSnapshot,
   ZodHeatGrid,
-  ZodMarketingLanding,
+  ZodLandingPayload,
   TICKER_LANES,
   AGENT_SOURCES,
   VERIFICATION_LEVELS,
@@ -381,9 +381,9 @@ describe('ZodHeatGrid', () => {
   });
 });
 
-// --- ZodMarketingLanding (composite SSR payload) ---
+// --- ZodLandingPayload (composite SSR payload) ---
 
-describe('ZodMarketingLanding', () => {
+describe('ZodLandingPayload', () => {
   it('accepts a complete landing payload', () => {
     const payload = {
       hero: heroZero,
@@ -403,7 +403,7 @@ describe('ZodMarketingLanding', () => {
       },
       generated_at: '2026-04-22T10:00:00.000Z',
     };
-    expect(ZodMarketingLanding.safeParse(payload).success).toBe(true);
+    expect(ZodLandingPayload.safeParse(payload).success).toBe(true);
   });
 
   it('requires exactly 3 ticker lanes', () => {
@@ -423,7 +423,7 @@ describe('ZodMarketingLanding', () => {
       },
       generated_at: '2026-04-22T10:00:00.000Z',
     };
-    expect(ZodMarketingLanding.safeParse(payload).success).toBe(false);
+    expect(ZodLandingPayload.safeParse(payload).success).toBe(false);
   });
 
   it('rejects agents array > 20', () => {
@@ -446,6 +446,6 @@ describe('ZodMarketingLanding', () => {
       },
       generated_at: '2026-04-22T10:00:00.000Z',
     };
-    expect(ZodMarketingLanding.safeParse(payload).success).toBe(false);
+    expect(ZodLandingPayload.safeParse(payload).success).toBe(false);
   });
 });

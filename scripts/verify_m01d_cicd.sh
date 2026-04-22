@@ -14,7 +14,7 @@ step() { echo; echo "▶ $1"; }
 
 step "1. 12 workflow files exist"
 REQUIRED=(
-  ".github/workflows/ci-frontend-marketing.yml"
+  ".github/workflows/ci-frontend-landing.yml"
   ".github/workflows/ci-frontend-registry.yml"
   ".github/workflows/ci-frontend-pay.yml"
   ".github/workflows/ci-frontend-radar.yml"

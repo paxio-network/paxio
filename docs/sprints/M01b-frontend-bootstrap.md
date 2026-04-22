@@ -19,7 +19,7 @@
 
 | App | Domain | Accent | Auth |
 |---|---|---|---|
-| `marketing/` | `paxio.network` | primary `#0F3460` | — |
+| `landing/` | `paxio.network` | primary `#0F3460` | — |
 | `registry/` | `registry.paxio.network` | teal `#0F766E` | Privy (partial) |
 | `pay/` | `pay.paxio.network` | accent `#533483` | Privy |
 | `radar/` | `radar.paxio.network` | accent `#533483` | — |
@@ -28,7 +28,7 @@
 | `wallet/` | `wallet.paxio.network` | navy `#1E3A5F` | Privy |
 | `fleet/` | `fleet.paxio.network` | dark `#1A1A2E` | SSO/SAML |
 
-Skeleton = landing-style `page.tsx` showing «Coming soon, under construction». Real content — M01c (marketing) и позже milestones.
+Skeleton = landing-style `page.tsx` showing «Coming soon, under construction». Real content — M01c (landing) и позже milestones.
 
 ### 4 shared packages
 

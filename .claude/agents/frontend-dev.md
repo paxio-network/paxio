@@ -12,7 +12,7 @@ skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, type
 
 | App | Domain | Audience | Auth | Accent |
 |---|---|---|---|---|
-| `marketing/` | `paxio.network` | Everyone (first touch) | None | primary `#0F3460` |
+| `landing/` | `paxio.network` | Everyone (first touch) | None | primary `#0F3460` |
 | `registry/` | `registry.paxio.network` | Developers, VC, researchers | Privy (partial, for registration/watchlist) | teal `#0F766E` |
 | `pay/` | `pay.paxio.network` | Platform devs, enterprise | Privy | accent `#533483` |
 | `radar/` | `radar.paxio.network` | VC, press, builders (FREE, no auth) | None | accent `#533483` |
@@ -90,15 +90,15 @@ Each app inherits base tokens from `@paxio/ui` and overrides its accent via CSS 
 MVP landing and all 8 apps consume **real backend endpoints** via `@paxio/api-client`. Example:
 
 ```tsx
-// apps/frontend/marketing/components/LiveStats.tsx
+// apps/frontend/landing/components/LiveStats.tsx
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { paxioClient } from '@paxio/api-client';
 
 export function LiveStats() {
   const { data } = useQuery({
-    queryKey: ['marketing-stats'],
-    queryFn: () => paxioClient.marketing.getLiveStats(),
+    queryKey: ['landing-stats'],
+    queryFn: () => paxioClient.landing.getLiveStats(),
     refetchInterval: 1100,  // 1.1s poll — matches HTML landing pulse
   });
   if (!data) return <Skeleton />;
@@ -106,7 +106,7 @@ export function LiveStats() {
 }
 ```
 
-Backend `/api/marketing/stats` endpoint returns real values from Registry + Intel + FAP stores. Early in product life those stores contain small real values (50 agents, not 2.4M). That is **not mock** — it's the real current state. As users join, numbers grow naturally.
+Backend `/api/landing/stats` endpoint returns real values from Registry + Intel + FAP stores. Early in product life those stores contain small real values (50 agents, not 2.4M). That is **not mock** — it's the real current state. As users join, numbers grow naturally.
 
 **NEVER:**
 - Hardcode values like `agents: 2_483_989` in components

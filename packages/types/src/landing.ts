@@ -1,8 +1,8 @@
-// Marketing / landing contracts — data surfaced on paxio.network landing page.
+// Landing contracts — data surfaced on paxio.network (apps/frontend/landing/).
 //
 // All fields mirror the live-ticker design in the landing HTML
 // (tmp/Paxio-Financial OS for the agentic economy.html). The backend exposes
-// these through /api/marketing/* endpoints in products/07-intelligence/app/api/.
+// these through /api/landing/* endpoints in products/07-intelligence/app/api/.
 //
 // Fields are populated from real stores (Registry counts, Intelligence indices,
 // FAP throughput, Security threat log). Early in product life many values will
@@ -217,9 +217,9 @@ export const ZodHeatGrid = z.object({
 });
 export type HeatGrid = z.infer<typeof ZodHeatGrid>;
 
-// --- Compound response — /api/marketing/landing (one-shot for initial SSR) -----
+// --- Compound response — /api/landing (one-shot for initial SSR) -----
 
-export const ZodMarketingLanding = z.object({
+export const ZodLandingPayload = z.object({
   hero: ZodHeroState,
   ticker_lanes: z.array(ZodTickerLane).length(3),
   agents: z.array(ZodAgentPreview).max(20),
@@ -228,13 +228,13 @@ export const ZodMarketingLanding = z.object({
   heatmap: ZodHeatGrid,
   generated_at: z.string().datetime(),
 });
-export type MarketingLanding = z.infer<typeof ZodMarketingLanding>;
+export type LandingPayload = z.infer<typeof ZodLandingPayload>;
 
 // --- Incremental polling responses ---------------------------------------------
 
-// GET /api/marketing/hero              → ZodHeroState                (1100ms poll)
-// GET /api/marketing/ticker            → ZodTickerLane[]             (1100ms poll)
-// GET /api/marketing/network/snapshot  → ZodNetworkSnapshot          (3000ms poll)
-// GET /api/marketing/heatmap           → ZodHeatGrid                 (60000ms poll)
-// GET /api/marketing/agents/top        → ZodAgentPreview[]           (on-load, paginated)
-// GET /api/marketing/landing           → ZodMarketingLanding         (SSR one-shot)
+// GET /api/landing                     → ZodLandingPayload           (SSR one-shot)
+// GET /api/landing/hero                → ZodHeroState                (1100ms poll)
+// GET /api/landing/ticker              → ZodTickerLane[]             (1100ms poll)
+// GET /api/landing/network/snapshot    → ZodNetworkSnapshot          (3000ms poll)
+// GET /api/landing/heatmap             → ZodHeatGrid                 (60000ms poll)
+// GET /api/landing/agents/top          → ZodAgentPreview[]           (on-load, paginated)

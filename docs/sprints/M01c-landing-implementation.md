@@ -6,9 +6,9 @@
 **Estimate:** 7–10 days
 
 ## Готово когда:
-- [ ] `apps/frontend/marketing/` рендерит все 7 секций из ТЗ v2.0 с pixel-parity к HTML
-- [ ] Все live-data значения приходят из `/api/marketing/*` через `@paxio/api-client` — **НЕТ mock в компонентах**
-- [ ] `products/07-intelligence/app/domain/marketing-stats.ts` реализует `MarketingStats` port
+- [ ] `apps/frontend/landing/` рендерит все 7 секций из ТЗ v2.0 с pixel-parity к HTML
+- [ ] Все live-data значения приходят из `/api/landing/*` через `@paxio/api-client` — **НЕТ mock в компонентах**
+- [ ] `products/07-intelligence/app/domain/landing-stats.ts` реализует `LandingStats` port
 - [ ] `products/07-intelligence/app/api/*.js` выставляет 6 endpoints (landing, hero, ticker, agents/top, rails, network/snapshot, heatmap)
 - [ ] Early product state = real empty values (0 agents, 0 txns) — НЕ fake 2.4M
 - [ ] `bash scripts/verify_m01c_landing.sh` — PASS
@@ -20,14 +20,14 @@
 
 | File | Purpose |
 |---|---|
-| `products/07-intelligence/app/domain/marketing-stats.ts` | `createMarketingStats(deps)` factory → `MarketingStats` port impl. Pulls real from Registry.count, Audit Log aggregate, Security threat log, FAP stats. |
-| `products/07-intelligence/app/api/marketing-landing.js` | GET `/api/marketing/landing` → `ZodMarketingLanding` |
-| `products/07-intelligence/app/api/marketing-hero.js` | GET `/api/marketing/hero` → `ZodHeroState` |
-| `products/07-intelligence/app/api/marketing-ticker.js` | GET `/api/marketing/ticker` → `TickerLane[]` |
-| `products/07-intelligence/app/api/marketing-agents-top.js` | GET `/api/marketing/agents/top?limit=20` → `AgentPreview[]` |
-| `products/07-intelligence/app/api/marketing-rails.js` | GET `/api/marketing/rails` → `RailInfo[]` |
-| `products/07-intelligence/app/api/marketing-network-snapshot.js` | GET `/api/marketing/network/snapshot` → `NetworkSnapshot` |
-| `products/07-intelligence/app/api/marketing-heatmap.js` | GET `/api/marketing/heatmap` → `HeatGrid` |
+| `products/07-intelligence/app/domain/landing-stats.ts` | `createLandingStats(deps)` factory → `LandingStats` port impl. Pulls real from Registry.count, Audit Log aggregate, Security threat log, FAP stats. |
+| `products/07-intelligence/app/api/landing-landing.js` | GET `/api/landing/landing` → `ZodLandingPayload` |
+| `products/07-intelligence/app/api/landing-hero.js` | GET `/api/landing/hero` → `ZodHeroState` |
+| `products/07-intelligence/app/api/landing-ticker.js` | GET `/api/landing/ticker` → `TickerLane[]` |
+| `products/07-intelligence/app/api/landing-agents-top.js` | GET `/api/landing/agents/top?limit=20` → `AgentPreview[]` |
+| `products/07-intelligence/app/api/landing-rails.js` | GET `/api/landing/rails` → `RailInfo[]` |
+| `products/07-intelligence/app/api/landing-network-snapshot.js` | GET `/api/landing/network/snapshot` → `NetworkSnapshot` |
+| `products/07-intelligence/app/api/landing-heatmap.js` | GET `/api/landing/heatmap` → `HeatGrid` |
 
 **Backend stores consumed** (early phase — may return empty-but-real):
 - Registry: `count()`, `find({limit: 20})` for top agents
@@ -49,11 +49,11 @@
 - `<HeatmapGrid grid={grid} />` — 6×6 SVG cells с gradient fill.
 - `<SectionFrame kicker title subtitle>{children}</SectionFrame>` — layout wrapper.
 
-### `apps/frontend/marketing/`
+### `apps/frontend/landing/`
 
 | File | Purpose |
 |---|---|
-| `app/page.tsx` | Root — compose all 7 sections, SSR initial payload via `/api/marketing/landing` |
+| `app/page.tsx` | Root — compose all 7 sections, SSR initial payload via `/api/landing/landing` |
 | `app/sections/01-hero.tsx` | Hero + 3-lane ticker + agent table + state strip |
 | `app/sections/02-quickstart.tsx` | `<TerminalWidget>` — SDK install 6-stage reveal |
 | `app/sections/02b-bitcoin.tsx` | BTC-native marketing copy (static) |
@@ -73,8 +73,8 @@ import { paxioClient } from '@paxio/api-client';
 
 export function LiveTicker() {
   const { data, isPending } = useQuery({
-    queryKey: ['marketing-ticker'],
-    queryFn: () => paxioClient.marketing.getTicker(),
+    queryKey: ['landing-ticker'],
+    queryFn: () => paxioClient.landing.getTicker(),
     refetchInterval: 1100,
   });
   if (isPending) return <TickerSkeleton />;
@@ -92,35 +92,35 @@ Backend endpoint может возвращать `{paei: 0, ...}` в ранне�
 
 ## Tests (RED — architect пишет до dev)
 
-### Contract-level (уже ✅ GREEN в `tests/marketing-contracts.test.ts` — 41 тест)
+### Contract-level (уже ✅ GREEN в `tests/landing-contracts.test.ts` — 41 тест)
 
 ### Behavior-level
-- `products/07-intelligence/tests/marketing-stats.test.ts` — RED:
+- `products/07-intelligence/tests/landing-stats.test.ts` — RED:
   - `getHero returns zero state when Registry is empty`
   - `getHero aggregates real Registry.count + Audit Log.count_24h`
   - `getTopAgents sorts by reputation desc`
   - `getNetworkSnapshot returns {nodes:[], pairs:[], generated_at}` on empty state
   - `getHeatmap returns 6x6 zero grid when Guard has no events`
-  - `upstream failures propagate as MarketingError{code:'upstream_error'}`
+  - `upstream failures propagate as LandingError{code:'upstream_error'}`
 
 ### Frontend
-- `apps/frontend/marketing/tests/sections.test.tsx` — smoke: каждая секция рендерит без crash с mocked react-query client (NOT mocked data в компонентах — mocked API layer)
-- `apps/frontend/marketing/tests/live-ticker.test.tsx` — делает `useQuery`, fetch мокируется через MSW, lane renders
+- `apps/frontend/landing/tests/sections.test.tsx` — smoke: каждая секция рендерит без crash с mocked react-query client (NOT mocked data в компонентах — mocked API layer)
+- `apps/frontend/landing/tests/live-ticker.test.tsx` — делает `useQuery`, fetch мокируется через MSW, lane renders
 
 ## Acceptance script
 
 `bash scripts/verify_m01c_landing.sh`:
 1. backend endpoints: 7 paths return 200 + валидный Zod shape
-2. frontend build (`pnpm turbo run build --filter=marketing`) — clean
+2. frontend build (`pnpm turbo run build --filter=landing`) — clean
 3. Playwright (headless): GET http://localhost:3000 returns 200, все 7 `<section>` в DOM
-4. `grep -rn 'Math.random\|setInterval' apps/frontend/marketing/app/` — ZERO matches (no fake live data)
-5. `grep -rn 'hardcoded_value\|mock_' apps/frontend/marketing/app/` — ZERO matches (no mock imports in prod code)
+4. `grep -rn 'Math.random\|setInterval' apps/frontend/landing/app/` — ZERO matches (no fake live data)
+5. `grep -rn 'hardcoded_value\|mock_' apps/frontend/landing/app/` — ZERO matches (no mock imports in prod code)
 
 ## Таблица задач
 
 | # | Задача | Агент | Метод верификации | Архитектурные требования |
 |---|---|---|---|---|
-| 1 | MarketingStats factory + port impl | backend-dev | `marketing-stats.test.ts` GREEN | Factory `createMarketingStats(deps)` frozen, pure domain fn, Result<T,E>, agentDid filter where applicable |
+| 1 | LandingStats factory + port impl | backend-dev | `landing-stats.test.ts` GREEN | Factory `createLandingStats(deps)` frozen, pure domain fn, Result<T,E>, agentDid filter where applicable |
 | 2 | 7 API handlers | backend-dev | contract tests pass + typecheck | VM sandbox format (backend-api-patterns.md), Zod at boundary, `throw errors.InternalError` on upstream fail |
 | 3 | Redis 1s cache wrapper | backend-dev | cache hit test | Idempotent, same-input → same-output |
 | 4 | `<LiveTicker>` in @paxio/ui | frontend-dev | smoke test + vitest | useQuery-based, no setInterval in component, `'use client'` only on wrapper |

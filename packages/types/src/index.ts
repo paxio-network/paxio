@@ -11,5 +11,5 @@ export * from './registry.js';
 export * from './wallet.js';
 export * from './security.js';
 export * from './audit-log.js';
-// Marketing / landing (real-data API)
-export * from './marketing.js';
+// Landing (real-data API for paxio.network)
+export * from './landing.js';

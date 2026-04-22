@@ -51,7 +51,7 @@ Settings → Secrets and variables → Actions → Repository secrets:
 Minimum required for `main` branch (current Phase 0):
 - `HETZNER_HOST`, `HETZNER_USER`, `HETZNER_SSH_KEY` — backend deploy
 - `PYPI_TOKEN`, `NPM_TOKEN`, `CARGO_TOKEN` — SDK publish
-- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_MARKETING` — frontend deploy (only marketing in P0)
+- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_LANDING` — frontend deploy (only landing in P0)
 
 Can be added later:
 - Remaining `VERCEL_PROJECT_ID_*` (as each frontend app reaches deploy-ready)
