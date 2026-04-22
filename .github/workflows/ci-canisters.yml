@@ -1,0 +1,121 @@
+name: CI · Canisters (Rust / ICP)
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'products/*/canister/**'
+      - 'products/*/canisters/**'
+      - 'products/*/http-proxy/**'
+      - 'products/*/cli/**'
+      - 'platform/canister-shared/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/ci-canisters.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'products/*/canister/**'
+      - 'products/*/canisters/**'
+      - 'products/*/http-proxy/**'
+      - 'products/*/cli/**'
+      - 'platform/canister-shared/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+concurrency:
+  group: ci-canisters-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: Rust Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: Rust Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: Rust Tests (workspace)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --features mock-ecdsa
+
+  wasm-build:
+    name: WASM cdylib build (canister deploy target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm32
+      # Each canister crate must build as a wasm32 cdylib.
+      # Drive by enumerating members from root Cargo.toml.
+      - name: Build all canister crates for wasm32
+        run: |
+          set -euxo pipefail
+          for c in wallet security_sidecar audit_log; do
+            echo "=== $c ==="
+            cargo rustc -p "$c" --target wasm32-unknown-unknown --crate-type cdylib --release
+          done
+
+  security:
+    name: Security (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  acceptance:
+    name: Canister acceptance scripts
+    runs-on: ubuntu-latest
+    needs: [test, wasm-build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: verify_m02_wallet
+        if: hashFiles('products/03-wallet/canister/src/lib.rs') != ''
+        run: bash scripts/verify_m02_wallet.sh
+      - name: verify_m03_security
+        if: hashFiles('products/04-security/canister/src/lib.rs') != ''
+        run: bash scripts/verify_m03_security.sh
+      - name: verify_m04_audit_log
+        if: hashFiles('products/06-compliance/canisters/audit-log/src/lib.rs') != ''
+        run: bash scripts/verify_m04_audit_log.sh
+
+  status-check:
+    name: All Checks Passed · canisters
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test, wasm-build, security, acceptance]
+    if: always()
+    steps:
+      - name: Verify
+        run: |
+          for r in "${{ needs.fmt.result }}" "${{ needs.clippy.result }}" "${{ needs.test.result }}" "${{ needs.wasm-build.result }}"; do
+            if [ "$r" != "success" ]; then echo "❌ $r"; exit 1; fi
+          done
+          echo "✅ All checks passed"
