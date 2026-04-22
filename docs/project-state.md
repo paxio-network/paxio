@@ -6,7 +6,7 @@
 ## Версия
 **Version:** 0.1.0
 **Last Updated:** 2026-04-22
-**Last Commit:** `037f991` (M03 Security Sidecar Intent Verifier cherry-picked into dev)
+**Last Commit:** `7ca66b5` (M04 Audit Log cherry-picked into dev — Phase-0 complete)
 
 ---
 
@@ -77,7 +77,7 @@ Paxio Agent Financial OS — некастодиальный финансовый
 
 | Модуль | Status | Заметки |
 |--------|--------|---------|
-| FA-06: Audit log | ⬜ НЕ НАЧАТО | Immutable records |
+| M04: Audit Log Canister MVP (FA-06) | ✅ DONE | `products/06-compliance/canisters/audit-log/` — SHA-256 hash chain, append-only, stable storage. `cargo test -p audit_log` 7/7 GREEN; `bash scripts/verify_m04_audit_log.sh` 7/7 PASS. Landed via cherry-pick of `de90b10` (now `7ca66b5`) — same salvage pattern as M03 (branch 4+ commits stale; skipped sibling-stubs prep commit). Conflicts resolved: kept theirs for crate Cargo.toml + src/lib.rs (real impl over stub); Cargo.lock kept theirs; root Cargo.toml comment updated stub→real. |
 | FA-06: KYC/AML | ⬜ НЕ НАЧАТО | Travel Rule |
 
 ### Phase 7 (P7 — Intelligence)
@@ -120,7 +120,9 @@ paxio/
 │   │   └── canister/                          # ✅ DONE (M03) — Security Sidecar Intent Verifier
 │   │       └── src/{lib,verifier,storage,types,errors}.rs
 │   └── 06-compliance/
-│       └── canisters/audit-log/               # ⚠ STUB (M02 prep) — real impl arrives on feature/m04-audit-log merge
+│       └── canisters/audit-log/               # ✅ DONE (M04) — Audit Log (SHA-256 hash chain)
+│           ├── src/{lib,chain,storage,types,errors}.rs
+│           └── audit_log.did                    # Candid interface
 ├── platform/
 │   └── canister-shared/                       # ✅ DONE (M00c) — AgentId, TxHash primitives
 ├── Cargo.toml                                 # ROOT Rust workspace (platform/canister-shared, products/*/canister(s))
@@ -181,6 +183,35 @@ M00 Foundation отмечен ✅ DONE.
 | 2026-04-22 | reviewer | M01 Registry TS (FA-01) | ✅ APPROVED | `7d7951f` → merged as `a53d1a9` (20/20 vitest + acceptance; TD-M01-1/M01-2 ACK) |
 | 2026-04-22 | reviewer | M02 Wallet Canister (FA-03) | ✅ APPROVED | merged as `cb8ae3b` (cargo test -p wallet --features mock-ecdsa 8/8 GREEN; -p canister-shared 9/9 GREEN) |
 | 2026-04-22 | reviewer | M03 Security Sidecar Intent Verifier (FA-04) | ✅ APPROVED (cherry-pick) | landed as `037f991` (cargo test -p security_sidecar 7/7 GREEN; release build clean). Single-commit salvage from stale `feature/m03-security-sidecar` (`7f54c84`). Conflicts auto-resolved: kept theirs for crate Cargo.toml + src/lib.rs (real impl over M02 stub); root Cargo.toml member comment updated. |
+| 2026-04-22 | reviewer | M04 Audit Log Canister (FA-06) | ✅ APPROVED (cherry-pick) | landed as `7ca66b5` (`cargo test -p audit_log` 7/7 GREEN; `verify_m04_audit_log.sh` 7/7 PASS). Single-commit salvage from stale `feature/m04-audit-log` (`de90b10`) — same pattern as M03. Conflicts resolved: kept theirs for crate Cargo.toml + src/lib.rs + Cargo.lock; root Cargo.toml comment updated stub→real. No tech debt recorded. |
+
+---
+
+## Phase-0 Completion — 2026-04-22
+
+**Все 6 Phase-0 милестоунов DONE.** Dev-ветка консистентна после последовательных merges/cherry-picks.
+
+| # | Милестоун | Landed | Commit | Tests |
+|---|-----------|--------|--------|-------|
+| 1 | M00 Foundation | merged | `2b8878e` | 72/72 vitest GREEN · 11/11 acceptance PASS |
+| 2 | M00c canister-shared | merged | `3851150` | 9/9 cargo GREEN · 22/22 acceptance PASS |
+| 3 | M01 Registry TS (FA-01) | merged | `a53d1a9` | 20/20 vitest GREEN · 10/10 acceptance PASS |
+| 4 | M02 Wallet Canister (FA-03) | merged | `cb8ae3b` | 8/8 cargo GREEN · 9/9 acceptance PASS |
+| 5 | M03 Security Sidecar (FA-04) | cherry-pick | `037f991` | 7/7 cargo GREEN · 7/7 acceptance PASS |
+| 6 | M04 Audit Log (FA-06) | cherry-pick | `7ca66b5` | 7/7 cargo GREEN · 7/7 acceptance PASS |
+
+**Cumulative aggregate verification (2026-04-22):**
+- Rust: `cargo test --workspace` → **31/31 GREEN** (canister-shared 9 + wallet 8 + security_sidecar 7 + audit_log 7)
+- TypeScript: `npx vitest run` → **217/217 GREEN** across 13 test files
+- Acceptance PASS: `verify_m00c_canister_shared.sh`, `verify_m01_registry.sh`, `verify_m02_wallet.sh`, `verify_m03_security.sh`, `verify_m04_audit_log.sh`
+- Acceptance FAIL (expected, NOT regressions): `verify_m01b_frontend.sh` (awaits frontend-dev), `verify_m01c_landing.sh` (awaits backend-dev v2 + frontend-dev)
+- Acceptance FAIL (pre-existing stale-script issues, not Phase-0 regressions): `verify_foundation.sh` checks removed `canisters/` dir (cleaned up in `e7deb05` when repo went product-first); `verify_m01d_cicd.sh` 35/36 PASS (cosmetic doc check for GITHUB_TOKEN in secrets.md). Both need architect update for product-first layout — tracked outside Phase-0.
+
+**NOT done (intentional, next cycle):**
+- M01b Frontend Bootstrap — awaits frontend-dev (8 Next.js apps scaffolding)
+- M01c Landing (paxio.network real-data API) — awaits backend-dev v2 + frontend-dev
+
+**Outstanding tech debt:** 5 entries (1 MED BACKLOG + 4 LOW/INFO ACK), zero added during M03/M04.
 
 ---
 
@@ -189,7 +220,8 @@ M00 Foundation отмечен ✅ DONE.
 - M00 Foundation завершён. Все 6 тест-файлов GREEN (72/72), acceptance PASS, typecheck clean.
 - M00c canister-shared merged (`3851150`): AgentId + TxHash primitives в `platform/canister-shared/`, 9 Rust unit tests GREEN, acceptance 22/22 PASS.
 - M01 Registry TS merged (`a53d1a9`): `products/01-registry/app/` (domain + api handlers + in-memory store + semantic search). 20/20 vitest GREEN + acceptance PASS.
-- M02 Wallet Canister merged (`cb8ae3b`): `products/03-wallet/canister/` — threshold ECDSA (behind `mock-ecdsa` feature), BTC address derivation, stable storage. 8/8 wallet tests + 9/9 canister-shared tests GREEN. Cargo.toml on dev now registers M02/M03/M04 members (M03/M04 are stubs from M02 prep commit — real impl arrives on their own branch merges).
-- M03 Security Sidecar Intent Verifier landed (`037f991`): `products/04-security/canister/` — deterministic Rust intent verifier. 7/7 cargo tests GREEN, release build clean. Salvaged via cherry-pick (not full merge) because `feature/m03-security-sidecar` branch was 4+ commits stale and would have wiped M00c/M01/M02. Sibling stubs (M02/M04) on the M03 branch were obsolete — real M02 already on dev, M04 awaits its own cherry-pick. No tech debt recorded (code quality clean).
-- 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO). M03 added 0.
-- Готово к merge M04 (Audit Log) — same cherry-pick pattern recommended.
+- M02 Wallet Canister merged (`cb8ae3b`): `products/03-wallet/canister/` — threshold ECDSA (behind `mock-ecdsa` feature), BTC address derivation, stable storage. 8/8 wallet tests + 9/9 canister-shared tests GREEN.
+- M03 Security Sidecar Intent Verifier landed (`037f991`): `products/04-security/canister/` — deterministic Rust intent verifier. 7/7 cargo tests GREEN, release build clean. Salvaged via cherry-pick (stale branch). No tech debt.
+- M04 Audit Log Canister landed (`7ca66b5`): `products/06-compliance/canisters/audit-log/` — SHA-256 hash chain, append-only, stable storage. 7/7 cargo tests GREEN, 7/7 acceptance PASS. Same cherry-pick salvage pattern as M03. No tech debt.
+- 5 единиц tech debt зафиксированы: TD-01 errors sync (MED), TD-02/TD-03 governance ACK, TD-M01-1 AgentId adoption (LOW), TD-M01-2 in-memory → persistence (INFO). M03/M04 added 0.
+- **Phase-0 завершён.** Next cycle: M01b frontend bootstrap + M01c landing (await dev work); M05+ milestones from architect.

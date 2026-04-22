@@ -35,7 +35,7 @@
 | Wallet (FA-03) | 0 | |
 | Security Sidecar (FA-04) | 0 | M03 review (037f991): code quality clean, no debt recorded. |
 | Bitcoin Agent (FA-05) | 0 | |
-| Compliance (FA-06) | 0 | |
+| Compliance (FA-06) | 0 | M04 Audit Log review (7ca66b5): code quality clean, no debt recorded. |
 | Intelligence (FA-07) | 0 | |
 | Guard Agent (FA-08) | 0 | |
 | Reputation (FA-09) | 0 | |
@@ -63,3 +63,4 @@
 | 2026-04-22 | TD-M01-1 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: AgentId primitive из canister-shared будет адоптирован когда FA-09 Reputation canister приземлится. |
 | 2026-04-22 | TD-M01-2 | reviewer | Зафиксировано при M01 Registry TS post-APPROVED: in-memory store (MVP) → Postgres/Qdrant/Redis swap в M17 persistence milestone. |
 | 2026-04-22 | — | reviewer | M03 Security Sidecar Intent Verifier (`037f991`) review: code quality clean, no tech debt recorded. Cherry-pick salvage process noted in project-state.md (not a debt; salvage was correct response to 4+ commit stale branch). |
+| 2026-04-22 | — | reviewer | M04 Audit Log Canister (`7ca66b5`) review: code quality clean, no tech debt recorded. Same cherry-pick salvage pattern as M03. Phase-0 closed with zero new debt from M03/M04. |
