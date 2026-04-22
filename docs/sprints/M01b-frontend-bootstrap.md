@@ -94,6 +94,11 @@ export const tokens = {
 
 - `tests/frontend-bootstrap.test.ts` — meta test: 8 app dirs exist, each has `package.json` with `@paxio/ui` dep, 4 package dirs exist with proper exports
 
+**Status: ✅ НАПИСАН — commit `d94feb6`**
+
+- 111 tests RED | 2 passing | 113 total
+- `npx vitest run tests/frontend-bootstrap.test.ts` → RED (awaiting frontend-dev implementation)
+
 ## Acceptance script
 
 `bash scripts/verify_m01b_frontend.sh` — 6 steps:
@@ -121,4 +126,6 @@ export const tokens = {
 - `@paxio/types` consumed (read-only) for type contracts — M01c will use real endpoints.
 - `@paxio/api-client` stubbed now, wired in M01c.
 
-## Статус: ТЕСТЫ ПИШЕМ — ЖДЁТ frontend-dev
+## Статус: ✅ ТЕСТЫ НАПИСАНЫ (`d94feb6`) — ЖДЁТ frontend-dev
+
+Тесты RED-спецификация написаны architect'ом. frontend-dev реализует по тестам.
