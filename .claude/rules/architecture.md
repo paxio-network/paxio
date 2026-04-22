@@ -86,9 +86,9 @@ server/ → app/api/ → app/domain/ → app/lib/
 
 ### Frontend
 
-- `packages/frontend/*` зависит от `app/types/` (transformed to TS declarations)
-- НЕ зависит от `server/`, `app/domain/`, `canisters/`
-- Общается с backend только через HTTP API (Fastify routes) или WebSocket
+- `apps/frontend/*` (8 apps) + `packages/{ui,hooks,api-client,auth}/` (shared frontend packages) зависят от `packages/types/` (API Zod-схемы) через `@paxio/types`
+- НЕ зависят от `apps/back/server/`, `products/*/app/domain/`, `products/*/canister(s)/`
+- Общаются с backend только через HTTP API (Fastify routes) или WebSocket — типизированный клиент в `packages/api-client/`
 
 ## No Circular Dependencies
 

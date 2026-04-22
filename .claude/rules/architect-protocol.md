@@ -111,12 +111,13 @@ docs/sprints/M0X-*.md             → КАК реализуем (тесты + з
 - `docs/project-state.md` — ТОЛЬКО reviewer
 - `docs/tech-debt.md` — ТОЛЬКО reviewer записывает
 - `docs/NOUS_Strategy_v5.md` (alias `docs/architecture.md`) — ТОЛЬКО user
-- `server/` — backend-dev
-- `app/{api,domain,lib,config,data,errors}/` — backend-dev (кроме `registry/` → registry-dev)
-- `app/{api,domain}/registry/` + `canisters/src/reputation/` — registry-dev (FA-01, TS core + single canister)
-- `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent}/` — icp-dev
-- `packages/frontend/` — frontend-dev
-- `packages/sdk/src/` — backend-dev
+- `apps/back/server/` — backend-dev
+- `products/*/app/{api,domain}/` — backend-dev (кроме FA-01 → registry-dev)
+- `products/01-registry/` целиком (app + canister) — registry-dev (FA-01, TS core + single Reputation canister)
+- `products/{03-wallet,04-security,05-bitcoin-agent,06-compliance}/canister(s)/` — icp-dev
+- `platform/canister-shared/` — icp-dev (общие Rust-типы)
+- `apps/frontend/` (8 apps) + `packages/{ui,hooks,api-client,auth}/` — frontend-dev
+- `products/03-wallet/sdk-ts/` + `products/03-wallet/sdk-python/` — backend-dev
 
 ## Обязательная таблица в конце milestone
 

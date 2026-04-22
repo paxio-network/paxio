@@ -1,53 +1,63 @@
 # Deploy commands for Paxio
 
-## ICP canister deployment
+## ICP canister deployment (local)
 
 ```bash
-# Local network
-dfx deploy registry           # FA-01 (registry-dev)
-dfx deploy wallet             # FA-03 (icp-dev)
-dfx deploy audit_log          # FA-06 (icp-dev)
-dfx deploy reputation         # FA-01 (icp-dev)
-dfx deploy security_sidecar   # FA-04 (icp-dev)
-dfx deploy bitcoin_agent      # FA-05 (icp-dev)
+source scripts/dfx-setup.sh     # per-agent port scheme (M00c)
+dfx_start
+
+# Canonical locations (Cargo workspace root):
+dfx deploy wallet               # products/03-wallet/canister/          (icp-dev)
+dfx deploy security             # products/04-security/canister/        (icp-dev)
+dfx deploy audit-log            # products/06-compliance/canisters/audit-log/ (icp-dev)
+dfx deploy reputation           # products/01-registry/canister/        (registry-dev)
+dfx deploy bitcoin-agent        # products/05-bitcoin-agent/canisters/* (icp-dev)
 
 # Check canister IDs
-dfx canister id registry
 dfx canister id wallet
-dfx canister id audit_log
+dfx canister id audit-log
 ```
 
-## Deploy to testnet (requires cycle tokens)
+## Deploy to ICP mainnet (requires cycle tokens)
 
 ```bash
-dfx deploy --network ic registry
 dfx deploy --network ic wallet
-dfx deploy --network ic audit_log
+dfx deploy --network ic security
+dfx deploy --network ic audit-log
 dfx deploy --network ic reputation
-dfx deploy --network ic security_sidecar
-dfx deploy --network ic bitcoin_agent
 ```
 
-## Frontend deployment (Vercel)
+## Frontend deployment (Vercel — 8 projects)
+
+Каждый app деплоится в свой Vercel project (Monorepo Projects pattern).
+CI-триггер: push в `main` → path-filter (`.github/workflows/ci-frontend-<app>.yml`) → Vercel git-webhook autodeploy.
+
+Manual deploy (если нужен прямой push):
 
 ```bash
-cd packages/frontend/landing && vercel --prod    # paxio.network
-cd packages/frontend/app && vercel --prod        # app.paxio.network
-cd packages/frontend/docs && vercel --prod       # docs.paxio.network
+cd apps/frontend/landing  && vercel --prod   # paxio.network
+cd apps/frontend/registry && vercel --prod   # registry.paxio.network
+cd apps/frontend/pay      && vercel --prod   # pay.paxio.network
+cd apps/frontend/radar    && vercel --prod   # radar.paxio.network
+cd apps/frontend/intel    && vercel --prod   # intel.paxio.network
+cd apps/frontend/docs     && vercel --prod   # docs.paxio.network
+cd apps/frontend/wallet   && vercel --prod   # wallet.paxio.network
+cd apps/frontend/fleet    && vercel --prod   # fleet.paxio.network
 ```
 
-## Backend deployment (Fastify)
+## Backend deployment (Hetzner Docker)
 
-Backend разворачивается как standard Node.js сервис:
+См. `docs/deployment-hetzner.md`. CI: `.github/workflows/deploy-backend.yml`:
+Docker build → ghcr.io → SSH Hetzner → healthcheck → rollback.
 
 ```bash
-# production start
-NODE_ENV=production node server/main.cjs
+# Manual production start (NOT the CI flow)
+NODE_ENV=production node apps/back/server/main.cjs
 ```
 
 ## External services (NOT deployed from this repo)
 
-- **Guard Agent** (`guard.paxio.network`): отдельный Python/FastAPI репо `/home/openclaw/guard/`, деплой на Hetzner GX11.
+- **Guard Agent** (`guard.paxio.network`): отдельный Python/FastAPI репо `/home/openclaw/guard/`, деплой на Hetzner GX11. Подключён как git submodule в `products/04-security/guard/`.
 
 ## Environment variables
 
@@ -55,9 +65,10 @@ NODE_ENV=production node server/main.cjs
 # Load before deployment
 export $(grep -v '^#' .env | xargs)
 
-# Verify critical vars
+# Verify critical vars (см. docs/secrets.md для полного списка)
 echo $ICP_GATEWAY
 echo $DATABASE_URL
+echo $HETZNER_HOST
 ```
 
 ## Post-deploy verification
@@ -66,8 +77,11 @@ echo $DATABASE_URL
 # Verify wallet canister is responsive
 dfx canister call wallet greet "test"
 
-# Verify all canisters
-dfx canister call audit_log get_log '(record { count = 10 })'
+# Verify audit log canister
+dfx canister call audit-log get_log '(record { count = 10 })'
+
+# Verify backend health
+curl https://api.paxio.network/health
 ```
 
-Report: success/failure, canister IDs, deployed versions.
+Report: success/failure, canister IDs, deployed versions, Vercel deployment URLs.

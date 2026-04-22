@@ -495,7 +495,7 @@ Composition root где ВСЕ зависимости собираются. В P
 **Правило для Paxio:**
 - **НИКАКИХ `new X()` в domain коде.** Получаем через DI.
 - В `app/` domain-функции получают зависимости как параметры
-- Composition root — `server/main.cjs` (backend), `packages/frontend/*/app/providers.tsx` (frontend)
+- Composition root — `apps/back/server/main.cjs` (backend), `apps/frontend/<app>/app/providers.tsx` (frontend — per-app Privy + React Query)
 
 ### Red flags
 - ❌ `import { db } from '../server/db.cjs'` в `app/domain/`

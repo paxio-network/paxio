@@ -12,9 +12,12 @@
     "node_modules",
     "dist",
     "target",
-    "canisters/target",
+    "products/*/canister/target",
+    "products/*/canisters/*/target",
+    "platform/canister-shared/target",
+    "apps/frontend/*/.next",
+    "apps/frontend/*/.turbo",
     "opensrc",
-    "packages/frontend",
     ".git"
   ]
 }

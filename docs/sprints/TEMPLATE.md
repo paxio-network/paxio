@@ -72,5 +72,5 @@
 
 | # | Задача | Агент | Метод верификации | Файлы |
 |---|---|---|---|---|
-| 1 | ... | backend-dev | unit test: TestX GREEN | engine/core/src/... |
-| 2 | ... | frontend-dev | acceptance: scripts/verify_Y.sh | packages/frontend/... |
+| 1 | ... | backend-dev | unit test: TestX GREEN | products/<fa>/app/... |
+| 2 | ... | frontend-dev | acceptance: scripts/verify_Y.sh | apps/frontend/<app>/... |
