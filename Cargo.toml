@@ -12,9 +12,9 @@
 resolver = "2"
 members = [
   "platform/canister-shared",                     # M00c — cross-cutting primitives (AgentId, TxHash)
-  # "products/03-wallet/canister",                # M02 — added on feature/m02-wallet-canister merge
-  # "products/04-security/canister",              # M03 — added on feature/m03-security-sidecar merge
-  # "products/06-compliance/canisters/audit-log", # M04 — added on feature/m04-audit-log merge
+  "products/03-wallet/canister",                  # M02 — threshold ECDSA wallet (icp-dev)
+  "products/04-security/canister",                # M03 stub (real impl arrives on feature/m03-security-sidecar merge)
+  "products/06-compliance/canisters/audit-log",   # M04 stub (real impl arrives on feature/m04-audit-log merge)
 ]
 
 [workspace.package]
