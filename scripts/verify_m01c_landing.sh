@@ -5,6 +5,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# TD-11 fix: ensure log directory exists before any redirect. The script was
+# written with paths under $HOME/tmp/ which is not guaranteed on fresh dev
+# machines or CI runners. Without this mkdir, the very first redirect
+# `>>"$HOME/tmp/m01c-contracts.log"` fails because the directory is missing,
+# the `if` branch falls into `bad`, and the failure is indistinguishable
+# from a real test failure. Result: 4/29 steps report ❌ FAILED while the
+# underlying vitest runs never even started. `mkdir -p` is idempotent and
+# creates nothing if the dir already exists.
+mkdir -p "$HOME/tmp"
+
 PASS=0
 FAIL=0
 
