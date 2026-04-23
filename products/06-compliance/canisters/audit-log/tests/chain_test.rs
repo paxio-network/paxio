@@ -12,8 +12,7 @@
 // Types mirror packages/types/src/audit-log.ts. Candid .did file lives next to lib.rs.
 
 use audit_log::{
-    log_entry, get_entries, verify_chain, reset_for_test,
-    AuditAction, LogEntryInput, LogQuery,
+    get_entries, log_entry, reset_for_test, verify_chain, AuditAction, LogEntryInput, LogQuery,
 };
 
 fn setup() {

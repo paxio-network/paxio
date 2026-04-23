@@ -13,9 +13,8 @@
 // M03 scope = Intent Verifier only. NO ML. Secrets Scanner is TS-side in M24.
 
 use security_sidecar::{
-    set_policy, verify, reset_for_test,
-    AgentPolicy, Asset, Decision, Reason,
-    TransactionIntent, VerifyRequest,
+    reset_for_test, set_policy, verify, AgentPolicy, Asset, Decision, Reason, TransactionIntent,
+    VerifyRequest,
 };
 
 fn setup() {

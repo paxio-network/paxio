@@ -19,16 +19,7 @@ use std::borrow::Cow;
 /// Wire-compatible with `type AgentId = text` in .did files.
 /// Used by Wallet, Reputation, Audit Log, Bitcoin Agent canisters.
 #[derive(
-    CandidType,
-    Deserialize,
-    Serialize,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
+    CandidType, Deserialize, Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct AgentId(pub String);
 
@@ -63,7 +54,9 @@ impl Storable for AgentId {
         // `expect` here is acceptable: bytes come from our own serialization,
         // which only writes valid UTF-8. A bug would be a deserialization of
         // foreign bytes — panic surfaces that immediately.
-        Self(String::from_utf8(bytes.into_owned()).expect("AgentId: invalid UTF-8 in stable memory"))
+        Self(
+            String::from_utf8(bytes.into_owned()).expect("AgentId: invalid UTF-8 in stable memory"),
+        )
     }
 
     const BOUND: Bound = Bound::Bounded {
@@ -80,16 +73,7 @@ impl Storable for AgentId {
 ///
 /// Wire-compatible with `type TxHash = text` in .did files.
 /// Used by Wallet, Audit Log, Bitcoin Agent canisters.
-#[derive(
-    CandidType,
-    Deserialize,
-    Serialize,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-)]
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TxHash(pub String);
 
 impl TxHash {

@@ -29,9 +29,15 @@ fn agent_id_storable_roundtrip() {
 #[test]
 fn agent_id_bound_is_bounded_non_fixed() {
     match AgentId::BOUND {
-        Bound::Bounded { max_size, is_fixed_size } => {
+        Bound::Bounded {
+            max_size,
+            is_fixed_size,
+        } => {
             assert_eq!(max_size, 512);
-            assert!(!is_fixed_size, "AgentId length varies — must NOT be fixed_size");
+            assert!(
+                !is_fixed_size,
+                "AgentId length varies — must NOT be fixed_size"
+            );
         }
         _ => panic!("AgentId must be Bounded for StableBTreeMap use"),
     }
@@ -56,7 +62,10 @@ fn tx_hash_storable_roundtrip() {
 #[test]
 fn tx_hash_bound_is_bounded_max_128() {
     match TxHash::BOUND {
-        Bound::Bounded { max_size, is_fixed_size } => {
+        Bound::Bounded {
+            max_size,
+            is_fixed_size,
+        } => {
             assert_eq!(max_size, 128);
             assert!(!is_fixed_size);
         }

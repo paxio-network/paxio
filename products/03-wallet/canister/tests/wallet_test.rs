@@ -18,8 +18,8 @@
 // Types mirror packages/types/src/wallet.ts.
 
 use wallet::{
-    derive_btc_address, derive_evm_address, get_balance, sign_transaction,
-    reset_for_test, Asset, TransactionIntent,
+    derive_btc_address, derive_evm_address, get_balance, reset_for_test, sign_transaction, Asset,
+    TransactionIntent,
 };
 
 fn setup() {
@@ -32,7 +32,9 @@ async fn derive_btc_address_is_deterministic_per_did() {
     let a = derive_btc_address("did:paxio:base:0xalice".into())
         .await
         .expect("derivation must succeed");
-    let b = derive_btc_address("did:paxio:base:0xalice".into()).await.unwrap();
+    let b = derive_btc_address("did:paxio:base:0xalice".into())
+        .await
+        .unwrap();
     assert_eq!(a, b, "same DID must derive same address");
     assert!(a.starts_with("bc1"), "must be bech32 mainnet: {a}");
 }
@@ -40,15 +42,21 @@ async fn derive_btc_address_is_deterministic_per_did() {
 #[tokio::test]
 async fn derive_btc_address_differs_per_did() {
     setup();
-    let a = derive_btc_address("did:paxio:base:0xalice".into()).await.unwrap();
-    let b = derive_btc_address("did:paxio:base:0xbob".into()).await.unwrap();
+    let a = derive_btc_address("did:paxio:base:0xalice".into())
+        .await
+        .unwrap();
+    let b = derive_btc_address("did:paxio:base:0xbob".into())
+        .await
+        .unwrap();
     assert_ne!(a, b, "different DIDs must derive different addresses");
 }
 
 #[tokio::test]
 async fn derive_evm_address_is_valid_format() {
     setup();
-    let a = derive_evm_address("did:paxio:base:0xalice".into()).await.unwrap();
+    let a = derive_evm_address("did:paxio:base:0xalice".into())
+        .await
+        .unwrap();
     assert!(a.starts_with("0x"));
     assert_eq!(a.len(), 42, "0x + 40 hex = 42 chars, got {}", a.len());
     assert!(a[2..].chars().all(|c| c.is_ascii_hexdigit()));

@@ -60,7 +60,11 @@ pub fn derive_btc_address_from_pubkey(pubkey: &[u8]) -> String {
 pub fn derive_evm_address_from_pubkey(pubkey: &[u8]) -> String {
     // Drop the leading 0x02/0x03 byte of a compressed key for parity with
     // standard EVM derivation which hashes the *uncompressed* pubkey body.
-    let body: &[u8] = if pubkey.len() == 33 { &pubkey[1..] } else { pubkey };
+    let body: &[u8] = if pubkey.len() == 33 {
+        &pubkey[1..]
+    } else {
+        pubkey
+    };
 
     let first = Sha256::digest(body);
     let second = Sha256::digest(first);

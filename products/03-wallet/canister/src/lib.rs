@@ -126,15 +126,15 @@ pub async fn sign_transaction(intent: TransactionIntent) -> Result<SignResponse,
 /// MVP: returns at most `limit` of the most recent records; `0` returns
 /// everything. Full pagination (cursor-based) lands in M58.
 #[cfg_attr(target_arch = "wasm32", ic_cdk_macros::query)]
-pub fn get_tx_history(
-    did: String,
-    asset: Asset,
-    limit: u32,
-) -> Result<Vec<TxRecord>, WalletError> {
+pub fn get_tx_history(did: String, asset: Asset, limit: u32) -> Result<Vec<TxRecord>, WalletError> {
     if !is_valid_did(&did) {
         return Err(WalletError::InvalidDid(did));
     }
-    let cap: usize = if limit == 0 { usize::MAX } else { limit as usize };
+    let cap: usize = if limit == 0 {
+        usize::MAX
+    } else {
+        limit as usize
+    };
     let records = storage::with_wallet(&did, |state| {
         state
             .tx_history

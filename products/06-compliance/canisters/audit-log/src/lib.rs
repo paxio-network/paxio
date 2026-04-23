@@ -158,7 +158,11 @@ fn matches_filters(entry: &LogEntry, q: &LogQuery) -> bool {
 }
 
 fn effective_limit(requested: u32) -> u32 {
-    let l = if requested == 0 { DEFAULT_LIMIT } else { requested };
+    let l = if requested == 0 {
+        DEFAULT_LIMIT
+    } else {
+        requested
+    };
     l.min(MAX_LIMIT)
 }
 

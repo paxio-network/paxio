@@ -1,0 +1,67 @@
+# cargo-deny config for Paxio Rust workspace.
+# Tunes the strictness of `EmbarkStudios/cargo-deny-action@v2` in ci-canisters.yml.
+#
+# Strategy: fail on vulnerabilities + rejected licenses, but tolerate the
+# realistic ICP ecosystem state — transitive deps like `paste`, `bincode`
+# are flagged "unmaintained" by RustSec but are widely used by ic-cdk 0.13+
+# itself. We track them but don't red-flag the whole workspace.
+
+[graph]
+# all-features to catch everything reachable, including optional features
+all-features = true
+
+[advisories]
+version = 2
+# Yanked crates — fail; unmaintained / unsound — warn only until upstream fixes
+yanked = "deny"
+ignore = [
+    # `paste` — no longer maintained but still pulled by ic-cdk-macros & candid_derive.
+    # Track: https://github.com/dtolnay/paste/issues/144
+    "RUSTSEC-2024-0436",
+    # `bincode 1.x` — unmaintained; we use it via ic-stable-structures 0.6.
+    # Migration path: upgrade to ic-stable-structures ≥ 0.7 (uses bincode 2).
+    { id = "RUSTSEC-2023-0071", reason = "bincode 1.x via ic-stable-structures 0.6" },
+]
+
+[licenses]
+version = 2
+# SPDX identifiers we permit. Expand as needed.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+
+# Exceptions for crates whose license metadata is ambiguous / custom
+[[licenses.exceptions]]
+allow = ["OpenSSL"]
+name = "ring"
+
+[[licenses.exceptions]]
+allow = ["Unicode-DFS-2016"]
+name = "unicode-ident"
+
+[bans]
+multiple-versions = "allow"   # ICP ecosystem has lots of version skew
+wildcards = "deny"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    # DFINITY official
+    "https://github.com/dfinity/cdk-rs",
+    "https://github.com/dfinity/candid",
+    "https://github.com/dfinity/stable-structures",
+]

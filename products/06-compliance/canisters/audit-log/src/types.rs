@@ -54,7 +54,7 @@ pub struct LogEntry {
     pub asset: Option<String>,
     pub metadata: BTreeMap<String, String>,
     pub timestamp: u64,
-    pub prev_hash: String,  // 64 hex chars — SHA-256 of previous entry (or "0"×64 for genesis)
+    pub prev_hash: String, // 64 hex chars — SHA-256 of previous entry (or "0"×64 for genesis)
     pub entry_hash: String, // 64 hex chars — SHA-256(prev_hash || bincode(EntryCore))
 }
 
