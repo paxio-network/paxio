@@ -1,20 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import type { NetworkSnapshot, NetworkNode } from '@paxio/types';
+import type { NetworkSnapshot } from '@paxio/types';
+import { nodeColor, nodeRadius } from './network-graph-utils';
 
 interface NetworkGraphProps {
   snapshot: NetworkSnapshot;
   className?: string;
-}
-
-function nodeColor(node: NetworkNode): string {
-  if (node.bitcoin_native) return '#D97706';
-  const r = Math.round((node.volume_usd_5m / 10_000) * 255);
-  return `rgb(${Math.min(r, 200)}, ${Math.min(100, r / 2)}, ${Math.min(80, r / 4)})`;
-}
-
-function nodeRadius(node: NetworkNode): number {
-  return Math.max(4, Math.min(12, 4 + Math.log10(node.volume_usd_5m + 1)));
 }
 
 export function NetworkGraph({ snapshot, className }: NetworkGraphProps) {

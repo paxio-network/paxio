@@ -1,5 +1,6 @@
 'use client';
 import { useRef } from 'react';
+import { computeSparkline } from './sparkline-utils';
 
 interface SparklineProps {
   seed?: number;
@@ -9,32 +10,12 @@ interface SparklineProps {
   className?: string;
 }
 
-// Deterministic pseudo-random from seed — no Math.random() leaks in render
-function seededRandom(seed: number): () => number {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0xffffffff;
-  };
-}
-
 export function Sparkline({ seed = 42, width = 120, height = 32, color = '#533483', className }: SparklineProps) {
   const pathRef = useRef<SVGPathElement>(null!);
-  const rand = seededRandom(seed);
 
-  const pts: [number, number][] = Array.from({ length: 24 }, (_, i) => [
-    (i / 23) * width,
-    height - rand() * height * 0.7 - height * 0.15,
-  ]);
+  const d = computeSparkline(seed, width, height);
 
-  const d = pts.reduce((acc, [x, y], i) => {
-    if (i === 0) return `M${x.toFixed(1)},${y.toFixed(1)}`;
-    const [px, py] = pts[i - 1];
-    const cpX = (px + x) / 2;
-    return `${acc} C${cpX.toFixed(1)},${py.toFixed(1)} ${cpX.toFixed(1)},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
-  }, '');
-
-  // Area fill
+  // Area fill — extend curve down to baseline and close the shape.
   const area = `${d} L${width},${height} L0,${height} Z`;
 
   return (
