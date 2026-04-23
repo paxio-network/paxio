@@ -143,12 +143,61 @@ paxio.network · Берлин · Конфиденциально
   -----------------------------------------------------------------------
   **FRONTEND --- paxio.network (Недели 1--4)**
 
-  **Landing page v1 (Неделя 1--2)** — 🟡 IN PROGRESS: backend API ✅ (M01c-backend, 2026-04-23), sections + UI components ⬜ (M01c-frontend pending)
+  **Landing page v1 (Неделя 1--2)** — 🟡 IN PROGRESS: backend API ✅ (M01c-backend, 2026-04-23), sections + UI components ⬜ (M01c-frontend pending), deployed заглушкой на paxio.network (Vercel, 2026-04-23)
+
+  **Landing Data Completion Track (Неделя 2--6)** — data-first milestones фиксируют строки hero/heatmap/FAP/network одна за одной, см. таблицу ниже.
 
   **Registry Explorer v1 (Неделя 3--4)** — ⬜ (M13 pending)
 
   **Developer Docs (Неделя 2--3)** — ⬜ (M12 pending)
   -----------------------------------------------------------------------
+
+### Landing Data Completion Track — M-L0..M-L8
+
+Каждая строка таблицы = **один фрагмент landing'а, который переходит из нуля в живые данные**. Делаем поэтапно: Progressive Reveal скрывает пустые секции пока они не готовы — страница "растёт на глазах" по мере готовности продукта.
+
+| # | Строка на landing | Status | Owner | Effort | Blocked by |
+|---|---|---|---|---|---|
+| **M-L0** | Progressive Reveal wrapper в `@paxio/ui` | ⬜ QUEUED | frontend-dev | 1d | M01c-frontend |
+| **M-L1-contracts** | Per-source Zod схемы (ERC-8004, A2A, MCP, Fetch.ai, Virtuals) + `AgentSourceAdapter` port + Postgres migration | 🟡 IN PROGRESS | architect | 2d | — |
+| **M-L1-impl** | 5 source адаптеров + Postgres storage + crawler scheduler → `Agents count + Top agents table` live | ⬜ QUEUED | registry-dev | 4–5d | M-L1-contracts |
+| **M-L4a** | Rails Catalog (JSON) + Stub Router → `FAPDiagram 4 nodes live` | ⬜ READY TO START | backend-dev | 1d | — |
+| **M-L5** | Registry `peers: Did[]` field + NetworkGraph D3 → `NetworkGraph live` | ⬜ QUEUED | registry-dev + frontend-dev | 2d | M-L1-impl |
+| **M-L7a** | Wallet waitlist signup form + hidden counter → email list растёт | ⬜ QUEUED | frontend-dev + backend-dev | 1–2d | M-L0 |
+| **M-L4b** | Full x402/BTC Facilitator (on-chain verify + BTC L1 settlement) → `x402/BTC share + Rails share_pct` live | ⬜ BLOCKED | backend-dev + icp-dev | 2–3 недели | M02 Wallet ✅, M-L1-impl |
+| **M-L2** | Paxio Intelligence Agent (коммерческий — x402 paywall, dogfood FAP + Wallet) → `Txns 24h` live + revenue demo | ⬜ BLOCKED | backend-dev + icp-dev | 1–2 недели | M-L4b, M02 ✅, M-L1-impl |
+| **M-L3 / M-L6** | Guard `/stats/24h` + `/stats/heatmap` HTTP клиент → `Attacks 24h + Heatmap 6×6` live | ⬜ BLOCKED | backend-dev | 1–2d | Guard v1 (external, a3ka team) |
+| **M-L7b** | Wallet counter появляется в hero когда >50 signups | ⬜ AUTO | frontend-dev | trivial | M-L7a + 50 signups |
+| **M-L8** | Uptime / SLA p50 / FAP throughput из backend телеметрии | ⬜ QUEUED | backend-dev | 2d | — |
+
+**Dependency chain:**
+```
+M-L1-contracts (architect) ──► M-L1-impl ──► M-L5 (NetworkGraph)
+                                        └──► M-L2 (Intelligence Agent)
+                                        └──► M-L4b (Full Facilitator)
+
+M-L0 (Progressive Reveal) ──► M-L7a (waitlist) ──► M-L7b (counter live)
+
+M-L4a (Stub Router) ──► M-L4b (Full Facilitator)
+
+Guard v1 (external) ──► M-L3 / M-L6
+
+M-L8 независимо.
+```
+
+**Progressive Reveal правило (M-L0):** секция landing рендерится ТОЛЬКО если есть не-нулевые данные. Landing честная, не показывает пустоту — вместо этого растёт по мере готовности продукта.
+
+### Ближайшие 2 недели (приоритет после M01c-frontend)
+
+1. **M-L1-contracts** (architect) — активно, 2d
+2. **M-L4a** (backend-dev) — параллельно, 1d, ready to start
+3. **M-L0** (frontend-dev) — в очередь за TD-08/TD-09/M01c-frontend
+4. **M-L1-impl** (registry-dev) — после M-L1-contracts, 4–5d
+5. **M-L8** (backend-dev) — заполняющий, 2d
+
+После этого: ждём Guard v1 от a3ka (разблокирует M-L3/M-L6) и M02-full-wallet (разблокирует M-L4b → M-L2).
+
+
 
   -----------------------------------------------------------------------
   **P3 · WALLET --- DKI Инфраструктура (Недели 1--2)**
