@@ -131,25 +131,31 @@ paxio.network · Берлин · Конфиденциально
 +-----------------------------------------------------------------------+
 | **Монорепо setup** ✅ DONE (M00, 2026-04-17)                          |
 +-----------------------------------------------------------------------+
+| **Product-first migration (Turborepo + pnpm + uv)** ✅ DONE (M01a, 2026-04-22) |
++-----------------------------------------------------------------------+
+| **canister-shared primitives (AgentId, TxHash)** ✅ DONE (M00c, 2026-04-22) |
++-----------------------------------------------------------------------+
+| **Frontend Bootstrap: 8 Next.js apps + 4 shared packages** ✅ DONE (M01b, 2026-04-23) |
++-----------------------------------------------------------------------+
 | **Лицензии и IP**                                                     |
 +-----------------------------------------------------------------------+
 
   -----------------------------------------------------------------------
   **FRONTEND --- paxio.network (Недели 1--4)**
 
-  **Landing page v1 (Неделя 1--2)**
+  **Landing page v1 (Неделя 1--2)** — 🟡 IN PROGRESS: backend API ✅ (M01c-backend, 2026-04-23), sections + UI components ⬜ (M01c-frontend pending)
 
-  **Registry Explorer v1 (Неделя 3--4)**
+  **Registry Explorer v1 (Неделя 3--4)** — ⬜ (M13 pending)
 
-  **Developer Docs (Неделя 2--3)**
+  **Developer Docs (Неделя 2--3)** — ⬜ (M12 pending)
   -----------------------------------------------------------------------
 
   -----------------------------------------------------------------------
   **P3 · WALLET --- DKI Инфраструктура (Недели 1--2)**
 
-  **DKI Canister (Rust)**
+  **DKI Canister (Rust)** — ✅ DONE (M02 Wallet Canister, 2026-04-22; threshold ECDSA under `mock-ecdsa` feature)
 
-  **ckBTC интеграция**
+  **ckBTC интеграция** — ⬜ (post-Phase 0)
 
   **\@paxio/sdk alpha (TypeScript)**
 

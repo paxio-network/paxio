@@ -4,6 +4,7 @@
 **Branch:** `feature/m01c-landing` (one branch, two agents — coordinated via path isolation)
 **Depends on:** M01b ✅ (bootstrap), M01 ✅ (Registry API), M04 ✅ (Audit Log)
 **Estimate:** 7–10 days
+**Status:** 🟡 **PARTIAL**. Backend ✅ DONE (2026-04-23, `57d4cc1`): `createLandingStats` factory + 7 API handlers + Clock DI + Zod bounds validation. 9/9 landing-stats + 8/8 TD-fixes vitest GREEN. TD-05/TD-06 closed. Frontend ⬜ PENDING: 7 sections (`app/sections/*.tsx`) + 8 UI components (`packages/ui/src/{LiveTicker,AgentTable,Sparkline,FAPDiagram,NetworkGraph,TerminalWidget,HeatmapGrid,SectionFrame}.tsx`) + Redis 1s cache wrapper (defence-in-depth). verify_m01c_landing.sh 13/29 (awaits frontend-dev). Next cycle.
 
 ## Готово когда:
 - [ ] `apps/frontend/landing/` рендерит все 7 секций из ТЗ v2.0 с pixel-parity к HTML

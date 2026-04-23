@@ -5,6 +5,7 @@
 **Depends on:** M01a ✅ (Turborepo)
 **Parallel with:** M01-M04 (backend Phase 0)
 **Estimate:** 3–4 days
+**Status:** ✅ **DONE** (2026-04-23 — review `d6fb2ac`). 113/113 bootstrap tests GREEN, 8/8 turbo builds PASS, verify_m01b_frontend.sh 28/28. APPROVED WITH CONDITIONS — TD-07 (governance, 4th recurrence), TD-08 (smoke tests dead+buggy), TD-09 (ESLint build-gate bypassed via `ignoreDuringBuilds: true`). All non-blocking; TD-08/TD-09 BACKLOG awaits architect tests → frontend-dev fix in the next cycle.
 
 ## Готово когда:
 - [ ] 8 Next.js 15 app skeletons под `apps/frontend/*` — каждый запускается `pnpm --filter <app> dev`
