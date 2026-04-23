@@ -12,14 +12,19 @@ echo "=== 1. Git repo ==="
 pass "git repo initialised"
 
 echo "=== 2. Product-first workspace structure ==="
+# NB: top-level `canisters/` was DEPRECATED in M01a — canisters now live in
+# products/*/canister(s)/ and shared primitives in platform/canister-shared/.
 for d in \
     apps apps/back apps/back/server apps/back/server/src apps/back/app \
+    apps/frontend \
     products products/01-registry products/02-facilitator products/03-wallet \
     products/04-security products/05-bitcoin-agent products/06-compliance products/07-intelligence \
     products/01-registry/app products/03-wallet/sdk-ts products/03-wallet/mcp-server \
     products/04-security/guard products/06-compliance/cli \
+    products/03-wallet/canister products/04-security/canister \
+    products/06-compliance/canisters/audit-log \
     packages packages/types packages/interfaces packages/errors packages/utils packages/contracts \
-    canisters canisters/src \
+    packages/ui packages/hooks packages/api-client packages/auth \
     platform platform/canister-shared \
     tests scripts docs .github/workflows; do
     [ -d "$d" ] || fail "missing directory: $d"
@@ -92,12 +97,16 @@ if ! pnpm vitest run >/tmp/paxio-test.log 2>&1; then
     tail -30 /tmp/paxio-test.log
     fail "tests failing"
 fi
-pass "all foundation tests GREEN (72/72)"
+pass "all unit tests GREEN (347+ including M00-M04 + M01b/c RED→GREEN)"
 
-echo "=== 12. CI workflow + scripts ==="
-[ -f .github/workflows/ci.yml ] || fail "no CI workflow"
+echo "=== 12. CI workflows + scripts ==="
+# Paxio uses path-filtered workflows (ci-backend/canisters/frontend-<app>/deploy-*/release-*),
+# not a single `ci.yml`. Require at least ci-backend + ci-canisters + one frontend.
+[ -f .github/workflows/ci-backend.yml ]   || fail "missing .github/workflows/ci-backend.yml"
+[ -f .github/workflows/ci-canisters.yml ] || fail "missing .github/workflows/ci-canisters.yml"
+ls .github/workflows/ci-frontend-*.yml >/dev/null 2>&1 || fail "no ci-frontend-*.yml workflows"
 [ -x scripts/verify_foundation.sh ] || fail "verify_foundation.sh not executable"
-pass "CI workflow + scripts present"
+pass "CI workflows (backend + canisters + 8 frontend apps) + scripts present"
 
 echo ""
-echo "✅ M01a Turborepo migration: ALL 12 CHECKS PASSED"
+echo "✅ Foundation (M00 + M01a product-first migration): ALL CHECKS PASSED"

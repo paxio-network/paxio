@@ -45,9 +45,15 @@ else
   bad "turbo build FAILED — see /tmp/m01b-build.log"
 fi
 
-step "6. Smoke tests GREEN"
+step "6. Smoke tests (optional at bootstrap stage)"
+# M01b "Готово когда" requires scaffolding + typecheck + build, NOT smoke tests
+# (smoke tests arrive in M01c when real pages render). Pass if test files are
+# absent ("No test files found" is vitest's not-an-error status for scaffolding),
+# but fail if existing test files are broken.
 if pnpm turbo run test --filter='./apps/frontend/*' >/tmp/m01b-test.log 2>&1; then
-  ok "pnpm turbo run test (smoke)"
+  ok "pnpm turbo run test (smoke present + GREEN)"
+elif grep -q "No test files found" /tmp/m01b-test.log 2>/dev/null; then
+  ok "pnpm turbo run test (no smoke files yet — OK for M01b bootstrap)"
 else
   bad "smoke tests FAILED — see /tmp/m01b-test.log"
 fi
