@@ -10,3 +10,5 @@ export type { SecuritySidecar, SecurityError } from './security.js';
 export type { AuditLog, AuditLogError } from './audit-log.js';
 // Landing composite port (paxio.network real-data)
 export type { LandingStats, LandingError } from './landing.js';
+// Meta-Facilitator rails (FA-02 / M-L4a)
+export type { FapRouter, FapError } from './fap.js';
