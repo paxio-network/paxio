@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "ES2022"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "preserve",
@@ -20,14 +24,48 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@paxio/ui": ["../../packages/ui/src/index.ts"],
-      "@paxio/hooks": ["../../packages/hooks/src/index.ts"],
-      "@paxio/api-client": ["../../packages/api-client/src/index.ts"],
-      "@paxio/auth": ["../../packages/auth/src/index.ts"],
-      "@paxio/types": ["../../packages/types/src/index.ts"]
+      "@paxio/ui": [
+        "../../packages/ui/src/index.ts"
+      ],
+      "@paxio/hooks": [
+        "../../packages/hooks/src/index.ts"
+      ],
+      "@paxio/api-client": [
+        "../../packages/api-client/src/index.ts"
+      ],
+      "@paxio/auth": [
+        "../../packages/auth/src/index.ts"
+      ],
+      "@paxio/types": [
+        "../../packages/types/src/index.ts"
+      ]
     },
-    "types": ["node", "vitest/globals"]
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["app/**/*.ts", "app/**/*.tsx", "components/**/*.ts", "components/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "lib/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "lib/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
