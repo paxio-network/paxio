@@ -20,15 +20,18 @@ const mockDeps = (overrides: {
   registryAgents?: { ok: boolean; value?: any; error?: any }[];
   auditCount?: number;
   guardAttacks?: number;
+  clockMs?: number;
 }) => {
   const {
     registryCount = 0,
     registryAgents = [],
     auditCount = 0,
     guardAttacks = 0,
+    clockMs = 1_733_184_000_000, // 2024-12-03T00:00:00.000Z — deterministic
   } = overrides;
 
   return {
+    clock: vi.fn().mockReturnValue(clockMs),
     getRegistryCount: vi.fn().mockImplementation(() =>
       registryCount < 0
         ? err('upstream_error', 'Registry unreachable')
@@ -208,6 +211,7 @@ describe('getLanding — SSR one-shot', () => {
   it('upstream failures propagate as LandingError{code:upstream_error}', async () => {
     // This tests the behavior when deps themselves throw (not return Result.err)
     const badDeps = {
+      clock: vi.fn().mockReturnValue(1_733_184_000_000),
       getRegistryCount: vi.fn().mockRejectedValue(new Error('DB connection refused')),
       getRegistryAgents: vi.fn().mockRejectedValue(new Error('DB connection refused')),
       getAuditCount24h: vi.fn().mockRejectedValue(new Error('DB connection refused')),
