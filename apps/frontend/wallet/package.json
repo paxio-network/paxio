@@ -1,5 +1,5 @@
 {
-  "name": "@paxio/wallet",
+  "name": "@paxio/wallet-app",
   "version": "0.1.0",
   "private": true,
   "description": "wallet.paxio.network — Wallet and Bitcoin Agents",

@@ -1,5 +1,5 @@
 {
-  "name": "@paxio/pay",
+  "name": "@paxio/pay-app",
   "version": "0.1.0",
   "private": true,
   "description": "pay.paxio.network — FAP dashboard and routing rules",
