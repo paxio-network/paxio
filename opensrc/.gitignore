@@ -1,0 +1,5 @@
+# Don't commit cloned repos — each dev fetches locally via fetch.sh
+repos/
+
+# Keep the schema definition + the directory structure marker
+!repos/.gitkeep

@@ -1,77 +1,270 @@
 {
-  "updatedAt": "2026-04-17",
-  "packages": [
+  "$schema": "https://json.schemastore.org/opensrc.schema.json",
+  "description": "Paxio external dependencies — pinned source for code we read, not just import. See README.md for fetch instructions.",
+  "updatedAt": "2026-04-23",
+
+  "rust_packages": [
     {
       "name": "ic-cdk",
-      "version": "0.13.0",
+      "version": "0.13",
       "registry": "crates",
-      "path": "repos/github.com/dfinity/ic-cdk",
-      "fetchedAt": "2026-04-17"
+      "path": "repos/github.com/dfinity/cdk-rs",
+      "purpose": "ICP canister SDK (used by all our canisters)"
+    },
+    {
+      "name": "ic-cdk-macros",
+      "version": "0.13",
+      "registry": "crates",
+      "path": "repos/github.com/dfinity/cdk-rs",
+      "purpose": "ICP canister macros (#[update], #[query])"
     },
     {
       "name": "ic-stable-structures",
-      "version": "0.13.0",
+      "version": "0.6",
       "registry": "crates",
       "path": "repos/github.com/dfinity/stable-structures",
-      "fetchedAt": "2026-04-17"
+      "purpose": "StableBTreeMap / StableCell — survives canister upgrades"
     },
     {
       "name": "candid",
-      "version": "0.10.0",
+      "version": "0.10",
       "registry": "crates",
       "path": "repos/github.com/dfinity/candid",
-      "fetchedAt": "2026-04-17"
+      "purpose": "Candid IDL — wire format for canister APIs"
     },
     {
       "name": "bitcoin",
-      "version": "0.32.0",
+      "version": "0.32",
       "registry": "crates",
       "path": "repos/github.com/rust-bitcoin/rust-bitcoin",
-      "fetchedAt": "2026-04-17"
+      "purpose": "Bitcoin types, address parsing (FA-05 Bitcoin Agent)"
+    },
+    {
+      "name": "thiserror",
+      "version": "1",
+      "registry": "crates",
+      "purpose": "Error enums in canisters"
+    },
+    {
+      "name": "serde",
+      "version": "1",
+      "registry": "crates",
+      "purpose": "Serialize/Deserialize"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10",
+      "registry": "crates",
+      "purpose": "SHA-256 for audit-log hash chain"
     }
   ],
-  "repos": [
+
+  "ts_packages": [
     {
-      "name": "github.com/coinbase/x402",
+      "name": "fastify",
+      "version": "5.x",
+      "registry": "npm",
+      "path": "repos/github.com/fastify/fastify",
+      "purpose": "HTTP server (apps/back/server/)"
+    },
+    {
+      "name": "@fastify/websocket",
+      "version": "11.x",
+      "registry": "npm",
+      "path": "repos/github.com/fastify/fastify-websocket",
+      "purpose": "WebSocket broadcasting (registry/payment/fap channels)"
+    },
+    {
+      "name": "@fastify/rate-limit",
+      "version": "10.x",
+      "registry": "npm",
+      "path": "repos/github.com/fastify/fastify-rate-limit",
+      "purpose": "Rate limiting on public APIs"
+    },
+    {
+      "name": "@fastify/helmet",
+      "version": "13.x",
+      "registry": "npm",
+      "path": "repos/github.com/fastify/fastify-helmet",
+      "purpose": "Security headers"
+    },
+    {
+      "name": "zod",
+      "version": "3.23",
+      "registry": "npm",
+      "path": "repos/github.com/colinhacks/zod",
+      "purpose": "Validation schemas (packages/types/src/)"
+    },
+    {
+      "name": "pino",
+      "version": "9.x",
+      "registry": "npm",
+      "path": "repos/github.com/pinojs/pino",
+      "purpose": "Structured logging (injected as `console` in VM sandbox)"
+    },
+    {
+      "name": "@dfinity/agent",
+      "version": "2.x",
+      "registry": "npm",
+      "path": "repos/github.com/dfinity/agent-js",
+      "purpose": "ICP HTTP client (apps/back/server/infrastructure/icp.cjs)"
+    },
+    {
+      "name": "next",
+      "version": "15.x",
+      "registry": "npm",
+      "path": "repos/github.com/vercel/next.js",
+      "purpose": "Next.js App Router for 8 frontend apps"
+    },
+    {
+      "name": "react",
+      "version": "19.x",
+      "registry": "npm",
+      "path": "repos/github.com/facebook/react",
+      "purpose": "React 19 (RSC streaming, use() hook)"
+    },
+    {
+      "name": "@tanstack/react-query",
+      "version": "5.x",
+      "registry": "npm",
+      "path": "repos/github.com/TanStack/query",
+      "purpose": "Real-data fetching in 8 frontend apps"
+    },
+    {
+      "name": "@radix-ui/react-*",
+      "version": "1.x",
+      "registry": "npm",
+      "path": "repos/github.com/radix-ui/primitives",
+      "purpose": "Unstyled accessible UI primitives in @paxio/ui"
+    },
+    {
+      "name": "tailwindcss",
+      "version": "4.x",
+      "registry": "npm",
+      "path": "repos/github.com/tailwindlabs/tailwindcss",
+      "purpose": "CSS framework (per-app accent via CSS vars)"
+    },
+    {
+      "name": "framer-motion",
+      "version": "12.x",
+      "registry": "npm",
+      "path": "repos/github.com/framer/motion",
+      "purpose": "Animations (page transitions, chart reveals)"
+    },
+    {
+      "name": "@privy-io/react-auth",
+      "version": "2.x",
+      "registry": "npm",
+      "path": "repos/github.com/privy-io/wagmi-demo",
+      "docsUrl": "https://docs.privy.io/",
+      "purpose": "Wallet connect + email magic link auth (per-app project). SDK source is private; we mirror their public wagmi-demo as integration reference. API docs: docs.privy.io"
+    },
+    {
+      "name": "recharts",
+      "version": "2.x",
+      "registry": "npm",
+      "path": "repos/github.com/recharts/recharts",
+      "purpose": "Dashboard charts in @paxio/ui"
+    },
+    {
+      "name": "@modelcontextprotocol/sdk",
+      "version": "1.x",
+      "registry": "npm",
+      "path": "repos/github.com/modelcontextprotocol/typescript-sdk",
+      "purpose": "MCP server (mcp.paxio.network) — wallet API exposed to LLM tools"
+    }
+  ],
+
+  "protocol_specs": [
+    {
+      "name": "x402",
       "version": "main",
+      "url": "https://github.com/coinbase/x402",
       "path": "repos/github.com/coinbase/x402",
-      "fetchedAt": "2026-04-17",
-      "purpose": "x402 protocol specification"
+      "purpose": "Stablecoin payment protocol — primary FA-02 Facilitator route"
     },
     {
-      "name": "github.com/a2aproject/A2A",
+      "name": "x402-rs",
       "version": "main",
+      "url": "https://github.com/x402-rs/x402-rs",
+      "path": "repos/github.com/x402-rs/x402-rs",
+      "purpose": "Rust reference impl of x402 (we adapt for canister-side flow)"
+    },
+    {
+      "name": "A2A",
+      "version": "main",
+      "url": "https://github.com/a2aproject/A2A",
       "path": "repos/github.com/a2aproject/A2A",
-      "fetchedAt": "2026-04-17",
-      "purpose": "Agent-to-Agent protocol"
+      "purpose": "Google Agent-to-Agent protocol — alt route in FA-02"
     },
     {
-      "name": "github.com/sudeepb02/awesome-erc8004",
+      "name": "awesome-erc8004",
       "version": "main",
+      "url": "https://github.com/sudeepb02/awesome-erc8004",
       "path": "repos/github.com/sudeepb02/awesome-erc8004",
-      "fetchedAt": "2026-04-17",
-      "purpose": "ERC-8004 registry standard"
+      "purpose": "ERC-8004 trust standard for agent registry (FA-01 ingestion)"
     },
     {
-      "name": "github.com/jedisct1/libsodium",
+      "name": "MCP-spec",
+      "version": "main",
+      "url": "https://github.com/modelcontextprotocol/specification",
+      "path": "repos/github.com/modelcontextprotocol/specification",
+      "purpose": "Model Context Protocol spec (powers mcp.paxio.network)"
+    },
+    {
+      "name": "BIPs",
       "version": "master",
+      "url": "https://github.com/bitcoin/bips",
+      "path": "repos/github.com/bitcoin/bips",
+      "purpose": "Bitcoin Improvement Proposals (BIP-340 Schnorr, BIP-341 Taproot for ckBTC)"
+    }
+  ],
+
+  "icp_examples": [
+    {
+      "name": "examples (DFINITY)",
+      "version": "master",
+      "url": "https://github.com/dfinity/examples",
+      "path": "repos/github.com/dfinity/examples",
+      "purpose": "Reference canister examples — threshold ECDSA, Bitcoin integration, HTTPS outcalls"
+    },
+    {
+      "name": "ic (DFINITY)",
+      "version": "master",
+      "url": "https://github.com/dfinity/ic",
+      "path": "repos/github.com/dfinity/ic",
+      "purpose": "ICP replica source — for understanding management canister API"
+    },
+    {
+      "name": "anda-cloud",
+      "version": "main",
+      "url": "https://github.com/ldclabs/anda-cloud",
+      "path": "repos/github.com/ldclabs/anda-cloud",
+      "purpose": "ICP-based agent framework — patterns for non-custodial wallet"
+    },
+    {
+      "name": "ic-eliza-eth-wallet-agent",
+      "version": "main",
+      "url": "https://github.com/kristoferlund/ic-eliza-eth-wallet-agent",
+      "path": "repos/github.com/kristoferlund/ic-eliza-eth-wallet-agent",
+      "purpose": "Reference for ICP threshold-ECDSA wallet pattern (FA-03)"
+    }
+  ],
+
+  "crypto_libs": [
+    {
+      "name": "libsodium",
+      "version": "master",
+      "url": "https://github.com/jedisct1/libsodium",
       "path": "repos/github.com/jedisct1/libsodium",
-      "fetchedAt": "2026-04-17",
-      "purpose": "Crypto library (chacha20, blake2, ed25519)"
+      "purpose": "Crypto primitives (chacha20, blake2, ed25519) — reference"
     },
     {
-      "name": "github.com/dfinity/ic-hs",
-      "version": "main",
-      "path": "repos/github.com/dfinity/ic-hs",
-      "fetchedAt": "2026-04-17",
-      "purpose": "ICP Haskell reference for threshold ECDSA"
-    },
-    {
-      "name": "github.com/nickvsadquarters/ic-bitcoin",
-      "version": "main",
-      "path": "repos/github.com/nickvsadquarters/ic-bitcoin",
-      "fetchedAt": "2026-04-17",
-      "purpose": "ICP Bitcoin integration examples"
+      "name": "rust-bitcoin",
+      "version": "master",
+      "url": "https://github.com/rust-bitcoin/rust-bitcoin",
+      "path": "repos/github.com/rust-bitcoin/rust-bitcoin",
+      "purpose": "Bitcoin protocol types in Rust (FA-05)"
     }
   ]
 }
