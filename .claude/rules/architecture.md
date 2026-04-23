@@ -1,6 +1,6 @@
 ---
-description: Architecture enforcement — server/app split, layer separation, dependency rules, data externalization
-globs: ["server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**/*.{ts,tsx}", "docs/**/*.md", "scripts/**"]
+description: Architecture enforcement — apps/back server/app split, layer separation, dependency rules, data externalization
+globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "docs/**/*.md", "scripts/**"]
 ---
 
 # Architecture Rules
@@ -86,9 +86,9 @@ server/ → app/api/ → app/domain/ → app/lib/
 
 ### Frontend
 
-- `packages/frontend/*` зависит от `app/types/` (transformed to TS declarations)
-- НЕ зависит от `server/`, `app/domain/`, `canisters/`
-- Общается с backend только через HTTP API (Fastify routes) или WebSocket
+- `apps/frontend/*` (8 apps) + `packages/{ui,hooks,api-client,auth}/` (shared frontend packages) зависят от `packages/types/` (API Zod-схемы) через `@paxio/types`
+- НЕ зависят от `apps/back/server/`, `products/*/app/domain/`, `products/*/canister(s)/`
+- Общаются с backend только через HTTP API (Fastify routes) или WebSocket — типизированный клиент в `packages/api-client/`
 
 ## No Circular Dependencies
 

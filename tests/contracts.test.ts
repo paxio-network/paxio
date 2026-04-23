@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { Logger, Clock } from 'app/interfaces/index.js';
-import { CAPABILITIES, ZodDid, ZodAgentCard, ok, err } from 'app/types/index.js';
+import type { Logger, Clock } from '@paxio/interfaces';
+import { CAPABILITIES, ZodDid, ZodAgentCard, ok, err } from '@paxio/types';
 
 describe('Contracts export surface', () => {
   it('Logger interface is satisfied by shape', () => {

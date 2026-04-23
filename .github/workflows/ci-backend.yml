@@ -1,0 +1,153 @@
+name: CI · Backend (Fastify + VM sandbox)
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/back/**'
+      - 'products/*/app/**'
+      - 'packages/types/**'
+      - 'packages/interfaces/**'
+      - 'packages/errors/**'
+      - 'packages/utils/**'
+      - 'packages/contracts/**'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+      - 'vitest.config.ts'
+      - '.github/workflows/ci-backend.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'apps/back/**'
+      - 'products/*/app/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: '10.33.0'
+  NODE_VERSION: '22'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint || echo "lint script TBD"
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    name: Test (unit + integration)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: paxio_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/paxio_test
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run
+
+  acceptance:
+    name: Acceptance scripts
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: verify_foundation
+        run: bash scripts/verify_foundation.sh
+      - name: verify_m01_registry (if Registry code present)
+        if: hashFiles('products/01-registry/app/domain/*.ts') != ''
+        run: bash scripts/verify_m01_registry.sh
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=critical || true
+
+  status-check:
+    name: All Checks Passed · backend
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, acceptance, security]
+    if: always()
+    steps:
+      - name: Verify
+        run: |
+          for r in "${{ needs.typecheck.result }}" "${{ needs.test.result }}" "${{ needs.acceptance.result }}"; do
+            if [ "$r" != "success" ]; then echo "❌ $r"; exit 1; fi
+          done
+          echo "✅ All checks passed"

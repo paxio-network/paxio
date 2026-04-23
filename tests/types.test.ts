@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { ZodDid, isDid, parseDid } from 'app/types/did.js';
-import { ZodCapability, CAPABILITIES } from 'app/types/capability.js';
-import { ZodAgentCard } from 'app/types/agent-card.js';
+import { ZodDid, isDid, parseDid } from '@paxio/types';
+import { ZodCapability, CAPABILITIES } from '@paxio/types';
+import { ZodAgentCard } from '@paxio/types';
 
 describe('ZodDid', () => {
   it('accepts did:paxio:base:0x1a2b', () => {

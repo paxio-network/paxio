@@ -1,0 +1,27 @@
+# M04 Audit Log canister.
+# Inherits all dependency versions from the root workspace.
+# `cdylib` is produced for the WASM canister build (`cargo build --target
+# wasm32-unknown-unknown` or `dfx build`); `rlib` is used by `cargo test`
+# for the integration tests in `tests/chain_test.rs`.
+
+[package]
+name = "audit_log"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Paxio M04 — Immutable append-only audit log canister with SHA-256 hash chain (FA-06)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
+ic-stable-structures = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+bincode = { workspace = true }

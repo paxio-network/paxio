@@ -1,0 +1,109 @@
+name: Deploy · Backend (Hetzner)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/back/**'
+      - 'products/*/app/**'
+      - 'packages/**'
+      - 'Dockerfile.production'
+      - 'docker-compose.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.production
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/paxio-backend:latest
+            ghcr.io/${{ github.repository_owner }}/paxio-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Hetzner
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
+
+            echo "=== Pull new image ==="
+            docker pull ghcr.io/${{ github.repository_owner }}/paxio-backend:${{ github.sha }}
+
+            echo "=== Tag as latest ==="
+            docker tag \
+              ghcr.io/${{ github.repository_owner }}/paxio-backend:${{ github.sha }} \
+              ghcr.io/${{ github.repository_owner }}/paxio-backend:latest
+
+            echo "=== Restart backend ==="
+            docker compose up -d --no-deps backend
+
+            echo "=== Wait for healthy (90s) ==="
+            timeout 90 sh -c 'until docker inspect --format="{{.State.Health.Status}}" paxio-backend 2>/dev/null | grep -q healthy; do sleep 5; done' || {
+              echo "=== UNHEALTHY — container logs ==="
+              docker logs paxio-backend --tail=100
+              exit 1
+            }
+
+            echo "=== Cleanup older images ==="
+            docker image prune -f
+
+            echo "=== Done: ${{ github.sha }} ==="
+
+      - name: Smoke test
+        run: |
+          sleep 10
+          curl -sf https://api.paxio.network/health || exit 1
+          echo "✅ Smoke test passed"
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
+            echo "=== ROLLBACK ==="
+            PREV=$(docker images ghcr.io/${{ github.repository_owner }}/paxio-backend \
+              --format "{{.Tag}}" | grep -v latest | sort | tail -2 | head -1)
+            docker tag \
+              ghcr.io/${{ github.repository_owner }}/paxio-backend:$PREV \
+              ghcr.io/${{ github.repository_owner }}/paxio-backend:latest
+            docker compose up -d --no-deps backend
+            echo "=== Rolled back to: $PREV ==="

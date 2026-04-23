@@ -1,6 +1,6 @@
 ---
 description: TEST-FIRST mandatory workflow — tests are specifications, not verification
-globs: ["app/**/*.{js,ts}", "server/**/*.cjs", "packages/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/**"]
+globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "scripts/**"]
 ---
 
 # Testing Rules

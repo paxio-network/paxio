@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createSystemClock, createFixedClock } from 'app/lib/clock.js';
+import { createSystemClock, createFixedClock } from '@paxio/utils/clock';
 
 describe('systemClock', () => {
   it('now() returns current timestamp (ms)', () => {

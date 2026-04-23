@@ -19,17 +19,32 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "app/*": ["app/*"]
+      "@paxio/types": ["packages/types/src/index.ts"],
+      "@paxio/interfaces": ["packages/interfaces/src/index.ts"],
+      "@paxio/errors": ["packages/errors/src/index.ts"],
+      "@paxio/utils": ["packages/utils/src/index.ts"],
+      "@paxio/utils/clock": ["packages/utils/src/clock.ts"],
+      "@paxio/utils/logger": ["packages/utils/src/logger.ts"]
     },
     "types": ["node"]
   },
-  "include": ["app/**/*.ts", "tests/**/*.ts"],
+  "include": [
+    "packages/*/src/**/*.ts",
+    "products/*/app/**/*.ts",
+    "tests/**/*.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",
     "target",
     "canisters/target",
-    "packages/frontend",
+    "apps/frontend",
+    "products/*/canister",
+    "products/*/canisters",
+    "products/*/cli",
+    "products/*/http-proxy",
+    "products/*/ml",
+    "products/04-security/guard",
     "opensrc"
   ]
 }

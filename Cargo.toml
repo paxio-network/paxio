@@ -1,0 +1,47 @@
+# Root Rust workspace for Paxio canisters.
+# Architect owns this file.
+#
+# MEMBERS: add a member entry ONLY when its Cargo.toml exists on disk.
+# Feature branches (feature/m02-wallet-canister, ...) each include their own
+# canister Cargo.toml on their branch — the branch also ships a Cargo.toml that
+# adds its member to this list. Merging the branch into `dev` therefore does
+# TWO things atomically: (a) adds the crate sources, (b) registers the member.
+# This keeps `cargo build --workspace` green on `dev` at every commit.
+
+[workspace]
+resolver = "2"
+members = [
+  "platform/canister-shared",                     # M00c — cross-cutting primitives (AgentId, TxHash)
+  "products/03-wallet/canister",                  # M02 — threshold ECDSA wallet (icp-dev)
+  "products/04-security/canister",                # M03 — Security Sidecar Intent Verifier (icp-dev)
+  "products/06-compliance/canisters/audit-log",   # M04 — Audit Log Canister: SHA-256 hash chain (icp-dev)
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# Internet Computer
+ic-cdk = "0.13"
+ic-cdk-macros = "0.13"
+ic-stable-structures = "0.6"
+candid = "0.10"
+
+# Common Rust
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+thiserror = "1"
+sha2 = "0.10"
+bincode = "1.3"
+
+# Test runtime (for #[tokio::test] in canister tests)
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+debug = false
+strip = true

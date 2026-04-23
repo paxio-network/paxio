@@ -1,0 +1,242 @@
+name: Release · Tools (npm + JSR + PyPI + crates.io)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (without v prefix, e.g. 0.1.0-alpha.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write   # required for JSR publishing via GitHub OIDC
+
+env:
+  CARGO_TERM_COLOR: always
+  PNPM_VERSION: '10.33.0'
+  NODE_VERSION: '22'
+
+jobs:
+  # ─── 1. Verify versions match tag ─────────────────────
+  verify-versions:
+    name: Verify versions match tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - name: Extract tag version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ github.event.inputs.version }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+          echo "→ $VER"
+      - name: Check all pkg versions match
+        run: |
+          TAG_VER="${{ steps.version.outputs.version }}"
+          FAIL=0
+          check() {
+            local name="$1"; local actual="$2"
+            if [ "$actual" != "$TAG_VER" ]; then
+              echo "❌ $name version '$actual' != tag '$TAG_VER'"; FAIL=1
+            else
+              echo "✅ $name $actual"
+            fi
+          }
+          check "products/03-wallet/sdk-ts"     "$(node -p "require('./products/03-wallet/sdk-ts/package.json').version" 2>/dev/null || echo MISSING)"
+          check "products/03-wallet/sdk-python" "$(grep -m1 '^version' products/03-wallet/sdk-python/pyproject.toml 2>/dev/null | sed -E 's/.*"(.+)".*/\1/' || echo MISSING)"
+          check "Cargo.toml (workspace)"        "$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.+)".*/\1/')"
+          [ "$FAIL" -eq 0 ] || exit 1
+
+  # ─── 2. Build multiplatform binaries (complior CLI pattern) ────────
+  build-cli-binaries:
+    name: Build paxio-cli (${{ matrix.target }})
+    needs: verify-versions
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact: paxio-linux-x86_64
+            cross: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact: paxio-linux-aarch64
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            artifact: paxio-macos-x86_64
+            cross: false
+          - target: aarch64-apple-darwin
+            os: macos-14
+            artifact: paxio-macos-arm64
+            cross: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: paxio-windows-x86_64.exe
+            cross: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }} -p paxio-cli || echo "paxio-cli not yet in workspace — skipping"
+      - name: Build (native)
+        if: '!matrix.cross'
+        run: cargo build --release --target ${{ matrix.target }} -p paxio-cli || echo "paxio-cli not yet in workspace — skipping"
+      - name: Stash binary
+        if: runner.os != 'Windows'
+        run: |
+          if [ -f target/${{ matrix.target }}/release/paxio ]; then
+            cp target/${{ matrix.target }}/release/paxio ${{ matrix.artifact }}
+            sha256sum ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
+          fi
+      - name: Stash binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path "target/${{ matrix.target }}/release/paxio.exe") {
+            Copy-Item "target/${{ matrix.target }}/release/paxio.exe" "${{ matrix.artifact }}"
+            $h = (Get-FileHash "${{ matrix.artifact }}" -Algorithm SHA256).Hash.ToLower()
+            "$h  ${{ matrix.artifact }}" | Out-File -Encoding ASCII "${{ matrix.artifact }}.sha256"
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.artifact }}.sha256
+          if-no-files-found: warn
+
+  # ─── 3. GitHub Release ────────────────────────────────
+  github-release:
+    name: GitHub Release
+    needs: [verify-versions, build-cli-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Merge checksums
+        run: cat artifacts/*.sha256 > artifacts/checksums.txt 2>/dev/null || true
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
+          fail_on_unmatched_files: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+
+  # ─── 4. Publish @paxio/* to npm ───────────────────────
+  publish-npm:
+    name: Publish to npm
+    needs: verify-versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build
+      - name: Publish @paxio/sdk
+        run: cd products/03-wallet/sdk-ts && pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true   # SOON: remove once first release stable
+      # Add more @paxio/* packages here as they come online
+
+  # ─── 5. Publish @paxio/sdk to JSR (OIDC, no token) ────
+  publish-jsr:
+    name: Publish to JSR
+    needs: verify-versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Publish @paxio/sdk to JSR
+        working-directory: products/03-wallet/sdk-ts
+        run: npx jsr publish --allow-dirty || echo "jsr not configured yet"
+
+  # ─── 6. Publish paxio-sdk to PyPI ─────────────────────
+  publish-pypi:
+    name: Publish to PyPI
+    needs: verify-versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build wheel + sdist
+        working-directory: products/03-wallet/sdk-python
+        run: uv build || echo "sdk-python not yet present"
+      - name: Publish
+        working-directory: products/03-wallet/sdk-python
+        run: uv tool run --from twine twine upload --username __token__ --password "$PYPI_TOKEN" dist/* || true
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+  # ─── 7. Publish paxio-cli to crates.io ────────────────
+  publish-crates:
+    name: Publish to crates.io
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish paxio-cli
+        run: cargo publish -p paxio-cli --token "$CARGO_TOKEN" || echo "paxio-cli not yet present"
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+
+  # ─── 8. Smoke test installs ───────────────────────────
+  smoke:
+    name: Smoke test
+    needs: [publish-npm, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: npm install @paxio/sdk
+        run: npm install @paxio/sdk@${{ needs.verify-versions.outputs.version }} || true
+      - uses: astral-sh/setup-uv@v5
+      - name: pip install paxio-sdk
+        run: uv tool run --from pip pip install paxio-sdk==${{ needs.verify-versions.outputs.version }} || true

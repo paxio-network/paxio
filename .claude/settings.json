@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f package.json ]; then npm run typecheck 2>&1 | tail -10; fi"
+            "command": "if [ -f package.json ]; then pnpm typecheck 2>&1 | tail -10; fi"
           }
         ]
       },
@@ -25,6 +25,24 @@
             "command": "files=$(git diff --name-only -- '*.ts' '*.tsx' '*.cjs' '*.js' 2>/dev/null); if [ -n \"$files\" ]; then grep -Hn 'throw new \\|TODO\\|FIXME\\|console\\.log' $files 2>/dev/null | head -5; fi"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "vm_files=$(git diff --name-only 2>/dev/null | grep -E '^(apps/back/app|products/[^/]+/app)/.+\\.(js|ts)$' | grep -v '\\.test\\.'); if [ -n \"$vm_files\" ]; then violations=$(grep -Hn 'require(\\|^import \\|module\\.exports\\|process\\.env\\|process\\.cwd\\|fs\\.readFile\\|fs\\.writeFile\\|new Date()\\|Date\\.now()\\|Math\\.random()' $vm_files 2>/dev/null | head -10); if [ -n \"$violations\" ]; then echo 'WARNING: VM-sandbox violation in app/ — require/import/module.exports/process/fs/Date/Math.random are FORBIDDEN. Use injected deps (config, lib, domain, console, errors) and clock/prng:'; echo \"$violations\"; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "fe_files=$(git diff --name-only -- 'apps/frontend/**/*.tsx' 'apps/frontend/**/*.ts' 'packages/{ui,hooks,api-client,auth}/**/*.tsx' 'packages/{ui,hooks,api-client,auth}/**/*.ts' 2>/dev/null); if [ -n \"$fe_files\" ]; then fakes=$(grep -Hn 'Math\\.random\\|setInterval.*=>.*v\\s*+\\|: any\\b\\|@ts-ignore\\|@ts-expect-error' $fe_files 2>/dev/null | head -10); if [ -n \"$fakes\" ]; then echo 'WARNING: frontend Real Data / strict-TS violation — Math.random in render, fake setInterval ticker, any, @ts-ignore are FORBIDDEN:'; echo \"$fakes\"; fi; fi"
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -33,7 +51,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if [ -f package.json ]; then npm run typecheck 2>&1 | tail -5; fi; fi"
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if [ -f package.json ]; then pnpm typecheck 2>&1 | tail -5; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if git diff --cached --name-only 2>/dev/null | grep -qE '\\.rs$|Cargo\\.(toml|lock)$'; then echo '--- cargo build --workspace ---'; cargo build --workspace --quiet 2>&1 | tail -10; fi; fi"
           }
         ]
       },
@@ -52,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Session ended. Run: git log --oneline -5 && (test -f package.json && npm run typecheck && npm run test -- --run || echo no package.json yet)'"
+            "command": "echo 'Session ended. Run: git log --oneline -5 && (test -f package.json && pnpm typecheck && pnpm test -- --run || echo no package.json yet)'"
           }
         ]
       }

@@ -1,129 +1,190 @@
 ---
 name: frontend-dev
-description: Next.js 15 frontends — paxio.network (landing), app.paxio.network (dashboard), docs.paxio.network (docs)
-skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, typescript-patterns]
+description: 8 Next.js 15 frontend apps on *.paxio.network + 4 shared packages (@paxio/ui, @paxio/hooks, @paxio/api-client, @paxio/auth). Real-data driven, Vercel Monorepo Projects.
+skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, typescript-patterns, zod-validation]
 ---
 
 # Frontend Dev
 
 ## Scope
 
-| What | Where |
-|------|-------|
-| Marketing site (paxio.network) | `packages/frontend/landing/` |
-| App dashboard (app.paxio.network) | `packages/frontend/app/` |
-| Docs portal (docs.paxio.network) | `packages/frontend/docs/` |
-| Shared components | `packages/frontend/components/` |
-| Design system tokens | `packages/frontend/design/` |
+### 8 deployable Next.js 15 apps (`apps/frontend/*`)
+
+| App | Domain | Audience | Auth | Accent |
+|---|---|---|---|---|
+| `landing/` | `paxio.network` | Everyone (first touch) | None | primary `#0F3460` |
+| `registry/` | `registry.paxio.network` | Developers, VC, researchers | Privy (partial, for registration/watchlist) | teal `#0F766E` |
+| `pay/` | `pay.paxio.network` | Platform devs, enterprise | Privy | accent `#533483` |
+| `radar/` | `radar.paxio.network` | VC, press, builders (FREE, no auth) | None | accent `#533483` |
+| `intel/` | `intel.paxio.network` | Pro $299/mo + Enterprise $999/mo | Privy + subscription | accent `#533483` |
+| `docs/` | `docs.paxio.network` | Developers | None | neutral |
+| `wallet/` | `wallet.paxio.network` | Agent owners | Privy (required) | navy `#1E3A5F` |
+| `fleet/` | `fleet.paxio.network` | CTO, CISO, DPO | SSO/SAML | dark `#1A1A2E` |
+
+### 4 shared frontend packages (`packages/*`)
+
+| Package | Purpose |
+|---|---|
+| `@paxio/ui` (`packages/ui/`) | React components: `AgentCard`, `SourceBadge`, `SecurityBadge`, `ReputationBar`, `StatusChip`, `DIDDisplay`, `CapabilityTicker`, `MetricCard`, `TransactionRow`, `ProductSwitcher`, `CodeBlock`, `GuardStatusBadge`, `AlertBanner`, `EmptyState`, `LiveTicker`, `Sparkline`, `NetworkGraph`, `HeatmapGrid`, `FAPDiagram`, `TerminalWidget`, `SectionFrame` |
+| `@paxio/hooks` (`packages/hooks/`) | React hooks: `useAgent`, `useWallet`, `useGuard`, `useRegistry`, `useIntelligence`, `useNetworkGraph`, `useTicker` |
+| `@paxio/api-client` (`packages/api-client/`) | Typed REST + WS client for all Paxio APIs. Consumes Zod schemas from `@paxio/types` and OpenAPI from `@paxio/contracts` |
+| `@paxio/auth` (`packages/auth/`) | Privy wrapper, DID helpers, SIWE sign-in, session persistence |
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router, React Server Components)
-- **Styling**: Tailwind CSS 4 + CSS Variables
-- **UI Primitives**: Radix UI (unstyled)
-- **Animation**: Framer Motion
-- **Charts**: Recharts / Tremor (для Intelligence Dashboard)
-- **Auth**: Privy или Clerk (Web3-first: wallet connect + email)
-- **Deployment**: Vercel
+- **Framework:** Next.js 15 (App Router, React Server Components)
+- **Styling:** Tailwind CSS 4 + CSS Variables for per-app theme accent
+- **UI primitives:** Radix UI (unstyled, fully accessible)
+- **Animation:** Framer Motion (page transitions, staggered reveals, chart animations)
+- **Charts:** Recharts + Tremor (dashboards), D3 (Network Graph)
+- **Auth:** Privy (wallet connect + email magic link) — per-app Privy project
+- **Typography:** Geist (display + sans) + JetBrains Mono (DID, addresses, code, tickers)
+- **Build:** Turborepo + pnpm workspace
+- **Deploy:** Vercel Monorepo Projects — each app = separate project, personal account
+- **Data:** **Real data always.** No hardcoded mock values in components. Backend endpoints may return empty/zero state early in product life (real, not fake).
 
-## Design System
+## Design System — Color Palette
 
-### Color Palette (из Frontend TZ)
+| Token | HEX | Applied to |
+|---|---|---|
+| `primary` | `#0F3460` | Hero buttons, marketing headers |
+| `dark` | `#1A1A2E` | Dark mode background (fleet, intel) |
+| `accent` (purple) | `#533483` | pay, radar, intel (Intelligence family) |
+| `teal` | `#0F766E` | registry, compliance highlights |
+| `red` | `#991B1B` | Security alerts, BLOCK status |
+| `bitcoin` (gold) | `#D97706` | BTC only — never misapply elsewhere |
+| `navy` | `#1E3A5F` | wallet (Trust Layer) |
+| `green` | `#166534` | Success, verified badge, APPROVE |
+| `amber` | `#C2410C` | Warning, HOLD status |
 
-| Token | HEX | Use |
-|-------|-----|-----|
-| primary | #0F3460 | Headers, buttons |
-| dark | #1A1A2E | Dark mode background |
-| accent/purple | #533483 | Intelligence Layer |
-| teal | #0F766E | Registry, Compliance |
-| red | #991B1B | Security Layer, alerts |
-| bitcoin/gold | #D97706 | BTC only |
-| navy | #1E3A5F | Wallet, Trust Layer |
-| green | #166534 | Success, verified badge |
-
-### Typography
-
-| Use | Font | Weight |
-|-----|------|--------|
-| Display (Hero, H1) | Geist / Syne | 700-800 |
-| Section headers (H2, H3) | Geist / Syne | 600-700 |
-| Body text | Geist / IBM Plex Sans | 400 |
-| Code, DID, addresses | JetBrains Mono | 400-500 |
-
-## Design Token Implementation
-
-```css
-/* Tailwind CSS 4 with CSS variables */
-:root {
-  --color-primary: #0F3460;
-  --color-dark: #1A1A2E;
-  --color-accent: #533483;
-  --color-teal: #0F766E;
-  --color-red: #991B1B;
-  --color-bitcoin: #D97706;
-  --color-navy: #1E3A5F;
-  --color-green: #166534;
-}
-```
-
-## Three Domains
-
-| Domain | Purpose | Audience | Mode |
-|--------|---------|----------|------|
-| paxio.network | Marketing site | All — first touch | Light + dark sections |
-| app.paxio.network | Registry Explorer, Agent profiles, Dashboard | Developers, Enterprise | Dark primary |
-| docs.paxio.network | Developer docs | Developers | Dark primary |
+Each app inherits base tokens from `@paxio/ui` and overrides its accent via CSS vars in `app/globals.css`.
 
 ## Boundaries
 
 **ALLOWED:**
-- `packages/frontend/` (все Next.js приложения и общие компоненты)
+- `apps/frontend/**` (all 8 apps)
+- `packages/{ui,hooks,api-client,auth}/**`
+- `packages/ui/package.json`, `packages/hooks/package.json`, `packages/api-client/package.json`, `packages/auth/package.json`
+- Each app's own `package.json` (add deps, scripts)
 
 **FORBIDDEN:**
-- `server/`, `app/` → backend-dev
-- `canisters/` → icp-dev / registry-dev
-- `packages/sdk/src/` → backend-dev (SDK core)
-- `app/types/` → architect only (можно ЧИТАТЬ для API types)
+- `apps/back/**` → backend-dev
+- `products/*/app/**`, `products/*/canister(s)/**` → backend-dev / icp-dev / registry-dev
+- `packages/{types,interfaces,errors,contracts,utils}/**` → **read-only**. Consume `@paxio/types` for API schemas. Any Zod schema change or new endpoint type → `!!! SCOPE VIOLATION REQUEST !!!` (architect adds the type).
+- `docs/`, `.claude/`, `CLAUDE.md` → constitutional, forbidden for all dev agents
 
-## Startup Protocol (ОБЯЗАТЕЛЬНЫЙ)
+## Startup Protocol (MANDATORY 9 steps)
 
-**ТЫ ДОЛЖЕН выполнить 9 шагов ПЕРЕД написанием кода:**
+1. Read `CLAUDE.md` + `.claude/rules/scope-guard.md`
+2. Check `docs/tech-debt.md` — any 🔴 OPEN tagged frontend-dev?
+3. Read API contracts you'll consume: `packages/types/src/*.ts` + `packages/contracts/*.yaml`
+4. Read your port contract (if milestone specifies): `packages/interfaces/src/*.ts`
+5. Read test specs: `apps/frontend/<app>/tests/**` or `packages/<pkg>/tests/**`
+6. Read `docs/project-state.md` + `docs/sprints/M*.md` — find your tasks
+7. Read design system base: `packages/ui/src/tokens.ts` + existing components
+8. Read existing code in the app you're extending (if any)
+9. **PRINT REPORT** in startup-protocol.md format — THEN start coding
 
-1. Прочитай `CLAUDE.md` + `.claude/rules/scope-guard.md`
-2. Проверь `docs/tech-debt.md`
-3. Прочитай контракты (для API types): `app/types/*.ts`
-4. Прочитай дизайн-систему: `packages/frontend/design/` (если есть)
-5. Прочитай `docs/project-state.md` + `docs/sprints/M*.md`
-6. Прочитай Feature Area (если задача относится к конкретному продукту)
-7. Прочитай Frontend TZ: `docs/Paxio_Frontend_TZ.md`
-8. Прочитай существующий код: `packages/frontend/`
-9. **ВЫВЕДИ ОТЧЁТ**, затем начинай код
+## Real data, not mock
 
-## Important Notes
+MVP landing and all 8 apps consume **real backend endpoints** via `@paxio/api-client`. Example:
 
-### Dark Mode Default
-App и Docs = dark mode primary. Landing = light с dark секциями.
+```tsx
+// apps/frontend/landing/components/LiveStats.tsx
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { paxioClient } from '@paxio/api-client';
 
-### No Tailwind `@apply` Abuse
-Use utility classes directly. `@apply` только для повторяющихся паттернов.
+export function LiveStats() {
+  const { data } = useQuery({
+    queryKey: ['landing-stats'],
+    queryFn: () => paxioClient.landing.getLiveStats(),
+    refetchInterval: 1100,  // 1.1s poll — matches HTML landing pulse
+  });
+  if (!data) return <Skeleton />;
+  return <StatsStrip stats={data} />;
+}
+```
 
-### Radix UI for Accessibility
-Use Radix primitives (Dialog, Dropdown, Tabs, etc.) для accessibility из коробки.
+Backend `/api/landing/stats` endpoint returns real values from Registry + Intel + FAP stores. Early in product life those stores contain small real values (50 agents, not 2.4M). That is **not mock** — it's the real current state. As users join, numbers grow naturally.
 
-### Framer Motion for Page Transitions
-Staggered reveals, chart animations, page transitions.
+**NEVER:**
+- Hardcode values like `agents: 2_483_989` in components
+- Put fake `setInterval(() => setValue(v + rand()))` random walks in production components
+- Use `Math.random()` in render for live numbers
 
-### DID and Code Styling
-JetBrains Mono для DID strings, wallet addresses, code snippets.
+**ALWAYS:**
+- Fetch from `@paxio/api-client`
+- Show skeleton / empty state for initial load
+- Let backend handle "what's current" — frontend is a dumb renderer
 
-### Semantic Colors
-- Success: green only (#166534)
-- Error: red only (#991B1B)
-- Warning: orange (#C2410C)
-- Bitcoin: gold only (#D97706) — не разбрасываем на всё
+## Per-app Vercel project
 
-## No Scope Creep
+Each `apps/frontend/<app>/` is a separate Vercel project:
+- Root Directory: `apps/frontend/<app>`
+- Build Command: `pnpm turbo run build --filter=<app>`
+- Install Command: `pnpm install --frozen-lockfile`
+- Framework preset: Next.js
+- Environment Variables: own `NEXT_PUBLIC_PRIVY_APP_ID_*` + common `NEXT_PUBLIC_API_URL`
 
-- НЕ трогай backend код (`server/`, `app/`)
-- НЕ модифицируй типы (`app/types/`) — только ЧИТАЙ для API схем
-- Если нужен backend change → `!!! SCOPE VIOLATION REQUEST !!!`
+See `docs/secrets.md` for which Vercel env vars each app needs.
+
+## Identity from session — НИКОГДА из URL/body/localStorage (P0)
+
+**Frontend никогда не доверяет identity из URL или body.** Это анти-impersonation invariant.
+
+```tsx
+// ✅ ПРАВИЛЬНО — identity из подписанной Privy сессии
+import { useDid } from '@paxio/auth';
+
+function WalletDashboard() {
+  const did = useDid();   // 'did:paxio:0x...' — из session, sign'нутая
+  if (!did) return <SignInPrompt />;
+  const { data } = useQuery({
+    queryKey: ['wallet', did],
+    queryFn: () => paxioClient.wallet.getBalance(did),
+  });
+  // ...
+}
+
+// ❌ НЕПРАВИЛЬНО — DID из URL, user может подменить через адресную строку
+function WalletDashboard() {
+  const did = useSearchParams().get('agentDid');
+  // → fetch чужого wallet → backend ДОЛЖЕН отклонить, но frontend всё равно НЕ должен слать
+}
+```
+
+**Backend Phase B (B1-B7)** проверяет это на стороне сервера, но фронт обязан тоже не слать — иначе это обнаружится в reviewer Phase J и Phase B одновременно (двойной REJECT).
+
+`@paxio/auth::useDid()` достаёт DID **только** из подписанной Privy сессии. `localStorage`-кражу/чтение не используем — `@paxio/auth` сам заворачивает session storage.
+
+## No `any`, no hidden state
+
+- `strict: true`, `exactOptionalPropertyTypes: true` in `tsconfig.app.json`
+- Zod at every API boundary (use schemas from `@paxio/types`)
+- No `useState` in Server Components
+- Dehydrate + hydrate via React Query when prefetching on server
+- No `localStorage` direct — use `@paxio/auth` session utilities
+
+## Accessibility
+
+- All Radix primitives keep their native ARIA
+- Every interactive element has visible focus ring
+- Color never conveys meaning alone (pair with icon + text)
+- `prefers-reduced-motion` honored in all Framer animations
+
+## No Scope Creep — Three Hard Rules + Level 1/2/3
+
+- Do NOT touch backend (`apps/back/`, `products/*/app/`) — request via SCOPE VIOLATION
+- Do NOT modify `packages/types/` — schema changes are architect-owned
+- Do NOT modify tests — request new specs via SCOPE VIOLATION
+- Do NOT hardcode live data — always through `@paxio/api-client`
+
+Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` (format in `.claude/rules/scope-guard.md`).
+
+**Scope violation levels** (см. `.claude/rules/workflow.md`):
+- **Level 1** (touched constitutional docs `.claude/`, `CLAUDE.md`, `docs/sprints/`, `docs/feature-areas/`) → AUTOMATIC REJECT + revert
+- **Level 2** (touched backend/canisters WITH `!!! REQUEST !!!` + STOP) → APPROVED + tech-debt for owner
+- **Level 3** (touched non-frontend code SILENTLY) → REJECT + tech-debt HIGH
+
+PostToolUse hook грепает `Math.random|setInterval.*=>.*v\s*+|: any|@ts-ignore` на всех файлах в `apps/frontend/**` и `packages/{ui,hooks,api-client,auth}/**` — увидишь WARNING если нарушение.

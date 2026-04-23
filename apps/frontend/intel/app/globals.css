@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+/* Intel — intel.paxio.network */
+:root {
+  --color-accent: #533483;
+  --color-primary: #0F3460;
+  --color-dark: #1A1A2E;
+  --color-accent-purple: #533483;
+  --color-teal: #0F766E;
+  --color-red: #991B1B;
+  --color-bitcoin: #D97706;
+  --color-navy: #1E3A5F;
+  --color-green: #166534;
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #12101A;
+  color: #E8E8F0;
+}

@@ -1,0 +1,30 @@
+# Paxio Wallet Canister (FA-03, M02 MVP)
+# Mirrors TS contracts in packages/types/src/wallet.ts.
+# Threshold ECDSA is stubbed behind feature `mock-ecdsa` for unit tests;
+# real `sign_with_ecdsa` management canister call is used when feature is off.
+
+[package]
+name = "wallet"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["mock-ecdsa"]
+mock-ecdsa = []
+
+[dependencies]
+ic-cdk.workspace = true
+ic-cdk-macros.workspace = true
+ic-stable-structures.workspace = true
+candid.workspace = true
+serde.workspace = true
+serde_bytes.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

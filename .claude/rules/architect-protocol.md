@@ -1,60 +1,461 @@
 ---
-description: Architect scan protocol, milestone creation rules, knowledge that MUST survive context compaction
-globs: ["docs/**/*.md", "server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/**"]
+description: Architect scan protocol, milestone creation rules, and knowledge that MUST survive context compaction
+globs: ["docs/**/*.md", "tests/**/*.{ts,tsx}", "products/**/*.{ts,js,rs}", "apps/**/*.{ts,tsx,cjs,js}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "scripts/**"]
 ---
 
 # Architect Protocol — ОБЯЗАТЕЛЬНЫЙ при каждом планировании
 
-## ПЕРВЫМ ДЕЛОМ: tech-debt тесты
+Этот файл существует чтобы критические знания architect'а не терялись
+при компакции контекста. Rules перезагружаются по glob — agent.md нет.
 
+---
+
+## ФАЗА 1: SCAN (понять текущее состояние)
+
+### 1.1 — Tech-debt ПЕРВЫМ ДЕЛОМ
+
+```bash
+cat docs/tech-debt.md
 ```
-1. cat docs/tech-debt.md
-2. Найди 🔴 OPEN где "Тест на fix" пустая или "architect напишет"
-3. Для КАЖДОЙ — напиши падающий тест
-4. Обнови tech-debt.md: колонку "Тест на fix" → имя теста
-5. Коммитни тесты
-6. ТОЛЬКО ПОСЛЕ ЭТОГО — milestone работа
-```
+
+- Найди 🔴 OPEN где «Тест на fix» пустая или «architect напишет»
+- Для КАЖДОЙ — напиши падающий тест
+- Обнови `docs/tech-debt.md`: колонку «Тест на fix» → имя написанного теста, статус 🟡 BACKLOG → 🔴 OPEN
+- Закоммить тест ДО milestone-работы
+- ТОЛЬКО ПОСЛЕ ЭТОГО — milestone работа
 
 Без тестов dev-агенты НЕ МОГУТ фиксить долг. Ты — бутылочное горлышко.
 
-## Scan протокол — ОБЯЗАТЕЛЬНЫЕ 6 шагов ПЕРЕД milestone
+### 1.2 — Стратегия и vision
 
-### ШАГ 1 — Статус проекта
+```bash
+cat docs/NOUS_Strategy_v5.md         # (alias: docs/architecture.md) ЧТО строим, ЗАЧЕМ
+cat docs/NOUS_Development_Roadmap.md # (alias: docs/roadmap.md)      КАКИЕ фичи, В КАКОМ порядке
+```
+
+Определи следующую задачу из текущей фазы Roadmap.
+- Нет Roadmap → СТОП, спроси user'а.
+- Milestone не из текущей фазы → не создавай.
+
+### 1.3 — Текущее состояние
+
 ```bash
 git log --oneline -10
-cat docs/project-state.md
+cat docs/project-state.md     # что DONE, что STUB
 ls docs/sprints/
-grep -l "ВЫПОЛНЕН\|DONE" docs/sprints/*.md
+grep -l "✅ DONE\|ВЫПОЛНЕН" docs/sprints/*.md
 ```
 
-### ШАГ 2 — Читай ВСЕ типы и интерфейсы
-```bash
-ls app/types/ && cat app/types/*.ts
-ls app/interfaces/ && cat app/interfaces/*.ts
-```
-Тесты ДОЛЖНЫ использовать РЕАЛЬНЫЕ типы. Предполагаемые типы → тест не скомпилируется → спринт сломан.
+### 1.4 — Feature Area подсистемы
 
-### ШАГ 3 — Что реализовано vs заглушки
-```bash
-grep -rn "TODO\|FIXME\|stub\|STUB" server/ app/ canisters/ packages/
-```
-
-### ШАГ 4 — Существующие тесты (НЕ дублировать!)
-```bash
-grep -rn "describe\|it(" tests/*.test.ts
-```
-
-### ШАГ 5 — Прочитай Feature Area подсистемы
 ```bash
 ls docs/feature-areas/
+cat docs/fa-registry.md                          # ★ FA → physical paths
 cat docs/feature-areas/FA-0X-[relevant].md
 ```
-Feature Area = промежуточный слой между Roadmap и Milestone.
 
-### ШАГ 6 — Начинай работу
-Теперь знаешь реальное состояние. Пиши milestone и тесты.
-НЕ обновляй project-state.md — это сделает reviewer после merge.
+Feature Area = промежуточный слой между Roadmap и Milestone.
+Прочитай cross-dependencies и test coverage **ПЕРЕД** планированием.
+НЕ создавай milestone пока не поймёшь подсистему глубоко.
+
+### 1.5 — Контракты (Shared Kernel)
+
+```bash
+ls packages/types/src/        && cat packages/types/src/*.ts        # @paxio/types — Zod + TS
+ls packages/interfaces/src/   && cat packages/interfaces/src/*.ts   # @paxio/interfaces — port-контракты
+ls packages/errors/src/       && cat packages/errors/src/*.ts       # @paxio/errors — AppError hierarchy
+ls packages/contracts/        # OpenAPI per FA — Published Language
+
+# Если milestone касается canister'ов:
+ls platform/canister-shared/src/                                    # cross-canister Rust primitives
+cat products/<fa>/canister*/src/lib.rs 2>/dev/null
+```
+
+Тесты ДОЛЖНЫ использовать **РЕАЛЬНЫЕ** типы.
+Предполагаемые типы → тест не скомпилируется → спринт сломан.
+
+### 1.6 — Что реализовано vs заглушки
+
+```bash
+grep -rn "STUB\|TODO\|FIXME\|not implemented\|throw new Error" \
+  apps/back/server/ apps/back/app/ products/ platform/canister-shared/
+```
+
+### 1.7 — Существующие тесты (НЕ дублировать!)
+
+```bash
+grep -rn "describe\|it(\|test(" tests/*.test.ts products/*/tests/**/*.test.ts 2>/dev/null | head -30
+grep -rn "#\[test\]" platform/canister-shared/ products/*/canister*/src/ 2>/dev/null | head -20
+```
+
+---
+
+## ФАЗА 2: PLAN (создать milestone)
+
+### 2.1 — Определи задачу из Roadmap
+
+Milestone должен соответствовать текущей фазе.
+- Нет Roadmap → СТОП, спроси user'а
+- Milestone не соответствует фазе → не создавай
+- Нет Strategy → СТОП
+
+### 2.2 — Создай milestone файл
+
+```
+docs/sprints/M0X-name.md
+```
+
+С задачами для каждого агента, зависимостями, предусловиями среды.
+Шаблон — в `docs/sprints/TEMPLATE.md`.
+
+### 2.3 — Определи тип КАЖДОЙ задачи
+
+**Тип 1 (логика):** unit test RED → GREEN
+- vitest для TypeScript: `tests/*.test.ts`, `products/*/tests/**/*.test.ts`
+- cargo test для Rust: `platform/canister-shared/tests/*.rs`, `products/*/canister*/tests/*.rs`
+
+**Тип 2 (интеграция/инфраструктура):** acceptance script FAIL → PASS
+- `scripts/verify_*.sh`
+- Примеры: dfx replica + canister deploy, Docker compose stack, daemon health check, frontend build
+
+**Тип 3 (E2E с ICP/Bitcoin testnet):** на реальной инфраструктуре
+- Требует ICP local replica или mainnet-cycles
+- Требует Bitcoin testnet (regtest или signet)
+- Requires `OPENROUTER_API_KEY` если задействован Guard ML или Intelligence
+
+Если задача требует несколько типов — напиши **ВСЕ** спецификации.
+
+### 2.4 — Обязательная таблица в конце milestone
+
+```markdown
+| # | Задача | Агент | Метод верификации | Архитектурные требования | Файлы |
+|---|---|---|---|---|---|
+| 1 | ... | backend-dev | unit test: TestX GREEN | Factory fn, Object.freeze, pure fn, agentDid filter | products/<fa>/app/... |
+| 2 | ... | icp-dev | cargo test + scripts/verify_Y.sh PASS | No panic, exhaustive match, thiserror, serde camelCase, Storable Bound | products/<fa>/canister/... |
+| 3 | ... | registry-dev | E2E: scripts/verify_Z.sh PASS | DI factory, data from JSON, Result<T,E> | products/01-registry/app/... |
+| 4 | ... | frontend-dev | smoke test + Playwright | useQuery via @paxio/api-client, no Math.random in render, accessible | apps/frontend/<app>/... |
+```
+
+Без таблицы user не знает кого запускать и что проверять.
+Колонка **«Архитектурные требования» — ключевая**: dev видит ожидания по стилю ДО кода.
+
+---
+
+## ФАЗА 3: CONTRACTS (контрактный слой)
+
+Единый источник правды: **packages/types/src/** + **packages/interfaces/src/**
+
+### 3.1 — Типы + Zod schemas
+
+- Обновляй/создавай в `packages/types/src/<fa>.ts`
+- Каждый тип должен иметь парный Zod schema (`Zod<TypeName>` суффикс)
+- `tests/<fa>-contracts.test.ts` проверяет что типы соответствуют Zod-валидации (round-trip)
+
+### 3.2 — Интерфейсы компонентов
+
+- `packages/interfaces/src/<fa>.ts` — port-контракты сервисов и адаптеров
+- Каждый port = pure interface (no I/O assumptions, only signature + Result<T,E>)
+
+### 3.3 — Cross-language зеркало (Rust canisters)
+
+Если тип нужен в Rust canister'е → зеркали в `products/<fa>/canister*/src/types.rs` ИЛИ
+вынеси в `platform/canister-shared/src/` если нужно ≥2 canister'ам.
+- `#[serde(rename_all = "camelCase")]` для совместимости с TS JSON
+- `CandidType` derive для wire-совместимости с .did файлами
+- Добавь serde round-trip тест в `tests/`
+
+### 3.4 — AppError hierarchy
+
+- `packages/errors/src/index.ts` — base `AppError` + subclasses
+- Backend (CommonJS) зеркало: `apps/back/server/lib/errors.cjs` (TD-01 синхронизация)
+- Никаких `throw new Error(...)` — только `AppError` подклассы
+
+---
+
+## ФАЗА 4: SPECS (спецификации — ТЗ для dev'ов)
+
+### 4.1 — RED unit тесты (Тип 1)
+
+- TypeScript: `tests/*.test.ts` (cross-FA) или `products/<fa>/tests/**/*.test.ts` (per-FA)
+- Rust: `platform/canister-shared/tests/*.rs`, `products/<fa>/canister*/tests/*.rs`
+- Используй РЕАЛЬНЫЕ типы из Phase 3
+
+### 4.2 — Acceptance scripts (Тип 2)
+
+- `scripts/verify_*.sh` — bash скрипты
+- Должны запускаться и FAIL (без реализации)
+- Не должны иметь ошибок среды (только логические fail)
+- Шаблон шапки: `set -euo pipefail; cd "$(dirname "$0")/.."; PASS=0; FAIL=0; ok(){...}; bad(){...}`
+
+### 4.3 — E2E тесты (Тип 3)
+
+- ICP-related: `bash scripts/verify_*.sh` после `source scripts/dfx-setup.sh && dfx_start`
+- Bitcoin: `regtest` через bitcoind в Docker
+- Frontend: Playwright headless через `pnpm --filter <app> test:e2e`
+- Backend integration: vitest с реальным PostgreSQL+Redis в Docker
+
+### 4.4 — Архитектурные проверки в тестах (ОБЯЗАТЕЛЬНО)
+
+Тесты — единственная гарантия что dev напишет код по стандартам.
+Dev-агенты теряют context при compaction. **Тесты не теряются.**
+
+#### TypeScript (domain/factory function в `products/<fa>/app/domain/`)
+
+```typescript
+// 1. Pure function — детерминированность (engineering-principles §6)
+it('is deterministic (same input → same output)', () => {
+  const r1 = fn(input);
+  const r2 = fn(input);
+  expect(r1).toStrictEqual(r2);
+});
+
+// 2. Factory pattern — create-prefix + frozen result (DI §16)
+import { createXxx } from './xxx.js';
+it('factory returns frozen service object', () => {
+  const service = createXxx(deps);
+  expect(Object.isFrozen(service)).toBe(true);
+  expect(Object.getPrototypeOf(service)).toBe(Object.prototype); // not class
+});
+
+// 3. Consistent return shape — monomorphic (V8 perf + safety)
+it('returns consistent shape for all code paths', () => {
+  const valid = fn(validInput);
+  const invalid = fn(invalidInput);
+  expect(Object.keys(valid).sort()).toStrictEqual(Object.keys(invalid).sort());
+});
+
+// 4. AppError hierarchy — типизированные ошибки
+it('throws NotFoundError for missing resource', async () => {
+  await expect(service.getX('nonexistent')).rejects.toThrow(NotFoundError);
+});
+
+// 5. agentDid / organizationId filter (multi-tenant isolation)
+it('filters by agentDid', async () => {
+  const alice = await listX('did:paxio:alice');
+  expect(alice.every(x => x.agentDid === 'did:paxio:alice')).toBe(true);
+});
+
+// 6. Zod validation на boundary
+it('validates input via Zod at API boundary', () => {
+  const bad = { amount: 'not a number' };
+  expect(SchemaX.safeParse(bad).success).toBe(false);
+});
+
+// 7. Data из JSON — не hardcoded (engineering-principles §5)
+import data from '../../../app/data/x.json' with { type: 'json' };
+it('uses data from JSON file', () => {
+  expect(data.key).toBeDefined();
+  const result = fn(input, data); // configurable param
+});
+```
+
+#### Rust (canister в `products/<fa>/canister*/`)
+
+```rust
+// 8. No panic on edge cases
+#[test]
+fn test_empty_input_no_panic() {
+    let result = process_intent(&[]);
+    assert!(result.is_ok());
+}
+
+// 9. Exhaustive enum handling
+#[test]
+fn test_all_variants_handled() {
+    for v in [Intent::Transfer, Intent::DCA, Intent::Escrow] {
+        let fee = calculate_fee(v, 1000);
+        assert!(fee > 0, "{:?} must have a fee", v);
+    }
+}
+
+// 10. serde + Candid round-trip
+#[test]
+fn test_state_serde_roundtrip() {
+    let state = State::default();
+    let bytes = candid::Encode!(&state).unwrap();
+    let back: State = candid::Decode!(&bytes, State).unwrap();
+    assert_eq!(state, back);
+}
+
+// 11. Storable bound (для StableBTreeMap)
+#[test]
+fn test_storable_bound_is_bounded() {
+    match MyType::BOUND {
+        Bound::Bounded { max_size, .. } => assert!(max_size > 0),
+        _ => panic!("must be Bounded for stable memory"),
+    }
+}
+```
+
+#### Frontend (`apps/frontend/<app>/`)
+
+```typescript
+// 12. Real data via @paxio/api-client (NO Math.random/setInterval/hardcoded)
+it('renders from useQuery, not from hardcoded values', () => {
+  const { container } = render(<LiveTicker />, { wrapper: MockedQueryClient });
+  expect(container.textContent).not.toMatch(/2\.4M|2,483,989/); // no hardcoded
+});
+
+// 13. Pure presentation — no fetching inside dumb components
+it('does not fetch — receives data via props', () => {
+  const fetchSpy = vi.spyOn(global, 'fetch');
+  render(<HeatmapGrid grid={fixture} />);
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+```
+
+### Контрольный чеклист — перед коммитом каждого test file
+
+- [ ] Тест использует РЕАЛЬНЫЕ типы из `packages/types/`
+- [ ] Pure function check (deterministic) для domain/
+- [ ] Object.isFrozen() для factory результата
+- [ ] Consistent return shape (monomorphic)
+- [ ] agentDid/organizationId filter если query
+- [ ] AppError subclass проверен
+- [ ] Zod validation на boundary
+- [ ] Data из JSON если применимо
+- [ ] Конкретные числа в assertions (не `toBeGreaterThan(0)`)
+- [ ] Каждый тест проверяет одну вещь
+- [ ] Название: `should X when Y` или `функция_когда_что`
+- [ ] Не дублирует существующий тест
+
+---
+
+## ФАЗА 5: ENVIRONMENT (подготовка среды для dev'ов)
+
+Dev НЕ МОЖЕТ выполнить задачу если среда не готова.
+Ответственность за среду — **на architect'е, не на dev'е.**
+
+### 5.1 — Базовая среда (ВСЕГДА проверить)
+
+```bash
+pnpm install                                  # workspace deps
+pnpm typecheck         2>&1 | tail -5         # tsc clean?
+pnpm test -- --run     2>&1 | tail -5         # vitest запускается? (RED тесты — ок)
+cargo build --workspace 2>&1 | tail -5         # Rust компилируется?
+cargo test --workspace 2>&1 | tail -5         # Rust тесты запускаются?
+```
+
+### 5.2 — ICP среда (если milestone касается canister'ов)
+
+```bash
+source scripts/dfx-setup.sh                   # M00c — per-agent port scheme
+AGENT_NAME=icp-dev dfx_start                  # local replica для dev
+```
+
+Если нужны canister'ы — записать какие и зачем в milestone.
+
+### 5.3 — Docker среда (если milestone требует PostgreSQL/Redis/Qdrant)
+
+```bash
+docker compose up -d                          # PostgreSQL, Redis, Qdrant, etc.
+docker compose ps                             # все healthy?
+```
+
+### 5.4 — E2E среда (если milestone включает Guard ML/Intelligence)
+
+- `OPENROUTER_API_KEY` в `.env` (judge model для eval)
+- Guard Agent доступен (HTTP) — `curl http://localhost:8001/health` или `guard.paxio.network`
+- Test fixtures готовы: `fixtures/`
+
+### 5.5 — Frontend среда (если milestone касается apps/frontend/)
+
+- `NEXT_PUBLIC_API_URL` в `.env` (dev: `http://localhost:3001`, prod: `https://api.paxio.network`)
+- Privy app IDs (если auth required): `NEXT_PUBLIC_PRIVY_APP_ID_<APP>`
+- Vercel project создан (см. `docs/deployment-vercel.md`)
+
+### 5.6 — Зафиксируй предусловия в milestone
+
+```markdown
+## Предусловия среды (architect обеспечивает):
+- [ ] pnpm install
+- [ ] pnpm typecheck clean
+- [ ] cargo build --workspace clean
+- [ ] [если canister] dfx replica started (`source scripts/dfx-setup.sh && dfx_start`)
+- [ ] [если DB] docker compose up postgres redis qdrant → all healthy
+- [ ] [если Guard ML] OPENROUTER_API_KEY в .env + guard health 200
+- [ ] [если frontend] NEXT_PUBLIC_API_URL set; Vercel project created
+Если среда не готова → milestone БЛОКИРОВАН. Dev НЕ начинает.
+```
+
+Если нужна помощь user'а (sudo, Docker, API keys, hardware) → запроси **ЯВНО**.
+
+---
+
+## ФАЗА 6: COMMIT + HANDOFF
+
+### 6.1 — Создай feature branch от dev
+
+```bash
+git checkout dev && git pull origin dev
+git checkout -b feature/M0X-name
+```
+
+**Все milestones работают на feature/* ветках. Никогда не коммить напрямую в `dev` или `main`.**
+
+### 6.2 — Закоммить ВСЁ
+
+```bash
+git add packages/types/ packages/interfaces/ packages/errors/  # контракты
+git add tests/*.test.ts products/*/tests/**/*.test.ts          # RED тесты
+git add platform/canister-shared/src/                          # cross-canister Rust (если M00c-style)
+git add scripts/verify_*.sh                                    # acceptance scripts
+git add docs/sprints/M*.md                                     # milestone
+git add docs/feature-areas/FA-*.md                             # FA docs (если обновлялись)
+git commit -m "feat(M0X): contracts, RED tests, acceptance scripts"
+```
+
+**Почему:** dev в worktree не видит незакоммиченные файлы.
+
+### 6.3 — Проверь build после коммита
+
+```bash
+pnpm typecheck       2>&1 | tail -5            # build errors — НЕТ
+pnpm test -- --run   2>&1 | tail -5            # RED тесты — ок (твои спецификации)
+cargo build --workspace 2>&1 | tail -5         # компилируется?
+bash scripts/verify_M0X_*.sh                   # должен FAIL (RED state)
+```
+
+### 6.4 — Скажи user'у кого запускать
+
+```
+Запускай [agent-name]. Milestone: M0X. Branch: feature/M0X-name.
+Тесты закоммичены. Среда готова (см. предусловия в milestone).
+```
+
+---
+
+## ФАЗА 7: POST-MILESTONE (после «готово» от dev'а)
+
+1. **Все тесты GREEN?** — `pnpm test -- --run` + `cargo test --workspace` + acceptance PASS
+2. **Dev НЕ изменил тесты?** — `git diff dev..HEAD -- 'tests/*' 'scripts/verify_*' 'products/*/tests/**'`
+   - Если изменил → REJECT + откат изменений
+3. **Обнови Feature Area** если архитектура изменилась (`docs/feature-areas/FA-*.md`)
+4. **Обнови Roadmap** — `docs/NOUS_Development_Roadmap.md` фичи ✅ DONE
+5. **Обнови milestone статус** в `docs/sprints/M0X-*.md` → ✅ DONE
+6. **Попроси user запустить reviewer**
+7. **Reviewer** обновляет `docs/project-state.md` и `docs/tech-debt.md` (НЕ ты)
+8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user мержит**)
+9. **POST-MERGE обновление:**
+   - После merge `feature → dev`: architect переносит milestone «pending» → «on dev»
+   - После merge `dev → main`: architect переносит milestones в «on main (released)»
+10. После merge в `dev` — **user** решает когда мержить `dev → main` (релиз)
+
+### CI/CD flow после merge
+
+```
+feature/M0X ──PR──► dev      ← user мержит после reviewer APPROVED
+                     │
+                    CI        ← .github/workflows/ci-*.yml автозапуск (path-filtered)
+                     │
+                    PR
+                     ▼
+                   main       ← user мержит когда готов к release
+                     │
+                   tag v*     ← release-tools.yml: build + publish (npm + JSR + PyPI + crates.io)
+```
+
+---
 
 ## Откуда берутся milestones — цепочка
 
@@ -62,78 +463,64 @@ Feature Area = промежуточный слой между Roadmap и Milesto
 docs/NOUS_Strategy_v5.md          → ЧТО строим, ЗАЧЕМ (product vision)
 docs/NOUS_Development_Roadmap.md  → КАКИЕ фичи, В КАКОМ порядке (phases)
 docs/feature-areas/FA-0X-*.md     → КАК УСТРОЕНА подсистема (промежуточный слой)
+docs/fa-registry.md               → FA → physical paths mapping (★ source of truth)
 docs/sprints/M0X-*.md             → КАК реализуем (тесты + задачи)
+packages/types/ + packages/interfaces/ + packages/errors/ → КОНТРАКТЫ
+tests/ + products/*/tests/ + scripts/  → СПЕЦИФИКАЦИИ (RED тесты + acceptance)
+apps/back/ + products/*/app/ + apps/frontend/ + products/*/canister*/ → КОД (GREEN — dev-агенты)
 ```
 
-Алиасы: `docs/architecture.md` → Strategy, `docs/roadmap.md` → Roadmap.
-
 **НЕ ПРИДУМЫВАТЬ MILESTONES С ПОТОЛКА.**
-- Нет Roadmap → СТОП, сначала создай Roadmap
-- Нет Strategy → СТОП, спроси user'а
 
-## Два типа задач — определяй для КАЖДОЙ задачи
-
-**Тип 1 (логика):** unit test RED → GREEN
-- Напиши падающий тест в `tests/*.test.ts`
-
-**Тип 2 (интеграция):** acceptance script FAIL → PASS
-- Напиши скрипт в `scripts/verify_*.sh`
-- Подготовь среду (Docker, dfx, testnet)
-- Запиши предусловия среды в milestone
-
-Если задача требует ОБА типа — напиши ОБА.
-
-## КОММИТЬ ВСЁ ДО ЗАПУСКА DEV-АГЕНТОВ
-
-Перед "запускай dev" ОБЯЗАТЕЛЬНО закоммить:
-- types + interfaces (контракты) в `app/types/` + `app/interfaces/`
-- tests/*.test.ts (RED тесты)
-- scripts/verify_*.sh
-- docs/sprints/M*.md
-
-**Почему:** dev в worktree не видит незакоммиченные файлы.
+---
 
 ## Файлы architect'а
 
 ### ✅ ТВОИ файлы:
+
 - `docs/sprints/*.md` — milestones
-- `docs/feature-areas/*.md` — Feature Areas (пишешь/правишь)
+- `docs/feature-areas/*.md` — Feature Area архитектура
+- `docs/fa-registry.md` — ★ FA → paths mapping
 - `docs/NOUS_Development_Roadmap.md` — отмечаешь ✅ DONE
 - `docs/e2e/*.md` — E2E сценарии
-- `tests/*.test.ts` — RED тесты-спецификации
-- `app/types/` — shared типы + Zod схемы
-- `app/interfaces/` — контракты (ports)
+- `packages/types/src/` — типы + Zod schemas
+- `packages/interfaces/src/` — port-контракты
+- `packages/errors/src/` — AppError hierarchy
+- `packages/contracts/` — OpenAPI per FA (Published Language)
+- `tests/*.test.ts` — cross-FA тесты
+- `products/*/tests/**/*.test.ts` — per-FA тесты
 - `scripts/verify_*.sh` — acceptance scripts
-- `CLAUDE.md` — master rules
-- `.claude/rules/*.md` и `.claude/agents/*.md` — правила проекта (совместно с user)
+- `CLAUDE.md` + `.claude/rules/*.md` + `.claude/agents/*.md` — правила (совместно с user)
 
 ### ❌ НЕ ТВОИ:
-- `docs/project-state.md` — ТОЛЬКО reviewer
-- `docs/tech-debt.md` — ТОЛЬКО reviewer записывает
-- `docs/NOUS_Strategy_v5.md` (alias `docs/architecture.md`) — ТОЛЬКО user
-- `server/` — backend-dev
-- `app/{api,domain,lib,config,data,errors}/` — backend-dev (кроме `registry/` → registry-dev)
-- `app/{api,domain}/registry/` + `canisters/src/reputation/` — registry-dev (FA-01, TS core + single canister)
-- `canisters/src/{wallet,audit_log,security_sidecar,bitcoin_agent}/` — icp-dev
-- `packages/frontend/` — frontend-dev
-- `packages/sdk/src/` — backend-dev
 
-## Обязательная таблица в конце milestone
+- `docs/project-state.md` — **ТОЛЬКО reviewer**
+- `docs/tech-debt.md` — **ТОЛЬКО reviewer записывает**, architect только пишет тесты на fix + заполняет колонку «Тест на fix»
+- `docs/NOUS_Strategy_v5.md` (alias `architecture.md`) — **ТОЛЬКО user**
+- `apps/back/server/` — **backend-dev** (TD-02 ACK для исключений на M00 bootstrap)
+- `apps/back/app/{config,data}/` — backend-dev наполняет JSON (architect определяет схему через Zod)
+- `products/*/app/` — backend-dev (FA-02..07) или registry-dev (FA-01)
+- `products/*/canister*/` — icp-dev (кроме `products/01-registry/canister/` → registry-dev)
+- `products/*/{cli,sdk-*,mcp-server,guard-client,http-proxy}/` — backend-dev / icp-dev
+- `apps/frontend/` — **frontend-dev**
+- `packages/{ui,hooks,api-client,auth}/` — **frontend-dev**
+- `packages/utils/` — **backend-dev**
+- `platform/canister-shared/` — **icp-dev** (TD-03 ACK для исключения на M00c bootstrap)
 
-```markdown
-| # | Задача | Агент | Метод верификации | Файлы |
-|---|---|---|---|---|
-| 1 | ... | registry-dev | unit test: `tests/registry.test.ts::TestX` GREEN | `app/domain/registry/` |
-| 2 | ... | icp-dev | `cargo test` GREEN + `bash scripts/verify_wallet.sh` PASS | `canisters/src/wallet/` |
-```
+**Если нужно изменение вне scope** → формат `!!! SCOPE VIOLATION REQUEST !!!` (см. `scope-guard.md`).
+**Не делай dev work «за компанию» — это нарушение, ловится reviewer'ом.**
 
-Без таблицы user не знает кого запускать и что проверять.
+---
 
-## После завершения milestone (dev сказал "готово")
+## Что каждый агент делает и не делает
 
-1. Все тесты GREEN? Acceptance PASS?
-2. Dev НЕ изменил тесты? (`git diff tests/ scripts/ docs/e2e/`)
-3. Обнови `docs/NOUS_Development_Roadmap.md` — фичи ✅ DONE
-4. Обнови milestone статус в `docs/sprints/M0X-*.md`
-5. Попроси user запустить reviewer
-6. НЕ трогай `project-state.md` и `tech-debt.md` (это reviewer)
+| Агент | Делает | НЕ делает | Коммитит |
+|---|---|---|---|
+| **architect** | scan, milestone, Feature Areas, RED тесты, acceptance scripts, E2E сценарии, типы/interfaces/errors, Roadmap ✅ | dev-реализацию (`.cjs`/`.js`/`.ts` импл, `.rs` impl, `.tsx`), `project-state`, `tech-debt` | контракты + тесты + scripts + docs |
+| **backend-dev** | `apps/back/server/`, TS в `products/*/app/` (кроме FA-01), SDK (`sdk-ts`/`sdk-python`), MCP, GH Action, `packages/utils/` | canister'ы, frontend, contracts | impl после каждого GREEN |
+| **icp-dev** | Rust в `products/*/canister*/` (кроме FA-01), `platform/canister-shared/`, `cli/`, `http-proxy/`, ICP infra в backend | TS в `products/*/app/`, frontend, packages | impl после каждого GREEN |
+| **registry-dev** | `products/01-registry/` целиком (TS + Rust Reputation + tests) | всё остальное | impl после каждого GREEN |
+| **frontend-dev** | 8 Next.js apps (`apps/frontend/`), `packages/{ui,hooks,api-client,auth}/` | backend, products, contracts | impl после каждого GREEN |
+| **test-runner** | build + unit + acceptance + E2E → отчёт | любой код | ничего |
+| **reviewer** | scope check, quality (per-language checklist), `project-state`, `tech-debt` | код, тесты, milestones | `project-state` + `tech-debt` после APPROVED |
+| **user** | запуск агентов, E2E верификация, **merge** (только user), стратегия, API keys | — | `git merge` после APPROVED |

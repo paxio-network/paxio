@@ -1,6 +1,6 @@
 ---
 description: Backend API handler format, auth, validation, error handling
-globs: ["app/api/**/*.js", "server/**/*.cjs"]
+globs: ["products/**/app/api/**/*.js", "apps/back/**/*.{cjs,js}"]
 ---
 
 # Backend API Patterns

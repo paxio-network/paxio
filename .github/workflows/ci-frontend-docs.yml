@@ -1,0 +1,131 @@
+name: CI · Frontend · docs
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/frontend/docs/**'
+      - 'packages/ui/**'
+      - 'packages/hooks/**'
+      - 'packages/api-client/**'
+      - 'packages/auth/**'
+      - 'packages/types/**'
+      - 'packages/interfaces/**'
+      - 'packages/errors/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/ci-frontend-docs.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'apps/frontend/docs/**'
+      - 'packages/ui/**'
+      - 'packages/hooks/**'
+      - 'packages/api-client/**'
+      - 'packages/auth/**'
+      - 'packages/types/**'
+      - 'packages/interfaces/**'
+      - 'packages/errors/**'
+      - 'pnpm-lock.yaml'
+
+concurrency:
+  group: ci-fe-docs-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP: "@paxio/docs-app"
+  PNPM_VERSION: '10.33.0'
+  NODE_VERSION: '22'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter ${{ env.APP }} lint
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run typecheck --filter=${{ env.APP }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: https://api.paxio.network
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=${{ env.APP }}
+
+  test:
+    name: Test (smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --filter=${{ env.APP }}
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=critical || true  # SOON: strict after deps stable
+
+  status-check:
+    name: All Checks Passed · docs
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, build, test, security]
+    if: always()
+    steps:
+      - name: Verify all jobs passed
+        run: |
+          for r in "${{ needs.lint.result }}" "${{ needs.type-check.result }}" "${{ needs.build.result }}" "${{ needs.test.result }}"; do
+            if [ "$r" != "success" ]; then echo "❌ $r"; exit 1; fi
+          done
+          echo "✅ All checks passed"

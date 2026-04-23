@@ -1,5 +1,7 @@
 # M00 — Foundation: монорепо, git, types, interfaces, CI
 
+> ⚠ **Historical snapshot.** Этот milestone ВЫПОЛНЕН 2026-04-17. Структура с тех пор эволюционировала (product-first monorepo, 8 frontend apps, Shared Kernel split). Пути ниже (`canisters/src/*`, `packages/frontend/*`) — **snapshot того дня**, не актуальная структура. Каноническая структура: см. `CLAUDE.md` + `pnpm-workspace.yaml` + `Cargo.toml`. Не используй эти пути для новых milestones.
+
 ## Готово когда
 
 Есть git-репозиторий Paxio, настроен npm workspace с TypeScript + Vitest + eslint-config-metarhia, создан каркас директорий (`server/`, `app/`, `canisters/`, `packages/`, `tests/`, `cli/`), написаны базовые доменные типы + контракты (Result, Did, Capability, AgentCard, AppError hierarchy), CI pipeline stub в GitHub Actions. Любой другой milestone может теперь работать.

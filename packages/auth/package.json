@@ -1,0 +1,16 @@
+{
+  "name": "@paxio/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paxio Privy wrapper + DID helpers + SIWE sign-in",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "@privy-io/react-auth": ">=1.0.0"
+  }
+}

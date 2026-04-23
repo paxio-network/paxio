@@ -1,13 +1,16 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist/app",
-    "rootDir": "./app",
+    "outDir": "./dist",
+    "rootDir": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "noEmit": false
+    "noEmit": false,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
   },
-  "include": ["app/**/*.ts"],
-  "exclude": ["node_modules", "tests", "dist"]
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "products/*/app/**/*.ts"],
+  "exclude": ["node_modules", "tests", "dist", "apps/frontend", "opensrc"]
 }
