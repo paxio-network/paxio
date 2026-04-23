@@ -228,15 +228,17 @@ pnpm turbo run test --filter=@paxio/registry      # только FA-01
 pnpm turbo run build --filter=@paxio/facilitator  # только FA-02
 pnpm turbo run test --filter='./products/*'       # все FA
 
-# Frontend (Next.js) — 8 apps, one pnpm filter each
-pnpm --filter landing dev                       # paxio.network
-pnpm --filter registry dev                        # registry.paxio.network
-pnpm --filter pay dev                             # pay.paxio.network
-pnpm --filter radar dev                           # radar.paxio.network
-pnpm --filter intel dev                           # intel.paxio.network
-pnpm --filter docs dev                            # docs.paxio.network
-pnpm --filter wallet dev                          # wallet.paxio.network
-pnpm --filter fleet dev                           # fleet.paxio.network
+# Frontend (Next.js) — 8 apps, one pnpm filter each.
+# Workspace names use `-app` suffix to avoid collision with products/* (e.g.
+# @paxio/registry = products/01-registry, @paxio/registry-app = apps/frontend/registry).
+pnpm --filter @paxio/landing-app dev              # paxio.network
+pnpm --filter @paxio/registry-app dev             # registry.paxio.network
+pnpm --filter @paxio/pay-app dev                  # pay.paxio.network
+pnpm --filter @paxio/radar-app dev                # radar.paxio.network
+pnpm --filter @paxio/intel-app dev                # intel.paxio.network
+pnpm --filter @paxio/docs-app dev                 # docs.paxio.network
+pnpm --filter @paxio/wallet-app dev               # wallet.paxio.network
+pnpm --filter @paxio/fleet-app dev                # fleet.paxio.network
 
 # Python (Intelligence ML)
 cd products/07-intelligence/ml && uv run fastapi dev

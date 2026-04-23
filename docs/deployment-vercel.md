@@ -20,9 +20,10 @@ In the Vercel dashboard:
 1. **New Project** → Import Git Repository → `paxio-network/paxio`
 2. **Root Directory:** `apps/frontend/<app>` — click "Edit" and set this
 3. **Framework Preset:** Next.js (auto-detected)
-4. **Build Command:**
+4. **Build Command:** use the full workspace name with `-app` suffix (see naming rule in `.claude/rules/frontend-rules.md`):
    ```bash
-   cd ../../.. && pnpm turbo run build --filter=<app>
+   cd ../../.. && pnpm turbo run build --filter=@paxio/<app>-app
+   # e.g. --filter=@paxio/landing-app, --filter=@paxio/registry-app
    ```
 5. **Install Command:**
    ```bash

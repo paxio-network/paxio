@@ -101,7 +101,7 @@ git branch -d feature/m05-bitcoin-agent
 | Rust unit | `cargo test --workspace` | все canister crates + `canister-shared` |
 | Rust clippy | `cargo clippy --workspace -- -D warnings` | lints as errors |
 | Acceptance | `bash scripts/verify_m0X_xxx.sh` | E2E для конкретного milestone |
-| Frontend (per app) | `pnpm --filter landing test` | smoke tests |
+| Frontend (per app) | `pnpm --filter @paxio/landing-app test` | smoke tests |
 | Frontend (all) | `pnpm turbo run test --filter='./apps/frontend/*'` | 8 apps parallel |
 
 Pre-commit checklist (dev-agent перед PR):

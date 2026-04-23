@@ -44,14 +44,14 @@ bash scripts/verify_m04_audit.sh        # M04
 ## Frontend tests (per-app)
 
 ```bash
-pnpm --filter landing test              # apps/frontend/landing
-pnpm --filter registry test
-pnpm --filter pay test
-pnpm --filter radar test
-pnpm --filter intel test
-pnpm --filter docs test
-pnpm --filter wallet test
-pnpm --filter fleet test
+pnpm --filter @paxio/landing-app test     # apps/frontend/landing
+pnpm --filter @paxio/registry-app test
+pnpm --filter @paxio/pay-app test
+pnpm --filter @paxio/radar-app test
+pnpm --filter @paxio/intel-app test
+pnpm --filter @paxio/docs-app test
+pnpm --filter @paxio/wallet-app test
+pnpm --filter @paxio/fleet-app test
 
 # All 8 at once
 pnpm turbo run test --filter='./apps/frontend/*'

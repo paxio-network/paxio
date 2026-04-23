@@ -25,7 +25,7 @@ pnpm turbo:typecheck        # cached + parallel через Turborepo
 ```bash
 pnpm --filter @paxio/types typecheck
 pnpm --filter @paxio/ui typecheck
-pnpm --filter landing typecheck          # apps/frontend/landing
+pnpm --filter @paxio/landing-app typecheck   # apps/frontend/landing
 pnpm --filter @paxio/facilitator typecheck   # products/02-facilitator
 ```
 

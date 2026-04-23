@@ -62,7 +62,7 @@ for comp in LiveTicker AgentTable Sparkline FAPDiagram NetworkGraph TerminalWidg
 done
 
 step "7. Frontend build clean"
-if pnpm turbo run build --filter=landing >/tmp/m01c-build.log 2>&1; then
+if pnpm turbo run build --filter=@paxio/landing-app >/tmp/m01c-build.log 2>&1; then
   ok "landing build"
 else
   bad "landing build FAILED — see /tmp/m01c-build.log"

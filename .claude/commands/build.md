@@ -43,14 +43,14 @@ cd products/03-wallet/sdk-python && uv build
 ## Frontends (8 Next.js 15 apps — per-app Vercel project)
 
 ```bash
-pnpm turbo run build --filter=landing     # paxio.network
-pnpm turbo run build --filter=registry    # registry.paxio.network
-pnpm turbo run build --filter=pay         # pay.paxio.network
-pnpm turbo run build --filter=radar       # radar.paxio.network
-pnpm turbo run build --filter=intel       # intel.paxio.network
-pnpm turbo run build --filter=docs        # docs.paxio.network
-pnpm turbo run build --filter=wallet      # wallet.paxio.network
-pnpm turbo run build --filter=fleet       # fleet.paxio.network
+pnpm turbo run build --filter=@paxio/landing-app    # paxio.network
+pnpm turbo run build --filter=@paxio/registry-app   # registry.paxio.network
+pnpm turbo run build --filter=@paxio/pay-app        # pay.paxio.network
+pnpm turbo run build --filter=@paxio/radar-app      # radar.paxio.network
+pnpm turbo run build --filter=@paxio/intel-app      # intel.paxio.network
+pnpm turbo run build --filter=@paxio/docs-app       # docs.paxio.network
+pnpm turbo run build --filter=@paxio/wallet-app     # wallet.paxio.network
+pnpm turbo run build --filter=@paxio/fleet-app      # fleet.paxio.network
 
 # All 8 at once (cached + parallel via Turborepo)
 pnpm turbo run build --filter='./apps/frontend/*'
