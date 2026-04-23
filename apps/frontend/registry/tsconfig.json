@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@paxio/ui": ["../../packages/ui/src/index.ts"],
+      "@paxio/hooks": ["../../packages/hooks/src/index.ts"],
+      "@paxio/api-client": ["../../packages/api-client/src/index.ts"],
+      "@paxio/auth": ["../../packages/auth/src/index.ts"],
+      "@paxio/types": ["../../packages/types/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["app/**/*.ts", "app/**/*.tsx", "components/**/*.ts", "components/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "lib/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
