@@ -152,12 +152,18 @@ const buildAdoptionLane = (hero: HeroState): TickerLane => ({
   ],
 });
 
-/** Server-generated ISO timestamp. */
-const nowIso = (): string => new Date().toISOString();
+/** Server-generated ISO timestamp — derived from injected clock dep (purity, determinism). */
+const nowIso = (clockMs: number): string => new Date(clockMs).toISOString();
 
 // --- LandingStats factory ---
 
 export interface LandingStatsDeps {
+  /**
+   * Monotonic wall-clock time in milliseconds (Unix epoch).
+   * Injected for testability — avoids `new Date()` inside pure domain functions.
+   */
+  clock: () => number;
+
   /**
    * Registry count — returns number of registered agents.
    * If not available (upstream not ready), return 0.
@@ -299,7 +305,7 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
       value: {
         nodes: [],
         pairs: [],
-        generated_at: nowIso(),
+        generated_at: nowIso(deps.clock()),
       },
     };
   };
@@ -335,6 +341,7 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
       ? agentsResult.value.value as AgentPreview[]
       : [] as AgentPreview[];
 
+    const ts = deps.clock();
     return {
       ok: true,
       value: {
@@ -345,10 +352,10 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
         network: {
           nodes: [],
           pairs: [],
-          generated_at: nowIso(),
+          generated_at: nowIso(ts),
         },
         heatmap: zeroHeatmap(),
-        generated_at: nowIso(),
+        generated_at: nowIso(ts),
       },
     };
   };
