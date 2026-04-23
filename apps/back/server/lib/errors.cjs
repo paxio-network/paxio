@@ -1,41 +1,42 @@
 'use strict';
 
-// TD-01 fix: error codes sourced from compiled dist/ output.
+// TD-14 fix: inline CJS mirror of @paxio/types ERROR_CODES + ERROR_STATUS_CODES.
 //
-// Strategy: tsconfig.app.json compiles packages/*/src/*.ts → dist/. The
-// compiled .js files are plain CJS (tsconfig uses ESNext + bundler, but
-// tsconfig.app.json has no "type":"module" and targets CJS via tsc).
-// We CANNOT use createRequire('@paxio/types') — @paxio/types has
-// "type":"module" in its package.json with no CJS dist, so Node.js resolves
-// the ESM source which uses .js extension imports that don't exist as
-// physical files.
+// Previous implementation (TD-01 fix, commit bab66c0) required `pnpm build`
+// before server start because it did `require('../../../dist/packages/types/src/errors.js')`
+// — hardcoded relative path into compiled dist output. Three problems fixed here:
+//   (1) deploy coupling — server now boots without pre-built dist/
+//   (2) path fragility — no hardcoded dist/ path
+//   (3) dead fallback — old try/catch had two identical require() calls
 //
-// Instead: parse the compiled ERROR_CODES / ERROR_STATUS_CODES directly
-// from the dist output (which has .js extensions resolved to actual .js
-// files). This is the same data as @paxio/types, just from the compiled
-// artifacts which CJS can safely require().
+// Drift risk is handled at test-time: tests/errors-cjs-sync.test.ts imports
+// `@paxio/types` through the vitest TS alias and compares against this
+// file's exports. If either side changes, the test fails (5ms drift check).
+//
+// Canonical HTTP status codes are RFC 7235 — they are stable by standard,
+// not by our version. Inlining is architecturally correct.
 
-const path = require('node:path');
+const ERROR_CODES = Object.freeze({
+  VALIDATION: 'validation_error',
+  NOT_FOUND: 'not_found',
+  UNAUTHORIZED: 'unauthorized',
+  FORBIDDEN: 'forbidden',
+  CONFLICT: 'conflict',
+  INTERNAL: 'internal_error',
+  EXTERNAL_SERVICE: 'external_service_error',
+  RATE_LIMIT: 'rate_limit',
+});
 
-// Resolve dist/packages/types/src/errors.js — compiled output from tsconfig.app.json
-// This is the canonical snapshot of @paxio/types ERROR_CODES and ERROR_STATUS_CODES.
-const { ERROR_CODES, ERROR_STATUS_CODES } = (() => {
-  const distErrorsPath = path.join(__dirname, '..', '..', '..', 'dist', 'packages', 'types', 'src', 'errors.js');
-  try {
-    return require(distErrorsPath);
-  } catch {
-    // Fallback: parse the dist/ index and walk to errors
-    const distIndexPath = path.join(__dirname, '..', '..', '..', 'dist', 'packages', 'types', 'src', 'index.js');
-    try {
-      const distIndex = require(distIndexPath);
-      // index.js does export * from './errors.js' — walk through it
-      const errorsModule = require(path.join(__dirname, '..', '..', '..', 'dist', 'packages', 'types', 'src', 'errors.js'));
-      return errorsModule;
-    } catch {
-      throw new Error('TD-01 FATAL: cannot resolve @paxio/types dist. Run `pnpm build` first.');
-    }
-  }
-})();
+const ERROR_STATUS_CODES = Object.freeze({
+  validation_error: 400,
+  unauthorized: 401,
+  forbidden: 403,
+  not_found: 404,
+  conflict: 409,
+  rate_limit: 429,
+  internal_error: 500,
+  external_service_error: 502,
+});
 
 class AppError extends Error {
   constructor(code, message, statusCode = 500, context = null) {
