@@ -1,23 +1,29 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { ERROR_CODES } from '@paxio/types';
 
-// TD-01: server/lib/errors.cjs must stay in sync with @paxio/types.
+// TD-01 / TD-14 / TD-15 — drift guard for server/lib/errors.cjs.
 //
-// This test verifies by:
-// 1. Loading @paxio/types via vitest's alias (tsconfig paths: src/index.ts)
-// 2. Executing the CJS file in a VM sandbox with module resolution
-// 3. Comparing the resulting class instances against @paxio/types values
+// Invariant: apps/back/server/lib/errors.cjs and packages/types/src/errors.ts
+// MUST agree on ERROR_CODES values and HTTP status codes. Server runtime uses
+// the .cjs file (it runs under plain Node CJS before the VM sandbox starts);
+// the TS side is the authoritative single source of truth.
 //
-// The CJS file reads from dist/ (compiled output from tsconfig.app.json).
-// Both must agree — same source, same compiled snapshot.
+// History:
+//  - TD-01 (initial): .cjs file and TS file duplicated constants, drift risk.
+//    This test introduced.
+//  - TD-14: .cjs file was briefly made to `require()` a compiled dist/ path,
+//    which coupled deploys to `pnpm build`. Rolled back to inline constants
+//    protected by this drift guard.
+//  - TD-15: this test used `eval(wrappedCode)` with a fake __dirname to make
+//    the old dist/-require resolve. After TD-14 there is no dist/ require —
+//    the .cjs file is self-contained. Replaced eval with `createRequire()`
+//    which is the standard Node API for loading CJS from ESM test files
+//    (also satisfies safety.md::No Dynamic Code Execution).
 
 describe('TD-01: CJS error mirror sync', () => {
-  // Authoritative values from @paxio/types (single source of truth)
-  // Imported directly via vitest alias → packages/types/src/errors.ts
   const EXPECTED_CODES = ERROR_CODES;
 
   const EXPECTED_STATUS_CODES: Record<string, number> = {
@@ -36,28 +42,25 @@ describe('TD-01: CJS error mirror sync', () => {
   beforeAll(() => {
     const __filename = fileURLToPath(import.meta.url);
     const __testDir = dirname(__filename);
-    const cjsPath = resolve(__testDir, '..', 'apps/back/server/lib/errors.cjs');
+    const cjsPath = resolve(
+      __testDir,
+      '..',
+      'apps/back/server/lib/errors.cjs',
+    );
 
-    const cjsSource = readFileSync(cjsPath, 'utf8');
-
-    // Pass the correct __dirname so the CJS file can resolve dist/ path
-    const serverLibDir = resolve(__testDir, '..', 'apps/back/server');
-
-    const wrappedCode = `
-      (function(__dirname) {
-        ${cjsSource}
-        return module.exports;
-      })
-    `;
-
-    const fn = eval(wrappedCode);
-    const exports = fn(serverLibDir);
-    errorsModule = exports;
+    // Standard Node API for loading a CJS module from an ESM context.
+    // Resolution is relative to the import.meta.url passed in. No eval.
+    const require = createRequire(import.meta.url);
+    errorsModule = require(cjsPath) as Record<string, unknown>;
   });
 
   const buildTest = (clsName: string, expectedCode: string, expectedStatus: number) => {
     it(`${clsName} code = '${expectedCode}' and status = ${expectedStatus}`, () => {
-      const cls = errorsModule[clsName] as new (msg: string) => Error & { code: string; statusCode: number; name: string };
+      const cls = errorsModule[clsName] as new (msg: string) => Error & {
+        code: string;
+        statusCode: number;
+        name: string;
+      };
       expect(cls).toBeDefined();
       expect(typeof cls).toBe('function');
 
@@ -69,13 +72,17 @@ describe('TD-01: CJS error mirror sync', () => {
   };
 
   buildTest('ValidationError', EXPECTED_CODES.VALIDATION, EXPECTED_STATUS_CODES.validation_error);
-  buildTest('NotFoundError',     EXPECTED_CODES.NOT_FOUND,     EXPECTED_STATUS_CODES.not_found);
+  buildTest('NotFoundError', EXPECTED_CODES.NOT_FOUND, EXPECTED_STATUS_CODES.not_found);
   buildTest('UnauthorizedError', EXPECTED_CODES.UNAUTHORIZED, EXPECTED_STATUS_CODES.unauthorized);
-  buildTest('ForbiddenError',    EXPECTED_CODES.FORBIDDEN,    EXPECTED_STATUS_CODES.forbidden);
-  buildTest('ConflictError',     EXPECTED_CODES.CONFLICT,     EXPECTED_STATUS_CODES.conflict);
-  buildTest('RateLimitError',    EXPECTED_CODES.RATE_LIMIT,   EXPECTED_STATUS_CODES.rate_limit);
-  buildTest('InternalError',     EXPECTED_CODES.INTERNAL,     EXPECTED_STATUS_CODES.internal_error);
-  buildTest('ExternalServiceError', EXPECTED_CODES.EXTERNAL_SERVICE, EXPECTED_STATUS_CODES.external_service_error);
+  buildTest('ForbiddenError', EXPECTED_CODES.FORBIDDEN, EXPECTED_STATUS_CODES.forbidden);
+  buildTest('ConflictError', EXPECTED_CODES.CONFLICT, EXPECTED_STATUS_CODES.conflict);
+  buildTest('RateLimitError', EXPECTED_CODES.RATE_LIMIT, EXPECTED_STATUS_CODES.rate_limit);
+  buildTest('InternalError', EXPECTED_CODES.INTERNAL, EXPECTED_STATUS_CODES.internal_error);
+  buildTest(
+    'ExternalServiceError',
+    EXPECTED_CODES.EXTERNAL_SERVICE,
+    EXPECTED_STATUS_CODES.external_service_error,
+  );
 
   describe('module.exports completeness', () => {
     it('exports all 9 error classes', () => {
@@ -100,7 +107,6 @@ describe('TD-01: CJS error mirror sync', () => {
       const exportedKeys = Object.keys(errorsModule).filter(
         (k) => typeof errorsModule[k] === 'function',
       );
-      // We expect exactly 9 (AppError base + 8 subclasses)
       expect(exportedKeys).toHaveLength(9);
     });
   });
