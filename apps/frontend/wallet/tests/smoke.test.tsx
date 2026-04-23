@@ -4,14 +4,15 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { fileURLToPath } from 'url';
-import { join, dirname, existsSync } from 'node:path';
-import type { Page as PageType } from '../../app/page';
+import { join, dirname } from 'node:path';
+import { existsSync } from 'node:fs';
+import type { Page as PageType } from '../app/page';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('wallet smoke', () => {
   it('app/page.tsx renders without throwing', async () => {
-    const { default: Page } = await import('../../app/page') as { default: PageType };
+    const { default: Page } = await import('../app/page') as { default: PageType };
     expect(() => render(<Page />)).not.toThrow();
   });
 
