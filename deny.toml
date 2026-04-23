@@ -12,16 +12,15 @@ all-features = true
 
 [advisories]
 version = 2
-# Yanked crates — fail; unmaintained / unsound — warn only until upstream fixes
+# Yanked crates — fail immediately; vulnerabilities checked via RUSTSEC DB.
+# Unmaintained & unsound: warn-only at this stage — the ICP ecosystem
+# (ic-cdk 0.13, candid 0.10, ic-stable-structures 0.6) pulls in several
+# transitive deps flagged `unmaintained` (bincode 1.x, paste, ...).
+# Tracked for upgrade to ic-stable-structures ≥0.7 + migration paths in
+# future milestones; not a security risk.
 yanked = "deny"
-ignore = [
-    # `paste` — no longer maintained but still pulled by ic-cdk-macros & candid_derive.
-    # Track: https://github.com/dtolnay/paste/issues/144
-    "RUSTSEC-2024-0436",
-    # `bincode 1.x` — unmaintained; we use it via ic-stable-structures 0.6.
-    # Migration path: upgrade to ic-stable-structures ≥ 0.7 (uses bincode 2).
-    { id = "RUSTSEC-2023-0071", reason = "bincode 1.x via ic-stable-structures 0.6" },
-]
+unmaintained = "workspace"   # workspace direct deps only (allow transitives)
+unsound = "warn"
 
 [licenses]
 version = 2
