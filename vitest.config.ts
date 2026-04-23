@@ -32,6 +32,7 @@ export default defineConfig({
       'dist',
       'canisters',
       'apps/frontend',
+      'opensrc',
       'products/*/canister',
       'products/*/canisters',
       'products/*/cli',
