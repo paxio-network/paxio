@@ -20,10 +20,17 @@ version = 2
 # future milestones; not a security risk.
 yanked = "deny"
 unmaintained = "workspace"   # workspace direct deps only (allow transitives)
-# cargo-deny v2: `unsound` field removed from schema — unsoundness surfaces
-# through advisory DB severity; yanked=deny + DB itself is enough. Keeping
-# the comment as a marker: if we ever want stricter unsound gating, use
-# `severity-threshold = "medium"` at [advisories] top level.
+# Explicit ignores — each is a deliberate exception with a tracked upgrade path.
+# These crates are required by the ICP ecosystem (ic-cdk, ic-stable-structures,
+# candid) and are known "unmaintained" in RustSec DB but widely used in production.
+ignore = [
+    # bincode 1.x unmaintained — 2.x under development. Used by ic-stable-structures
+    # for state serialization. Upgrade path: ic-stable-structures >=0.7.
+    "RUSTSEC-2023-0089",
+    # paste unmaintained (macro helper) — pulled transitively by serde_derive
+    # ecosystem and ic-cdk-macros. No replacement; widely used, no known issues.
+    "RUSTSEC-2024-0436",
+]
 
 [licenses]
 version = 2
