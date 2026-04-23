@@ -25,7 +25,7 @@
     "baseUrl": ".",
     "paths": {
       "@paxio/ui": [
-        "../../packages/ui/src/index.ts"
+        "../../packages/ui/src/index.tsx"
       ],
       "@paxio/hooks": [
         "../../packages/hooks/src/index.ts"

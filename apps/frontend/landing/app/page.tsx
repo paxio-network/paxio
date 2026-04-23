@@ -1,13 +1,28 @@
+import { Providers } from './providers';
+import { LiveTicker } from '@paxio/ui';
+import { Hero } from './sections/01-hero';
+import { Quickstart } from './sections/02-quickstart';
+import { BitcoinSection } from './sections/02b-bitcoin';
+import { Radar } from './sections/03-radar';
+import { Pay } from './sections/04-pay';
+import { Network } from './sections/05-network';
+import { Doors } from './sections/06-doors';
+import { Footer } from '@paxio/ui';
+
 export default function LandingPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-accent)' }}>
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-white mb-4">Paxio — Agent Financial OS</h1>
-        <p className="text-lg text-white/80">paxio.network — coming soon</p>
-        <div className="mt-6 text-sm text-white/60 font-mono">
-          Universal Registry · Multi-Protocol Payments · Trust Infrastructure
-        </div>
-      </div>
-    </main>
+    <Providers>
+      <main className="min-h-screen bg-[--color-dark] text-white">
+        <LiveTicker className="sticky top-0 z-50" />
+        <Hero />
+        <Quickstart />
+        <BitcoinSection />
+        <Radar />
+        <Pay />
+        <Network />
+        <Doors />
+        <Footer dark />
+      </main>
+    </Providers>
   );
 }

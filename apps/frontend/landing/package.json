@@ -18,7 +18,8 @@
     "@paxio/ui": "workspace:*",
     "@paxio/hooks": "workspace:*",
     "@paxio/api-client": "workspace:*",
-    "@paxio/auth": "workspace:*"
+    "@paxio/auth": "workspace:*",
+    "@tanstack/react-query": ">=5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
