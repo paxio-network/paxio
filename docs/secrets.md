@@ -20,6 +20,7 @@ Template: [`.env.example`](../.env.example) — copy, fill, never commit.
 | `PYPI_TOKEN` | PyPI `paxio-sdk` project | `release-tools.yml` | user | 180d | Python SDK release fails. Users still `pip install` old version. |
 | `NPM_TOKEN` | npm org `paxio` | `release-tools.yml` | user | 180d | TS SDK / MCP / proxy / CLI publish fails. |
 | `CARGO_TOKEN` | crates.io account | `release-tools.yml` | user | 365d | `paxio-cli` publish fails. |
+| `GITHUB_TOKEN` | GitHub API access for release automation + PR comments | All workflows (auto-provided by GitHub Actions) | GitHub (auto) / user PAT fallback | auto | Release publishing fails; PR automation disabled. PAT only needed if default token lacks scope (e.g. cross-repo triggers). Fallback PAT stored as `GH_PAT_*` (user owns). |
 | `HETZNER_HOST` | Production server DNS/IP | `deploy-backend.yml` | user | static | Backend deploy SSH fails. |
 | `HETZNER_USER` | SSH user on prod | `deploy-backend.yml` | user | static | Backend deploy SSH fails. |
 | `HETZNER_SSH_KEY` | SSH private key for deploy user | `deploy-backend.yml` | user | 365d | Backend deploy SSH fails. Requires manual rekey via console. |

@@ -196,6 +196,27 @@ const did = useDid();  // 'did:paxio:0x...'
 - DID display через `@paxio/ui::DIDDisplay` (truncated с tooltip полного DID)
 - Per-app Privy project (отдельный `NEXT_PUBLIC_PRIVY_APP_ID_<APP>` env var)
 
+## Workspace package naming — NO collisions with `products/*`
+
+Каждый `apps/frontend/<name>/package.json` **ОБЯЗАН** иметь имя `@paxio/<name>-app`, не `@paxio/<name>`.
+
+**Почему:** `@paxio/<name>` зарезервировано за продуктами в `products/*/package.json` (backend API/SDK/types). Одно workspace name не может существовать в двух местах — Turborepo + pnpm workspace падают при конфликте.
+
+| apps/frontend/<name>/ | ✅ Правильно | ❌ НЕ ТАК (конфликт с products/) |
+|---|---|---|
+| `landing/` | `@paxio/landing-app` | `@paxio/landing` |
+| `registry/` | `@paxio/registry-app` | `@paxio/registry` (← products/01-registry) |
+| `pay/` | `@paxio/pay-app` | `@paxio/pay` |
+| `radar/` | `@paxio/radar-app` | `@paxio/radar` |
+| `intel/` | `@paxio/intel-app` | `@paxio/intel` |
+| `docs/` | `@paxio/docs-app` | `@paxio/docs` |
+| `wallet/` | `@paxio/wallet-app` | `@paxio/wallet` (← products/03-wallet) |
+| `fleet/` | `@paxio/fleet-app` | `@paxio/fleet` |
+
+Тот же принцип для `apps/back/` → `@paxio/back-app` (но сейчас `@paxio/back` — legacy, не конфликтует, можно оставить либо переименовать в отдельном M0X).
+
+Turborepo фильтры соответственно: `pnpm turbo run build --filter=@paxio/landing-app...`
+
 ## Per-app Vercel project
 
 Каждый `apps/frontend/<app>/` — отдельный Vercel project (Monorepo Projects pattern):
