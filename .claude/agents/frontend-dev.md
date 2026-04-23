@@ -129,6 +129,35 @@ Each `apps/frontend/<app>/` is a separate Vercel project:
 
 See `docs/secrets.md` for which Vercel env vars each app needs.
 
+## Identity from session — НИКОГДА из URL/body/localStorage (P0)
+
+**Frontend никогда не доверяет identity из URL или body.** Это анти-impersonation invariant.
+
+```tsx
+// ✅ ПРАВИЛЬНО — identity из подписанной Privy сессии
+import { useDid } from '@paxio/auth';
+
+function WalletDashboard() {
+  const did = useDid();   // 'did:paxio:0x...' — из session, sign'нутая
+  if (!did) return <SignInPrompt />;
+  const { data } = useQuery({
+    queryKey: ['wallet', did],
+    queryFn: () => paxioClient.wallet.getBalance(did),
+  });
+  // ...
+}
+
+// ❌ НЕПРАВИЛЬНО — DID из URL, user может подменить через адресную строку
+function WalletDashboard() {
+  const did = useSearchParams().get('agentDid');
+  // → fetch чужого wallet → backend ДОЛЖЕН отклонить, но frontend всё равно НЕ должен слать
+}
+```
+
+**Backend Phase B (B1-B7)** проверяет это на стороне сервера, но фронт обязан тоже не слать — иначе это обнаружится в reviewer Phase J и Phase B одновременно (двойной REJECT).
+
+`@paxio/auth::useDid()` достаёт DID **только** из подписанной Privy сессии. `localStorage`-кражу/чтение не используем — `@paxio/auth` сам заворачивает session storage.
+
 ## No `any`, no hidden state
 
 - `strict: true`, `exactOptionalPropertyTypes: true` in `tsconfig.app.json`
@@ -144,11 +173,18 @@ See `docs/secrets.md` for which Vercel env vars each app needs.
 - Color never conveys meaning alone (pair with icon + text)
 - `prefers-reduced-motion` honored in all Framer animations
 
-## No Scope Creep
+## No Scope Creep — Three Hard Rules + Level 1/2/3
 
 - Do NOT touch backend (`apps/back/`, `products/*/app/`) — request via SCOPE VIOLATION
 - Do NOT modify `packages/types/` — schema changes are architect-owned
 - Do NOT modify tests — request new specs via SCOPE VIOLATION
 - Do NOT hardcode live data — always through `@paxio/api-client`
 
-Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` (format in scope-guard.md).
+Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` (format in `.claude/rules/scope-guard.md`).
+
+**Scope violation levels** (см. `.claude/rules/workflow.md`):
+- **Level 1** (touched constitutional docs `.claude/`, `CLAUDE.md`, `docs/sprints/`, `docs/feature-areas/`) → AUTOMATIC REJECT + revert
+- **Level 2** (touched backend/canisters WITH `!!! REQUEST !!!` + STOP) → APPROVED + tech-debt for owner
+- **Level 3** (touched non-frontend code SILENTLY) → REJECT + tech-debt HIGH
+
+PostToolUse hook грепает `Math.random|setInterval.*=>.*v\s*+|: any|@ts-ignore` на всех файлах в `apps/frontend/**` и `packages/{ui,hooks,api-client,auth}/**` — увидишь WARNING если нарушение.

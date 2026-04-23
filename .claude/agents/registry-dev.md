@@ -115,6 +115,40 @@ Design rules:
 - **НИКАКОГО admin key** — это ключевая гарантия immutability (§9 FA-01)
 - Caller checks: `record_transaction` доступен только из whitelisted canister principals (Facilitator, Audit Log)
 
+## Multi-Tenancy / Identity Filter — P0 BLOCKER (reviewer Phase B)
+
+**TS side (`products/01-registry/app/`):**
+- Каждый SQL/Qdrant запрос к agent данным фильтруется по `session.agentDid` (или public whitelist).
+- Identity ВСЕГДА из `session.*`, никогда из `body.*`:
+
+```javascript
+// ✅ ПРАВИЛЬНО — claim требует подписи owner DID
+method: async ({ body, session }) => {
+  if (!session?.agentDid) throw new errors.AuthError();
+  return await db.query(
+    'SELECT * FROM agent_claims WHERE agent_did = $1',
+    [session.agentDid]
+  );
+}
+
+// ❌ НЕПРАВИЛЬНО — клиент подделает чужой DID
+method: async ({ body }) => {
+  return await db.query(
+    'UPDATE agent_cards SET ... WHERE agent_did = $1',
+    [body.agentDid]
+  );
+}
+```
+
+**Public exception:** `/api/registry/find` — публичный agent index by design (whitelist в `backend-architecture.md`).
+
+**Rust side (reputation canister):**
+- `record_transaction` доступен только из whitelisted principals (Facilitator, Audit Log) через `ic_cdk::caller()` + check
+- `get_score` — публично (read-only)
+- НИКАКОГО admin key
+
+Любой fail B1-B7 → REJECT + tech-debt CRITICAL. Reviewer Phase 2 проверит первым.
+
 ## DFX Environment (только для reputation canister)
 
 ```bash
@@ -140,11 +174,16 @@ dfx_stop
 
 Каноничный источник — `packages/types/src/capability.ts` (Zod enum). Rust canister reputation НЕ дублирует этот список.
 
-## No Scope Creep
+## No Scope Creep — Three Hard Rules + Level 1/2/3
 
 - НЕ создавай `canisters/src/registry/` — этот каталог не существует by design
 - Agent Card storage → **PostgreSQL через TS** (не canister)
 - Semantic search → **Qdrant через TS** (не canister)
 - НЕ трогай других canisters — icp-dev territory
 - НЕ модифицируй тесты — только реализуй по ним
-- Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!`
+- Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` (см. `.claude/rules/scope-guard.md`)
+
+**Scope violation levels** (см. `.claude/rules/workflow.md`):
+- **Level 1** (touched constitutional docs) → AUTOMATIC REJECT + revert
+- **Level 2** (touched other dev's code WITH `!!! REQUEST !!!` + STOP) → APPROVED + tech-debt for owner
+- **Level 3** (touched other dev's code SILENTLY) → REJECT + tech-debt HIGH

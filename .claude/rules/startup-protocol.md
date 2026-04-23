@@ -1,6 +1,6 @@
 ---
 description: Mandatory startup protocol — agent must announce what it found BEFORE writing code
-globs: ["server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "docs/**/*.md", "scripts/**"]
+globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "docs/**/*.md", "scripts/**"]
 ---
 
 # Startup Protocol — ОБЯЗАТЕЛЬНЫЙ для каждого агента

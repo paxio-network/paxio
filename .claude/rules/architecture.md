@@ -1,6 +1,6 @@
 ---
-description: Architecture enforcement — server/app split, layer separation, dependency rules, data externalization
-globs: ["server/**/*.cjs", "app/**/*.{js,ts}", "canisters/**/*.rs", "packages/**/*.{ts,tsx}", "docs/**/*.md", "scripts/**"]
+description: Architecture enforcement — apps/back server/app split, layer separation, dependency rules, data externalization
+globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "docs/**/*.md", "scripts/**"]
 ---
 
 # Architecture Rules
