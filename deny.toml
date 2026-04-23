@@ -24,11 +24,17 @@ unmaintained = "workspace"   # workspace direct deps only (allow transitives)
 # These crates are required by the ICP ecosystem (ic-cdk, ic-stable-structures,
 # candid) and are known "unmaintained" in RustSec DB but widely used in production.
 ignore = [
-    # bincode 1.x unmaintained — 2.x under development. Used by ic-stable-structures
-    # for state serialization. Upgrade path: ic-stable-structures >=0.7.
-    "RUSTSEC-2023-0089",
-    # paste unmaintained (macro helper) — pulled transitively by serde_derive
-    # ecosystem and ic-cdk-macros. No replacement; widely used, no known issues.
+    # bincode 1.3.3 — permanently unmaintained per bincode team statement
+    # (RUSTSEC-2025-0141, filed after team ceased development following
+    # doxxing incident). Used by ic-stable-structures 0.6 for canister state
+    # serialization; no practical replacement until ic-stable-structures 0.7
+    # migrates (wincode / postcard are suggested alternatives). Not a security
+    # risk — the team considers 1.3.3 feature-complete.
+    "RUSTSEC-2025-0141",
+    # paste unmaintained (proc-macro helper) — pulled transitively by several
+    # serde_derive/ic-cdk-macros internals. No drop-in replacement; waiting on
+    # ICP macro ecosystem migration. Not flagged yet in live CI but ignored
+    # preemptively to keep this file as the single source of waivers.
     "RUSTSEC-2024-0436",
 ]
 
