@@ -3,43 +3,23 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { ERROR_CODES } from '@paxio/types';
 
-// TD-01: server/lib/errors.cjs must stay in sync with app/errors/index.ts
-// (which reads ERROR_CODES from @paxio/types).
+// TD-01: server/lib/errors.cjs must stay in sync with @paxio/types.
 //
-// This test verifies:
-// 1. All error classes in CJS mirror have the same codes as ERROR_CODES
-// 2. All HTTP status codes match ERROR_STATUS_CODES
-// 3. No extra or missing error classes
+// This test verifies by:
+// 1. Loading @paxio/types via vitest's alias (tsconfig paths: src/index.ts)
+// 2. Executing the CJS file in a VM sandbox with module resolution
+// 3. Comparing the resulting class instances against @paxio/types values
+//
+// The CJS file reads from dist/ (compiled output from tsconfig.app.json).
+// Both must agree — same source, same compiled snapshot.
 
 describe('TD-01: CJS error mirror sync', () => {
-  let cjsSource: string;
+  // Authoritative values from @paxio/types (single source of truth)
+  // Imported directly via vitest alias → packages/types/src/errors.ts
+  const EXPECTED_CODES = ERROR_CODES;
 
-  beforeAll(() => {
-    // Use import.meta.url so we always resolve relative to this file's location,
-    // regardless of how the test runner resolved __dirname in compiled output.
-    const __filename = fileURLToPath(import.meta.url);
-    const __testDir = dirname(__filename);
-    // __testDir = /home/nous/paxio/tests; go up one level to repo root → apps/back/...
-    cjsSource = readFileSync(
-      resolve(__testDir, '..', 'apps/back/server/lib/errors.cjs'),
-      'utf8',
-    );
-  });
-
-  // These are the authoritative codes from @paxio/types ERROR_CODES
-  const EXPECTED_CODES = {
-    VALIDATION: 'validation_error',
-    NOT_FOUND: 'not_found',
-    UNAUTHORIZED: 'unauthorized',
-    FORBIDDEN: 'forbidden',
-    CONFLICT: 'conflict',
-    RATE_LIMIT: 'rate_limit',
-    INTERNAL: 'internal_error',
-    EXTERNAL_SERVICE: 'external_service_error',
-  } as const;
-
-  // These are the authoritative status codes from @paxio/types ERROR_STATUS_CODES
   const EXPECTED_STATUS_CODES: Record<string, number> = {
     validation_error: 400,
     unauthorized: 401,
@@ -51,132 +31,51 @@ describe('TD-01: CJS error mirror sync', () => {
     external_service_error: 502,
   };
 
-  describe('error class codes', () => {
-    it('ValidationError code matches ERROR_CODES.VALIDATION', () => {
-      // The CJS file hardcodes 'validation_error' string — check it matches
-      const match = cjsSource.match(/super\s*\(\s*['"]validation_error['"]/);
-      expect(match).not.toBeNull();
-      expect(match![0]).toContain("'validation_error'");
-    });
+  let errorsModule: Record<string, unknown>;
 
-    it('NotFoundError code matches ERROR_CODES.NOT_FOUND', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]not_found['"]/);
-      expect(match).not.toBeNull();
-    });
+  beforeAll(() => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __testDir = dirname(__filename);
+    const cjsPath = resolve(__testDir, '..', 'apps/back/server/lib/errors.cjs');
 
-    it('UnauthorizedError code matches ERROR_CODES.UNAUTHORIZED', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]unauthorized['"]/);
-      expect(match).not.toBeNull();
-    });
+    const cjsSource = readFileSync(cjsPath, 'utf8');
 
-    it('ForbiddenError code matches ERROR_CODES.FORBIDDEN', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]forbidden['"]/);
-      expect(match).not.toBeNull();
-    });
+    // Pass the correct __dirname so the CJS file can resolve dist/ path
+    const serverLibDir = resolve(__testDir, '..', 'apps/back/server');
 
-    it('ConflictError code matches ERROR_CODES.CONFLICT', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]conflict['"]/);
-      expect(match).not.toBeNull();
-    });
+    const wrappedCode = `
+      (function(__dirname) {
+        ${cjsSource}
+        return module.exports;
+      })
+    `;
 
-    it('RateLimitError code matches ERROR_CODES.RATE_LIMIT', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]rate_limit['"]/);
-      expect(match).not.toBeNull();
-    });
-
-    it('InternalError code matches ERROR_CODES.INTERNAL', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]internal_error['"]/);
-      expect(match).not.toBeNull();
-    });
-
-    it('ExternalServiceError code matches ERROR_CODES.EXTERNAL_SERVICE', () => {
-      const match = cjsSource.match(/super\s*\(\s*['"]external_service_error['"]/);
-      expect(match).not.toBeNull();
-    });
+    const fn = eval(wrappedCode);
+    const exports = fn(serverLibDir);
+    errorsModule = exports;
   });
 
-  describe('HTTP status codes', () => {
-    it('ValidationError status code 400 matches ERROR_STATUS_CODES.validation_error', () => {
-      // super('validation_error', message, 400, context) — 3rd arg is statusCode
-      const match = cjsSource.match(
-        /class ValidationError[\s\S]*?super\s*\(\s*['"]validation_error['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.validation_error,
-      );
-    });
+  const buildTest = (clsName: string, expectedCode: string, expectedStatus: number) => {
+    it(`${clsName} code = '${expectedCode}' and status = ${expectedStatus}`, () => {
+      const cls = errorsModule[clsName] as new (msg: string) => Error & { code: string; statusCode: number; name: string };
+      expect(cls).toBeDefined();
+      expect(typeof cls).toBe('function');
 
-    it('NotFoundError status code 404 matches ERROR_STATUS_CODES.not_found', () => {
-      const match = cjsSource.match(
-        /class NotFoundError[\s\S]*?super\s*\(\s*['"]not_found['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.not_found,
-      );
+      const instance = new cls('test message');
+      expect(instance.code).toBe(expectedCode);
+      expect(instance.statusCode).toBe(expectedStatus);
+      expect(instance.name).toBe(clsName);
     });
+  };
 
-    it('UnauthorizedError status code 401 matches ERROR_STATUS_CODES.unauthorized', () => {
-      const match = cjsSource.match(
-        /class UnauthorizedError[\s\S]*?super\s*\(\s*['"]unauthorized['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.unauthorized,
-      );
-    });
-
-    it('ForbiddenError status code 403 matches ERROR_STATUS_CODES.forbidden', () => {
-      const match = cjsSource.match(
-        /class ForbiddenError[\s\S]*?super\s*\(\s*['"]forbidden['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.forbidden,
-      );
-    });
-
-    it('ConflictError status code 409 matches ERROR_STATUS_CODES.conflict', () => {
-      const match = cjsSource.match(
-        /class ConflictError[\s\S]*?super\s*\(\s*['"]conflict['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.conflict,
-      );
-    });
-
-    it('RateLimitError status code 429 matches ERROR_STATUS_CODES.rate_limit', () => {
-      const match = cjsSource.match(
-        /class RateLimitError[\s\S]*?super\s*\(\s*['"]rate_limit['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.rate_limit,
-      );
-    });
-
-    it('InternalError status code 500 matches ERROR_STATUS_CODES.internal_error', () => {
-      const match = cjsSource.match(
-        /class InternalError[\s\S]*?super\s*\(\s*['"]internal_error['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.internal_error,
-      );
-    });
-
-    it('ExternalServiceError status code 502 matches ERROR_STATUS_CODES.external_service_error', () => {
-      const match = cjsSource.match(
-        /class ExternalServiceError[\s\S]*?super\s*\(\s*['"]external_service_error['"]\s*,\s*message\s*,\s*(\d+)/,
-      );
-      expect(match).not.toBeNull();
-      expect(parseInt(match![1])).toBe(
-        EXPECTED_STATUS_CODES.external_service_error,
-      );
-    });
-  });
+  buildTest('ValidationError', EXPECTED_CODES.VALIDATION, EXPECTED_STATUS_CODES.validation_error);
+  buildTest('NotFoundError',     EXPECTED_CODES.NOT_FOUND,     EXPECTED_STATUS_CODES.not_found);
+  buildTest('UnauthorizedError', EXPECTED_CODES.UNAUTHORIZED, EXPECTED_STATUS_CODES.unauthorized);
+  buildTest('ForbiddenError',    EXPECTED_CODES.FORBIDDEN,    EXPECTED_STATUS_CODES.forbidden);
+  buildTest('ConflictError',     EXPECTED_CODES.CONFLICT,     EXPECTED_STATUS_CODES.conflict);
+  buildTest('RateLimitError',    EXPECTED_CODES.RATE_LIMIT,   EXPECTED_STATUS_CODES.rate_limit);
+  buildTest('InternalError',     EXPECTED_CODES.INTERNAL,     EXPECTED_STATUS_CODES.internal_error);
+  buildTest('ExternalServiceError', EXPECTED_CODES.EXTERNAL_SERVICE, EXPECTED_STATUS_CODES.external_service_error);
 
   describe('module.exports completeness', () => {
     it('exports all 9 error classes', () => {
@@ -192,8 +91,53 @@ describe('TD-01: CJS error mirror sync', () => {
         'ExternalServiceError',
       ];
       for (const cls of expected) {
-        expect(cjsSource).toContain(`  ${cls},`);
+        expect(errorsModule).toHaveProperty(cls);
+        expect(typeof errorsModule[cls]).toBe('function');
       }
+    });
+
+    it('does NOT export extra classes beyond the 9 defined', () => {
+      const exportedKeys = Object.keys(errorsModule).filter(
+        (k) => typeof errorsModule[k] === 'function',
+      );
+      // We expect exactly 9 (AppError base + 8 subclasses)
+      expect(exportedKeys).toHaveLength(9);
+    });
+  });
+
+  describe('AppError.toJSON consistency', () => {
+    it('toJSON output matches RFC 7807-lite shape', () => {
+      const ValidationError = errorsModule.ValidationError as new (msg: string) => {
+        toJSON: () => Record<string, unknown>;
+        code: string;
+        statusCode: number;
+        message: string;
+      };
+      const e = new ValidationError('bad input');
+      const json = e.toJSON();
+      expect(json).toHaveProperty('error');
+      expect(json.error).toHaveProperty('code', EXPECTED_CODES.VALIDATION);
+      expect(json.error).toHaveProperty('message', 'bad input');
+      expect(json.error).toHaveProperty('statusCode', EXPECTED_STATUS_CODES.validation_error);
+    });
+
+    it('toJSON omits context when null', () => {
+      const InternalError = errorsModule.InternalError as new (msg: string) => {
+        toJSON: () => Record<string, unknown>;
+      };
+      const e = new InternalError('boom');
+      const json = e.toJSON();
+      expect(json.error).not.toHaveProperty('context');
+    });
+
+    it('toJSON includes context when provided', () => {
+      const ValidationError = errorsModule.ValidationError as new (
+        msg: string,
+        ctx: Record<string, unknown> | null,
+      ) => { toJSON: () => Record<string, unknown> };
+      const e = new ValidationError('bad', { field: 'did' });
+      const json = e.toJSON();
+      expect(json.error).toHaveProperty('context', { field: 'did' });
     });
   });
 });
