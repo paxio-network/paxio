@@ -20,7 +20,10 @@ version = 2
 # future milestones; not a security risk.
 yanked = "deny"
 unmaintained = "workspace"   # workspace direct deps only (allow transitives)
-unsound = "warn"
+# cargo-deny v2: `unsound` field removed from schema — unsoundness surfaces
+# through advisory DB severity; yanked=deny + DB itself is enough. Keeping
+# the comment as a marker: if we ever want stricter unsound gating, use
+# `severity-threshold = "medium"` at [advisories] top level.
 
 [licenses]
 version = 2
