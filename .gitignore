@@ -56,3 +56,10 @@ scratch/
 # opensrc — pinned external clones (each dev fetches via opensrc/fetch.sh)
 opensrc/repos/*
 !opensrc/repos/.gitkeep
+
+# Claude Code runtime artifacts
+.claude/scheduled_tasks.lock
+.claude/*.lock
+
+# Next.js auto-generated type file (each app regenerates on dev)
+apps/frontend/*/next-env.d.ts
