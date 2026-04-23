@@ -9,6 +9,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.base.json --noEmit",
     "test": "vitest",
+    "test:specs": "vitest run --config vitest.specs.config.ts",
     "test:integration": "vitest --config vitest.integration.config.ts",
     "lint": "eslint . && prettier --check \"**/*.{js,cjs,ts,tsx,json,md}\"",
     "fix": "eslint . --fix && prettier --write \"**/*.{js,cjs,ts,tsx,json,md}\"",

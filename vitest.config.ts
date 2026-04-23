@@ -16,9 +16,18 @@ export default defineConfig({
     },
   },
   test: {
+    // Default run = green baseline only. `*.test.ts` convention.
+    // RED specs for pending tech-debt fixes live in `tests/_specs/**/*.spec.ts`
+    // (see `pnpm test:specs` in root package.json) — they are NOT in the
+    // default suite by design: CI enforces green, specs guide dev toward
+    // green. This mirrors the Paxio TDD pattern (RED on feature branch only).
+    // Default run = green baseline. RED specs for pending tech-debt live in
+    // `tests/_specs/` and run via `pnpm test:specs` (uses vitest.specs.config.ts).
+    // Keeping them out of default CI — they're guidance for dev, not regressions.
     include: ['tests/**/*.test.ts', 'products/*/tests/**/*.test.ts'],
     exclude: [
       'tests/**/*.integration.ts',
+      'tests/_specs/**',
       'node_modules',
       'dist',
       'canisters',
