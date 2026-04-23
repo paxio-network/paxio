@@ -12,6 +12,7 @@ on:
       - 'platform/canister-shared/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - 'deny.toml'
       - '.github/workflows/ci-canisters.yml'
   push:
     branches: [dev, main]
@@ -23,6 +24,8 @@ on:
       - 'platform/canister-shared/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - 'deny.toml'
+      - '.github/workflows/ci-canisters.yml'
 
 concurrency:
   group: ci-canisters-${{ github.ref }}
