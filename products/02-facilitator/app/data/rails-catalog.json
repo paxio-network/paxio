@@ -1,0 +1,50 @@
+[
+  {
+    "id": "x402",
+    "name": "Coinbase x402",
+    "category": "http",
+    "description": "HTTP 402 micropayments — agents pay per request via standard headers (x-payment-…). USDC settlement on Base.",
+    "status": "supported",
+    "share_pct": 0,
+    "latency_ms": 45,
+    "fee_description": "0.10%",
+    "color_hex": "#0F766E",
+    "concentration_risk": false
+  },
+  {
+    "id": "mpp",
+    "name": "Stripe MPP",
+    "category": "offchain",
+    "description": "Stripe Merchant Payment Protocol — agent-initiated card and bank settlement with delegated spend limits.",
+    "status": "planned",
+    "share_pct": 0,
+    "latency_ms": 420,
+    "fee_description": "2.9% + $0.30",
+    "color_hex": "#533483",
+    "concentration_risk": false
+  },
+  {
+    "id": "tap",
+    "name": "Visa TAP",
+    "category": "offchain",
+    "description": "Visa Trusted Agent Protocol — tokenised card-present agent rails with binding signature verification.",
+    "status": "planned",
+    "share_pct": 0,
+    "latency_ms": 380,
+    "fee_description": "1.8% + $0.10",
+    "color_hex": "#1A1A2E",
+    "concentration_risk": false
+  },
+  {
+    "id": "btc-l1",
+    "name": "BTC L1",
+    "category": "onchain-btc",
+    "description": "Native Bitcoin base layer — threshold-ECDSA signed transactions from the Paxio Wallet canister.",
+    "status": "supported",
+    "share_pct": 0,
+    "latency_ms": 600000,
+    "fee_description": "flat sat fee",
+    "color_hex": "#F7931A",
+    "concentration_risk": false
+  }
+]
