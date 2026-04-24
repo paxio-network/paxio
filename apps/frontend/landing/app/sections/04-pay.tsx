@@ -10,13 +10,13 @@ export function Pay() {
     staleTime: 10_000,
   });
 
-  // Two gates:
-  //   1. `data?.length` — backend returned a non-empty catalog (loading vs ready).
-  //   2. `share_pct > 0` — at least one rail is actively routing real traffic.
-  // While loading or empty, render the skeleton. With a catalog but no live
-  // traffic, render an UpcomingBadge so we stay honest about launch state.
-  const hasCatalog = data?.length ? true : false;
-  const hasTraffic = !!data?.some((r) => r.share_pct > 0);
+  // Inline narrowing: `!data || data.length === 0` narrows `data` from
+  // `RailInfo[] | undefined` to `RailInfo[]` in the truthy branch.
+  // `exactOptionalPropertyTypes: true` amplifies any remaining `undefined`
+  // into a confusing TS2719 ("Two different types with this name exist").
+  // `?? false` on `hasTraffic` ensures `ConditionalSection.show` always
+  // receives a strict `boolean` (not `boolean | undefined`).
+  const hasTraffic = data?.some((r) => r.share_pct > 0) ?? false;
 
   return (
     <SectionFrame id="pay" eyebrow="Payment Layer" dark>
@@ -25,7 +25,7 @@ export function Pay() {
           <h2 className="text-4xl font-bold mb-3 text-white">Meta-Facilitator — Multi-Rail Routing</h2>
           <p className="text-white/50">FAP routes payments across x402, MPP, Skyfire, TAP, BTC L1</p>
         </div>
-        {isPending || !hasCatalog ? (
+        {isPending || !data || data.length === 0 ? (
           <RailsSkeleton />
         ) : (
           <ConditionalSection
