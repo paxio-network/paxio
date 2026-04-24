@@ -179,6 +179,26 @@ const wallets = await db.query('SELECT * FROM wallets');
 - [ ] **D16. SRP** — Functions < 50 lines, files < 300 lines, single responsibility
 - [ ] **D17. DRY** — No duplicated logic. Search before writing
 - [ ] **D18. No dead code** — No commented-out, no stub без TODO + milestone reference
+- [ ] **D19. No `bind`/`call`/`apply`** — arrow functions + spread. Legacy `this`-binding = читаемость + source of bugs
+- [ ] **D20. No chained assignments** (`let a = b = c = 0`) — each variable declared separately (hoisting / accidental global)
+- [ ] **D21. Return objects, not arrays** for multi-value returns — `{ user, token }` > `[user, token]`. Позиция в tuple магична, имена — self-documenting
+
+---
+
+### Phase 4.1: Naming Consistency (single source for file / symbol naming)
+
+Cross-reference: `.claude/rules/code-style.md` + `.claude/rules/backend-code-style.md` (naming table). Reviewer enforces:
+
+- [ ] **N-1. Files TS/JS** — `kebab-case.ts` / `kebab-case.js` (tests: `*.test.ts`)
+- [ ] **N-2. Files Rust** — `snake_case.rs`
+- [ ] **N-3. Functions / variables** — `camelCase` (TS), `snake_case` (Rust)
+- [ ] **N-4. Types / interfaces** — `PascalCase` (обе lang)
+- [ ] **N-5. Constants** — `UPPER_SNAKE_CASE`
+- [ ] **N-6. Booleans** — `is` / `has` / `can` prefix (`isAuthenticated`, `hasPermission`)
+- [ ] **N-7. Factory functions** — `create` prefix (`createWalletService`, `createFAPRouter`)
+- [ ] **N-8. Zod schemas** — `Zod` prefix + `PascalCase` (`ZodAgentCard`, `ZodSignRequest`)
+- [ ] **N-9. Error classes** — `PascalCase` + `Error` suffix (`ValidationError`, `NotFoundError`)
+- [ ] **N-10. API paths** — `kebab-case` (`/api/registry/find`, `/api/wallet/sign-transaction`)
 
 ---
 
