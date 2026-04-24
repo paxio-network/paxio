@@ -13,7 +13,7 @@
     "test:integration": "vitest --config vitest.integration.config.ts",
     "lint": "eslint . && prettier --check \"**/*.{js,cjs,ts,tsx,json,md}\"",
     "fix": "eslint . --fix && prettier --write \"**/*.{js,cjs,ts,tsx,json,md}\"",
-    "build": "tsc -p tsconfig.app.json",
+    "build": "tsc -p tsconfig.app.json && node scripts/copy-api-handlers.mjs",
     "dev:server": "node --watch apps/back/server/main.cjs",
     "server": "node apps/back/server/main.cjs",
     "turbo:build": "turbo run build",
