@@ -58,7 +58,6 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 - architect **может** выполнить `gh pr merge N --merge` после фразы user'а содержащей «мержи» / «merge» / «OK мержить» / «go ahead merge» на конкретный PR номер
 - Фраза user'а должна быть **SPECIFIC** — содержать номер PR или однозначный контекст. «Да» без привязки к номеру = уточнить. «Мержи всё» = отказаться, просить по одному
 - `git push --force` к `main` / `dev` — **ЗАПРЕЩЕНО для всех агентов всегда, без исключений**, даже с user OK
-- Mode B (delegated orchestration через wake-up): merge НЕ автоматизируется. Wake-up firing не считается OK. Architect всё равно пишет в отчёт «мержить PR #N?» и ждёт user на следующем cycle
 
 ### Branch model: feature/* → dev → main
 

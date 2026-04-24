@@ -5,61 +5,37 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 # Startup Protocol — ОБЯЗАТЕЛЬНЫЙ для каждого агента
 
-## ПЕРЕД тем как написать хоть одну строчку кода, выполни ВСЕ шаги ПО ПОРЯДКУ:
+ПЕРЕД тем как написать хоть одну строчку кода:
 
-### Step 1: Прочитай правила проекта
-- CLAUDE.md — master rules
-- .claude/rules/scope-guard.md — твои границы (какие файлы МОЖЕШЬ трогать)
+Step 1: Прочитай `CLAUDE.md` и `.claude/rules/scope-guard.md`
+Step 2: Прочитай `docs/tech-debt.md` — есть ли 🔴 OPEN на тебя?
+         - Если есть с тестом → СНАЧАЛА закрой долг, ПОТОМ milestone
+         - Если есть без теста → НЕ БЕРИ задачу, сообщи "TD-N ждёт тест от architect'а"
+Step 3: Прочитай контракты (Shared Kernel):
+         `packages/types/src/` — типы + Zod schemas
+         `packages/interfaces/src/` — port contracts
+         `packages/errors/src/` — AppError hierarchy
+Step 4: Прочитай тест-спецификации:
+         `tests/**/*.test.ts` + `products/*/tests/**/*.test.ts` — unit тесты
+         `platform/canister-shared/tests/*.rs` + `products/*/canister*/tests/*.rs` — Rust тесты
+         `scripts/verify_*.sh` — acceptance scripts
+Step 5: Прочитай `docs/project-state.md` и `docs/sprints/M*.md`
+Step 6: Прочитай `docs/feature-areas/FA-*.md` релевантной подсистемы
+Step 7: Прочитай текущий код своего модуля
+Step 8: Запусти тесты — посмотри RED/GREEN:
+         `pnpm typecheck && pnpm test -- --run`
+         `cargo test --workspace` (если Rust)
+Step 9: ВЫВЕДИ ОТЧЁТ:
 
-### Step 2: Прочитай tech debt — ДО milestone задач
-- docs/tech-debt.md — есть ли OPEN долг на тебя?
-- Если есть 🔴 OPEN с твоим owner → проверь колонку "Тест на fix":
-  - Тест/script ЕСТЬ (architect написал) → СНАЧАЛА закрой долг по этому тесту, ПОТОМ milestone
-  - Тест/script НЕТ → НЕ БЕРИ задачу. Сообщи: "TD-N ждёт тест от architect'а."
-- После fix долга → прогони ВСЕ тесты
-- Если fix ломает чужие тесты → СТОП, !!! SCOPE VIOLATION REQUEST !!!
-- Отметь долг как ✅ CLOSED в tech-debt.md
-
-### Step 3: Прочитай КОНТРАКТЫ — типы и интерфейсы
-- `app/types/` — shared типы + Zod схемы (source of truth)
-- `app/interfaces/` — контракты компонентов (ports)
-- Контракт определяет ЧТО модуль делает. Ты реализуешь ПО КОНТРАКТУ.
-- Если контракт неясен или кажется ошибочным → !!! SCOPE VIOLATION REQUEST !!!
-
-### Step 4: Прочитай тест-спецификации и acceptance scripts
-- `tests/*.test.ts` — unit-тесты твоего модуля
-- `scripts/verify_*.sh` — acceptance scripts (Type 2 tasks)
-- Тесты написаны НА ОСНОВЕ контрактов. Контракт + тесты = полное ТЗ.
-
-### Step 5: Прочитай текущее состояние проекта
-- docs/project-state.md — какие модули DONE, какие STUB
-- docs/sprints/M*.md — найди milestone с твоей секцией
-- docs/feature-areas/*.md — пойми контекст подсистемы
-
-### Step 6: Прочитай текущий код своего модуля
-- Все файлы в твоём scope — что уже реализовано, что stub
-- Проверь: `grep -rn "TODO\|FIXME\|not implemented" [твой scope]`
-
-### Step 7: Запусти тесты
-```bash
-npm run typecheck && npm run test -- --run
-```
-Посмотри какие тесты RED (твои задачи), какие GREEN (уже сделано).
-
-### Step 8: ВЫВЕДИ ОТЧЁТ пользователю
-
-**ОБЯЗАТЕЛЬНЫЙ формат — НЕ ПРОПУСКАЙ:**
-
-```
 ═══════════════════════════════════════════════════
-AGENT: [твоё имя]
-TASK FOUND: [milestone] — [название задачи]
+AGENT: [имя]
+TASK FOUND: [milestone] — [задача]
 ═══════════════════════════════════════════════════
 
 Tech debt: [OPEN на меня: N / нет]
 Milestone: M0X
 Feature Area: [файл]
-Contract: [интерфейсный файл]
+Contract: [packages/types/src/*.ts]
 Test spec: [файл с тестами]
 Tests RED: N of total (мои задачи)
 Tests GREEN: N of total (уже сделано)
@@ -67,14 +43,12 @@ Tests GREEN: N of total (уже сделано)
 Файлы которые буду реализовывать:
   - [path]/[file] — [что именно]
 
-Читаю данные из: app/data/ (reference JSON)
 Зависимости от других модулей: [какие]
 
 Приступаю к реализации.
 ═══════════════════════════════════════════════════
-```
 
-### Step 9: ТОЛЬКО ПОСЛЕ ОТЧЁТА начинай писать код
+Step 10: ТОЛЬКО ПОСЛЕ ОТЧЁТА начинай код
 
-Если ты начал писать код до Step 8 — ты нарушил протокол.
+Если ты начал писать код до Step 9 — ты нарушил протокол.
 Если пользователь не видел твой отчёт — он не знает что ты делаешь.
