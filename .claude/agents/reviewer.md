@@ -311,6 +311,7 @@ const wallets = await db.query('SELECT * FROM wallets');
   - Severity: 🔴 BLOCKER / 🟡 MEDIUM / 🟢 LOW / 🟢 INFO
   - Status: 🔴 OPEN (test exists) / 🟡 BACKLOG (no test yet) / 🟢 ACK (governance) / ✅ CLOSED
 - [ ] **N3. Flag patterns** that should become rules → propose addition в `.claude/rules/`
+- [ ] **N4. Auto-push после APPROVED.** Если verdict ✅ APPROVED — сразу делаешь `git push origin <branch>` сам, **не** оставляешь commit локально и **не** просишь user'а пушить. Merge остаётся за user'ом, но push reviewer-commits — зона ответственности самого reviewer'а (иначе commits теряются при context compaction / session timeout). Исключение: push rejected (CI hook, network) → репортишь и ждёшь.
 
 ---
 
