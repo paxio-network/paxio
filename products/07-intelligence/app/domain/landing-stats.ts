@@ -28,8 +28,8 @@ const zeroHeatmap = (): HeatGrid => ({
   window_hours: 24,
 });
 
-/** Build zero rail array (early-phase FAP not ready). */
-const zeroRails = (): RailInfo[] => [];
+/** Build zero rail array (fallback when upstream FAP is unreachable). */
+const zeroRails = (): readonly RailInfo[] => Object.freeze<RailInfo[]>([]);
 
 /** Build zero hero state (all zeros — real empty product state). */
 const zeroHero = (): HeroState => ({
@@ -187,6 +187,17 @@ export interface LandingStatsDeps {
    * If not available, return 0.
    */
   getGuardAttacks24h: () => Promise<Result<number, LandingError>>;
+
+  /**
+   * FAP rails catalog — canonical list of payment rails Paxio exposes
+   * (x402, MPP, TAP, BTC L1, …). Returned by FapRouter.getRails().
+   *
+   * Injected as a dep so landing stays independent of FA-02 internals.
+   * When upstream FAP is unreachable, implementations should resolve to
+   * `err({ code: 'upstream_error', … })` and landing will fall back to
+   * an empty array (Real Data Invariant — empty real > fake 2.4M).
+   */
+  getRailsCatalog: () => Promise<Result<readonly RailInfo[], LandingError>>;
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
@@ -263,6 +274,8 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
     const heroResult = await getHero();
     if (!heroResult.ok) return heroResult;
     const hero = heroResult.value;
+    // Ticker RAILS lane doesn't need the FAP catalog when traffic is zero
+    // (all share_pct=0 → no interesting "top rail"). Keep it empty here.
     const rails = zeroRails();
     return {
       ok: true,
@@ -292,9 +305,20 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getRails ---
-  // Early phase: FAP not ready — return empty array, frontend shows skeleton
+  // Pulls the canonical catalog from the FAP router (FA-02). Real data:
+  // 4 rails with `share_pct = 0` until M-L4b wires traffic metering.
+  // On upstream failure we fall back to an empty array — Real Data
+  // Invariant says "empty real is better than fake populated".
   const getRails = async (): Promise<Result<readonly RailInfo[], LandingError>> => {
-    return { ok: true, value: [] };
+    try {
+      const result = await deps.getRailsCatalog();
+      if (!result.ok) {
+        return { ok: true, value: zeroRails() };
+      }
+      return { ok: true, value: result.value };
+    } catch (err) {
+      return { ok: true, value: zeroRails() };
+    }
   };
 
   // --- getNetworkSnapshot ---
@@ -317,12 +341,13 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getLanding ---
-  // SSR one-shot — aggregates all incremental responses into one payload
+  // SSR one-shot — aggregates all incremental responses into one payload.
   const getLanding = async (): Promise<Result<LandingPayload, LandingError>> => {
-    const [heroResult, tickerResult, agentsResult] = await Promise.allSettled([
+    const [heroResult, tickerResult, agentsResult, railsResult] = await Promise.allSettled([
       getHero(),
       getTickerLanes(),
       getTopAgents(20),
+      getRails(),
     ]);
 
     const hero = heroResult.status === 'fulfilled' && heroResult.value.ok
@@ -341,6 +366,13 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
       ? agentsResult.value.value as AgentPreview[]
       : [] as AgentPreview[];
 
+    // ZodLandingPayload requires rails.length >= 1. Once the FAP catalog
+    // lands we always have ≥4 rails; the zero-rails fallback here is for
+    // the narrow window where FAP is down and the landing still renders.
+    const rails = railsResult.status === 'fulfilled' && railsResult.value.ok
+      ? railsResult.value.value as RailInfo[]
+      : zeroRails() as RailInfo[];
+
     const ts = deps.clock();
     return {
       ok: true,
@@ -348,7 +380,7 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
         hero,
         ticker_lanes,
         agents,
-        rails: [],
+        rails,
         network: {
           nodes: [],
           pairs: [],

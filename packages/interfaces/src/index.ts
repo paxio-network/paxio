@@ -20,3 +20,5 @@ export type {
   StorageError,
   AgentCountBySource,
 } from './agent-storage.js';
+// Meta-Facilitator rails (FA-02 / M-L4a)
+export type { FapRouter, FapError } from './fap.js';
