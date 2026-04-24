@@ -68,26 +68,40 @@ dfx_stop
 
 ## Worktree pattern
 
-Phase-0 и все последующие milestones используют git worktrees для параллельной разработки:
+Phase-0 и все последующие milestones используют git worktrees для параллельной разработки. **Роли строго разделены** — dev-агент работает только локально, `git push` / `gh pr create` делает architect:
 
 ```bash
-# architect создаёт feature-ветку + worktree
+# ── [architect] создаёт feature-ветку + worktree ДО запуска dev-агента ──
 git worktree add /home/nous/paxio-worktrees/m05-bitcoin-agent feature/m05-bitcoin-agent
 
-# dev-agent работает в worktree (unique branch, unique dfx port)
+# ── [dev-agent, напр. icp-dev] работает локально в worktree ──
+# Subagent стартует с cwd=worktree, берёт тесты как спецификацию, пишет код
 cd /home/nous/paxio-worktrees/m05-bitcoin-agent
-AGENT_NAME=icp-dev source scripts/dfx-setup.sh
-# ... реализация + unit tests ...
+AGENT_NAME=icp-dev source scripts/dfx-setup.sh    # unique dfx replica port
+# ... реализация ...
+cargo test --workspace --features wallet/mock-ecdsa   # GREEN
+git add products/05-bitcoin-agent/canisters/
+git commit -m "feat(M05): DCA canister — GREEN"
+# Dev-агент говорит «готово». НЕ делает git push. НЕ делает gh pr create.
 
-# По готовности — PR
+# ── [architect] после hand-off отчёта dev-агента — push + PR ──
+# (architect находится в главном worktree /home/nous/paxio)
+cd /home/nous/paxio
+git fetch origin
+git log origin/feature/m05-bitcoin-agent..feature/m05-bitcoin-agent  # sanity-check commits
 git push -u origin feature/m05-bitcoin-agent
-gh pr create --base dev
+gh pr create --base dev --title "feat(M05): Bitcoin Agent DCA" --body "..."
 
-# После merge — worktree и ветка чистятся
+# ── [user] после reviewer APPROVED + явный OK на merge ──
+gh pr merge <N> --merge   # executes architect или user
+
+# ── [architect] после merge — cleanup worktree ──
 cd /home/nous/paxio
 git worktree remove /home/nous/paxio-worktrees/m05-bitcoin-agent
 git branch -d feature/m05-bitcoin-agent
 ```
+
+**Почему такое разделение:** dev-subagent не имеет доступа к `gh auth` token / SSH credentials — любой его `git push` упадёт с `fatal: could not read Username for 'https://github.com'`. Единственный актор с правом push — architect (его session имеет `gh auth` через `~/.gitconfig` → `gh auth git-credential` helper). Это также даёт единый audit trail и возможность architect отревьюить diff **до** публикации на remote.
 
 Актуальные worktrees: `git worktree list`.
 
