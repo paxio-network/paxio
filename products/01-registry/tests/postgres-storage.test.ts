@@ -396,3 +396,142 @@ describe('createPostgresStorage.countBySource', () => {
     }
   });
 });
+
+// --- M-L5: listRecent(limit) — freshest N agents for landing NetworkGraph -----
+//
+// Contract (see packages/interfaces/src/agent-storage.ts::listRecent):
+//   - limit in [1, 100] — impl MUST clamp silently to 100 if asked more
+//   - ORDER BY updated_at DESC, did ASC (second key for determinism when
+//     two agents share the same updated_at — e.g. crawled in same batch)
+//   - Returns readonly frozen array
+//   - Empty array valid (no agents crawled yet)
+//   - Deterministic: same data + same limit → identical order
+//
+// Used by M-L5 landing NetworkGraph — only requests up to 20.
+
+describe('createPostgresStorage.listRecent (M-L5)', () => {
+  it('emits SELECT ... ORDER BY updated_at DESC, did ASC LIMIT $1', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({ rows: [], rowCount: 0 });
+    const storage = await createPostgresStorage({ pool });
+    await storage.listRecent(10);
+
+    const lastCall = pool.calls[pool.calls.length - 1]!;
+    const sql = lastCall.sql.toLowerCase().replace(/\s+/g, ' ');
+    expect(sql).toContain('select');
+    expect(sql).toContain('from agent_cards');
+    expect(sql).toContain('order by updated_at desc');
+    expect(sql).toContain('did asc');
+    expect(sql).toContain('limit $1');
+    expect(lastCall.params).toStrictEqual([10]);
+  });
+
+  it('returns a readonly frozen array of AgentCards', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({
+      rows: [
+        {
+          did: sampleCard.did,
+          name: sampleCard.name,
+          description: sampleCard.description,
+          capability: sampleCard.capability,
+          endpoint: sampleCard.endpoint,
+          version: sampleCard.version,
+          source: sampleCard.source,
+          external_id: sampleCard.externalId,
+          source_url: sampleCard.sourceUrl,
+          crawled_at: sampleCard.crawledAt,
+          created_at: sampleCard.createdAt,
+        },
+      ],
+      rowCount: 1,
+    });
+    const storage = await createPostgresStorage({ pool });
+    const r = await storage.listRecent(20);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(Object.isFrozen(r.value)).toBe(true);
+      expect(r.value).toHaveLength(1);
+      expect(r.value[0]!.did).toBe(sampleCard.did);
+      expect(r.value[0]!.source).toBe('erc8004');
+    }
+  });
+
+  it('returns empty frozen array when no rows', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({ rows: [], rowCount: 0 });
+    const storage = await createPostgresStorage({ pool });
+    const r = await storage.listRecent(20);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toStrictEqual([]);
+      expect(Object.isFrozen(r.value)).toBe(true);
+    }
+  });
+
+  it('clamps limit at 100 silently (impl defence)', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({ rows: [], rowCount: 0 });
+    const storage = await createPostgresStorage({ pool });
+    await storage.listRecent(500);
+
+    const lastCall = pool.calls[pool.calls.length - 1]!;
+    expect(lastCall.params).toStrictEqual([100]);
+  });
+
+  it('clamps limit at 1 for zero/negative inputs (impl defence)', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({ rows: [], rowCount: 0 });
+    const storage = await createPostgresStorage({ pool });
+    await storage.listRecent(0);
+
+    const lastCall = pool.calls[pool.calls.length - 1]!;
+    expect(lastCall.params).toStrictEqual([1]);
+  });
+
+  it('skips rows that fail Zod validation (defence against bad rows)', async () => {
+    const pool = makeFakePool();
+    pool.setNextResult({
+      rows: [
+        {
+          did: sampleCard.did,
+          name: sampleCard.name,
+          description: sampleCard.description,
+          capability: sampleCard.capability,
+          endpoint: sampleCard.endpoint,
+          version: sampleCard.version,
+          source: sampleCard.source,
+          external_id: sampleCard.externalId,
+          source_url: sampleCard.sourceUrl,
+          crawled_at: sampleCard.crawledAt,
+          created_at: sampleCard.createdAt,
+        },
+        {
+          // Malformed row — missing required fields; should be skipped, not error.
+          did: 'malformed',
+        },
+      ],
+      rowCount: 2,
+    });
+    const storage = await createPostgresStorage({ pool });
+    const r = await storage.listRecent(20);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value).toHaveLength(1);
+      expect(r.value[0]!.did).toBe(sampleCard.did);
+    }
+  });
+
+  it('returns db_unavailable on driver error', async () => {
+    const pool = makeFakePool();
+    pool.setQueryFn(async () => {
+      throw makePgError('08006', undefined, 'connection terminated');
+    });
+    const storage = await createPostgresStorage({ pool });
+    const r = await storage.listRecent(20);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe('db_unavailable');
+    }
+  });
+});

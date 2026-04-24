@@ -21,6 +21,14 @@ const mockDeps = (overrides: {
   auditCount?: number;
   guardAttacks?: number;
   clockMs?: number;
+  /**
+   * M-L5: agentStorage.listRecent() result override. Default is empty array
+   * (real empty state — no agents crawled yet). Pass AgentCard[] to exercise
+   * the populated-snapshot path, or set `agentStorageError: true` to simulate
+   * storage failure propagating as LandingError{code:'upstream_error'}.
+   */
+  agentCards?: any[];
+  agentStorageError?: boolean;
 }) => {
   const {
     registryCount = 0,
@@ -28,10 +36,38 @@ const mockDeps = (overrides: {
     auditCount = 0,
     guardAttacks = 0,
     clockMs = 1_733_184_000_000, // 2024-12-03T00:00:00.000Z — deterministic
+    agentCards = [],
+    agentStorageError = false,
   } = overrides;
+
+  // AgentStorage port mock — only listRecent is used by getNetworkSnapshot
+  // today. Full port (upsert/resolve/find/count/countBySource) is stubbed
+  // with deterministic no-ops so the factory accepts the dep shape.
+  const agentStorage = {
+    listRecent: vi.fn().mockImplementation(() =>
+      agentStorageError
+        ? err('db_unavailable', 'Registry DB unreachable')
+        : ok(agentCards),
+    ),
+    upsert: vi.fn().mockImplementation(() => ok(undefined)),
+    resolve: vi.fn().mockImplementation(() => err('not_found', 'stub')),
+    find: vi.fn().mockImplementation(() => ok([])),
+    count: vi.fn().mockImplementation(() => ok(0)),
+    countBySource: vi.fn().mockImplementation(() =>
+      ok({
+        native: 0,
+        erc8004: 0,
+        a2a: 0,
+        mcp: 0,
+        'fetch-ai': 0,
+        virtuals: 0,
+      }),
+    ),
+  };
 
   return {
     clock: vi.fn().mockReturnValue(clockMs),
+    agentStorage,
     getRegistryCount: vi.fn().mockImplementation(() =>
       registryCount < 0
         ? err('upstream_error', 'Registry unreachable')
@@ -163,6 +199,119 @@ describe('getNetworkSnapshot', () => {
   });
 });
 
+// --- getNetworkSnapshot (M-L5) wired to AgentStorage.listRecent ----------------
+//
+// Contract (see docs/sprints/M-L5-network-snapshot.md T-4):
+//   - Calls `deps.agentStorage.listRecent(20)` EXACTLY once per invocation
+//   - Passes those cards to pure `buildNetworkSnapshot(cards, deps.clock())`
+//   - On storage error → returns LandingError{code:'upstream_error'}
+//   - Result is frozen (factory invariant)
+//   - Never calls Date.now() directly — uses deps.clock()
+
+describe('getNetworkSnapshot — M-L5 wired to agentStorage.listRecent', () => {
+  const sampleAgentCards = [
+    {
+      did: 'did:paxio:base:0xaaaabbbbccccdddd1111222233334444',
+      name: 'Wired Alice',
+      description: 'test',
+      capability: 'INTELLIGENCE',
+      endpoint: 'https://alice.example.com',
+      version: '1.0.0',
+      createdAt: '2026-04-23T10:00:00.000Z',
+      source: 'erc8004',
+      externalId: '0xaaaabbbb',
+      sourceUrl: 'https://basescan.org/address/0xaaaa',
+      crawledAt: '2026-04-23T10:30:00.000Z',
+    },
+    {
+      did: 'did:paxio:mcp:wired-bob',
+      name: 'Wired Bob Wallet',
+      description: 'wallet',
+      capability: 'WALLET',
+      endpoint: 'https://bob.example.com',
+      version: '1.0.0',
+      createdAt: '2026-04-23T11:00:00.000Z',
+      source: 'mcp',
+      externalId: 'wired-bob',
+      sourceUrl: 'https://smithery.ai/server/wired-bob',
+      crawledAt: '2026-04-23T11:30:00.000Z',
+    },
+  ];
+
+  it('calls agentStorage.listRecent(20) exactly once', async () => {
+    const deps = mockDeps({ agentCards: sampleAgentCards });
+    const stats = createLandingStats(deps);
+    await stats.getNetworkSnapshot();
+    expect(deps.agentStorage.listRecent).toHaveBeenCalledTimes(1);
+    expect(deps.agentStorage.listRecent).toHaveBeenCalledWith(20);
+  });
+
+  it('populates nodes array with one entry per card returned by storage', async () => {
+    const deps = mockDeps({ agentCards: sampleAgentCards });
+    const stats = createLandingStats(deps);
+    const result = await stats.getNetworkSnapshot();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.nodes).toHaveLength(2);
+      const ids = result.value.nodes.map((n) => n.id);
+      expect(ids).toContain(sampleAgentCards[0]!.did);
+      expect(ids).toContain(sampleAgentCards[1]!.did);
+    }
+  });
+
+  it('pairs stays empty array (MVP — no transaction data)', async () => {
+    const deps = mockDeps({ agentCards: sampleAgentCards });
+    const stats = createLandingStats(deps);
+    const result = await stats.getNetworkSnapshot();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pairs).toStrictEqual([]);
+    }
+  });
+
+  it('returns upstream_error when agentStorage fails', async () => {
+    const deps = mockDeps({ agentStorageError: true });
+    const stats = createLandingStats(deps);
+    const result = await stats.getNetworkSnapshot();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('upstream_error');
+    }
+  });
+
+  it('uses deps.clock() for generated_at (not Date.now)', async () => {
+    const FIXED_MS = 1_714_000_000_000;
+    const deps = mockDeps({ agentCards: [], clockMs: FIXED_MS });
+    const stats = createLandingStats(deps);
+    const result = await stats.getNetworkSnapshot();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.generated_at).toBe(new Date(FIXED_MS).toISOString());
+    }
+    expect(deps.clock).toHaveBeenCalled();
+  });
+
+  it('returns frozen snapshot (top-level + nested arrays)', async () => {
+    const deps = mockDeps({ agentCards: sampleAgentCards });
+    const stats = createLandingStats(deps);
+    const result = await stats.getNetworkSnapshot();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Object.isFrozen(result.value)).toBe(true);
+      expect(Object.isFrozen(result.value.nodes)).toBe(true);
+      expect(Object.isFrozen(result.value.pairs)).toBe(true);
+    }
+  });
+
+  it('deterministic (same input → same output)', async () => {
+    const deps1 = mockDeps({ agentCards: sampleAgentCards, clockMs: 1_714_000_000_000 });
+    const deps2 = mockDeps({ agentCards: sampleAgentCards, clockMs: 1_714_000_000_000 });
+    const r1 = await createLandingStats(deps1).getNetworkSnapshot();
+    const r2 = await createLandingStats(deps2).getNetworkSnapshot();
+    expect(r1).toStrictEqual(r2);
+  });
+});
+
 // --- getHeatmap ---
 
 describe('getHeatmap', () => {
@@ -212,6 +361,14 @@ describe('getLanding — SSR one-shot', () => {
     // This tests the behavior when deps themselves throw (not return Result.err)
     const badDeps = {
       clock: vi.fn().mockReturnValue(1_733_184_000_000),
+      agentStorage: {
+        listRecent: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+        upsert: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+        resolve: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+        find: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+        count: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+        countBySource: vi.fn().mockRejectedValue(new Error('DB connection refused')),
+      },
       getRegistryCount: vi.fn().mockRejectedValue(new Error('DB connection refused')),
       getRegistryAgents: vi.fn().mockRejectedValue(new Error('DB connection refused')),
       getAuditCount24h: vi.fn().mockRejectedValue(new Error('DB connection refused')),
