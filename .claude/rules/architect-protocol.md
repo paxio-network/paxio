@@ -568,7 +568,10 @@ User МОЖЕТ делегировать роль оркестратора archi
 | **Launch dev agent** (frontend/backend/registry/icp) | ❌ | ✅ |
 | **Launch reviewer** | ❌ | ✅ |
 | **Launch test-runner** | ❌ | ✅ |
-| **`git merge` в dev/main** | ❌ | ❌ (только user, всегда) |
+| **`gh pr merge N --merge` (decision)** | ❌ (только user) | ❌ (только user, wake-up ≠ OK) |
+| **`gh pr merge N --merge` (execution после явного OK от user)** | ✅ | ✅ |
+| **Direct `git merge` в dev/main** (bypass PR) | ❌ всегда | ❌ всегда |
+| **`git push --force` dev/main** | ❌ всегда | ❌ всегда |
 | Schedule next wake-up | — | ✅ |
 | Close TD без reviewer | ❌ | ❌ |
 | Modify `docs/project-state.md`, `docs/tech-debt.md` | ❌ (reviewer zone) | ❌ (reviewer zone) |
@@ -629,7 +632,7 @@ User МОЖЕТ делегировать роль оркестратора archi
 5. **Обнови milestone статус** в `docs/sprints/M0X-*.md` → ✅ DONE
 6. **В Mode A:** попроси user запустить reviewer. **В Mode B:** запусти reviewer сам
 7. **Reviewer** обновляет `docs/project-state.md` и `docs/tech-debt.md` (НЕ ты)
-8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user мержит всегда, в обоих режимах**)
+8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user решает merge, architect выполняет после OK**: architect пишет в hand-off «мержить PR #N?»; после user OK содержащей номер PR — architect выполняет `gh pr merge N --merge` сам)
 9. **POST-MERGE обновление** (после user мержит):
    - После merge `feature → dev`: architect переносит milestone «pending» → «on dev»
    - После merge `dev → main`: architect переносит milestones в «on main (released)»

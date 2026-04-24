@@ -47,7 +47,7 @@ User передал роль оркестратора через `ScheduleWakeup
 - User не доступен для запроса разрешений в ближайшие N минут/часов
 - Architect **МОЖЕТ и ДОЛЖЕН** запускать dev-агентов сам чтобы продвигать milestones
 - Architect **МОЖЕТ** запускать reviewer после dev-work done
-- Architect **МОЖЕТ** открывать PR, но **НЕ мержит** — merge остаётся за user'ом (scope-guard абсолютен: даже в delegated mode `git merge` к `dev`/`main` делает только user)
+- Architect **МОЖЕТ** открывать PR. **Merge decision** — только user (wake-up firing ≠ OK). **Merge execution** — architect выполняет `gh pr merge N --merge` только после явного OK в prompt от user (фраза «мержи PR #N» / «merge PR #N» / «OK мержить #N»). В Mode B architect пишет в morning-handoff отчёт «какие PR ждут merge decision» — user решает в следующем cycle
 - Architect **МОЖЕТ** запускать test-runner для проверки GREEN state
 - Architect планирует следующий цикл через `ScheduleWakeup` если остаётся work
 
