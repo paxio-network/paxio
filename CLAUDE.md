@@ -262,6 +262,7 @@ feature/* → dev → main
 - **dev** — рабочая интеграционная ветка
 - **main** — релиз (tagged `v*`)
 - **Merge = ТОЛЬКО user**. Агенты только создают PR. `git push --force` к main/dev — запрещён для всех агентов.
+- **Orchestration = ТОЛЬКО user** by default. Architect — planner, не orchestrator. После hand-off отчёта architect ОСТАНАВЛИВАЕТСЯ и ждёт команду user'а. Исключение: user может делегировать orchestration через wake-up / `/loop` / `<<autonomous-loop>>` sentinel — тогда architect входит в **Mode B** (см. `.claude/agents/architect.md::Boundaries` + `.claude/rules/architect-protocol.md` ФАЗА 6.5/6.6) и может запускать dev-агентов + reviewer + test-runner, НО merge всё равно остаётся за user'ом.
 
 ## CI/CD (monorepo with path-filter workflows)
 

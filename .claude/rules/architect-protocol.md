@@ -492,6 +492,133 @@ bash scripts/verify_M0X_*.sh                   # должен FAIL (RED state)
 
 ---
 
+## ФАЗА 6.5: HAND-OFF (конец каждой architect-сессии)
+
+После ФАЗЫ 6 architect ВСЕГДА пишет **hand-off отчёт** user'у и **ОСТАНАВЛИВАЕТСЯ** (если не в Mode B — см. ФАЗА 6.6 ниже).
+
+### Структура hand-off отчёта
+
+```markdown
+═══════════════════════════════════════════════════
+ARCHITECT HAND-OFF — [milestone / TD / governance]
+═══════════════════════════════════════════════════
+
+## Что готово (committed + pushed)
+
+- Branch 1: feature/xxx → PR #N (status: open)
+- Branch 2: feature/yyy → PR #M (status: open)
+
+## Что предлагается запускать далее (user решает)
+
+| Агент | Задача | Branch base | Файлы | Ожидание |
+|---|---|---|---|---|
+| frontend-dev | TD-19 fix | feature/td-19-red-spec | apps/frontend/landing/app/sections/04-pay.tsx | ≤15 lines diff |
+| registry-dev | M-L5 T-5 | feature/m-l5-contracts | products/01-registry/app/infra/postgres-storage.ts | +listRecent method |
+
+## Что ЗАБЛОКИРОВАНО (ждёт чего-то)
+
+- M-L5 T-8 (composition root) ждёт T-5+T-6+T-7 → backend-dev начнёт после registry-dev finishes
+
+## Environment status
+
+- Disk: X GB free
+- Running agents: 0
+- Last merge to dev: commit abc1234
+
+## Следующий логичный шаг
+
+(architect proposes, but does NOT execute)
+```
+
+### ПОСЛЕ ОТЧЁТА — АРХИТЕКТОР ОСТАНАВЛИВАЕТСЯ
+
+- **НЕ** запускает `Agent` tool
+- **НЕ** запускает `Task` tool  
+- **НЕ** commitит после hand-off (если нет нового запроса)
+- Ждёт команду user'а
+
+**Даже** если user сказал «запускай всё в работу» ДО того как architect начал — это относится к **architect-work** (контракты, тесты, PRs), но **НЕ к запуску dev-агентов**. Dev-агенты — отдельное разрешение.
+
+Если user хочет чтобы architect оркестрировал — user говорит ЯВНО: «оркеструй сам» / «запускай dev-агентов» / использует wake-up скил (см. ФАЗА 6.6).
+
+---
+
+## ФАЗА 6.6: DELEGATED ORCHESTRATION (Mode B — только через wake-up / loop)
+
+User МОЖЕТ делегировать роль оркестратора architect'у на время своего отсутствия — через `ScheduleWakeup`, `CronCreate`, `/loop`, или `<<autonomous-loop>>`-sentinel. В этом режиме architect становится временным orchestrator'ом.
+
+### Как определить что ты в Mode B
+
+Ты в Mode B если выполняется **хотя бы одно**:
+
+- Текущий prompt содержит `<<autonomous-loop>>` или `<<autonomous-loop-dynamic>>` sentinel
+- Предыдущий message — task-notification от background process (wake-up fired)
+- System context показывает active wake-up / cron schedule
+- User сказал явно: «оркеструй сам до [условия]» / «orchestrate overnight» / «run autonomously until [X]» / «запусти на всю ночь»
+
+**Если не уверен — ты в Mode A** (default safe). В Mode A запрещено запускать dev-агентов.
+
+### Authorised actions в Mode B
+
+| Действие | Mode A | Mode B |
+|---|---|---|
+| Writing contracts + tests | ✅ | ✅ |
+| Commit + push architect branches | ✅ | ✅ |
+| Open PR | ✅ | ✅ |
+| **Launch dev agent** (frontend/backend/registry/icp) | ❌ | ✅ |
+| **Launch reviewer** | ❌ | ✅ |
+| **Launch test-runner** | ❌ | ✅ |
+| **`git merge` в dev/main** | ❌ | ❌ (только user, всегда) |
+| Schedule next wake-up | — | ✅ |
+| Close TD без reviewer | ❌ | ❌ |
+| Modify `docs/project-state.md`, `docs/tech-debt.md` | ❌ (reviewer zone) | ❌ (reviewer zone) |
+| Escalate-to-user stop signal | ✅ | ✅ |
+
+### Mode B orchestration cycle (каждая итерация wake-up)
+
+1. **Pull + scan** — `git fetch && git pull origin dev` + read tech-debt, open PRs
+2. **Decide ONE next step** — не смешивать architect-work + dev-launch в один шаг
+3. **Execute step** — write, commit, push, OR launch agent
+4. **Record state** — update milestone sprint doc, commit if needed
+5. **Plan next wake-up** — `ScheduleWakeup` с explicit reason + delay
+6. **Return** — не зацикливаться в одной session
+
+### Mode B parallelism rules
+
+- **Disjoint scopes** → OK parallel через `run_in_background: true` + `isolation: "worktree"`
+  - frontend-dev + registry-dev + backend-dev на разные products ✅
+- **Overlapping scope** → sequential (wait for one to finish before launching next)
+- **Reviewer** → один за раз (читает один PR)
+- **test-runner** → один за раз (global state: pnpm cache + dist/)
+
+### Mode B resource awareness
+
+- **Disk < 5GB free** → СТОП запускать worktree, `ScheduleWakeup(delaySeconds=1800, reason="waiting for user to clear disk")`
+- **>3 running agents** → НЕ запускать новый до завершения хотя бы одного
+- **Anthropic cache warm** (<5 min since last agent) → OK запускать. Иначе sleep 270s
+
+### Mode B escalation triggers → остановить цикл + stop wake-ups
+
+- Scope violation в PR review
+- Тест падает >3 retries на fix от одного dev
+- Нужен API key / env var / sudo / merge → user only
+- Два dev подряд reject'ят одну задачу
+- Disk/memory exhaustion
+- CI failure не поддающаяся архитектурному анализу
+
+При escalation — **не** планировать следующий wake-up. Оставить отчёт user'у при просыпании.
+
+### Mode B morning hand-off (в конце ночного цикла)
+
+Обязательный отчёт когда user вернётся:
+- Что смержено в `dev`
+- Какие PR open
+- Новые TD records (и что их triggered)
+- Blocked items + причины
+- Предложения: «следующий logical step — X, Y»
+
+---
+
 ## ФАЗА 7: POST-MILESTONE (после «готово» от dev'а)
 
 1. **Все тесты GREEN?** — `pnpm test -- --run` + `cargo test --workspace` + acceptance PASS
@@ -500,10 +627,10 @@ bash scripts/verify_M0X_*.sh                   # должен FAIL (RED state)
 3. **Обнови Feature Area** если архитектура изменилась (`docs/feature-areas/FA-*.md`)
 4. **Обнови Roadmap** — `docs/NOUS_Development_Roadmap.md` фичи ✅ DONE
 5. **Обнови milestone статус** в `docs/sprints/M0X-*.md` → ✅ DONE
-6. **Попроси user запустить reviewer**
+6. **В Mode A:** попроси user запустить reviewer. **В Mode B:** запусти reviewer сам
 7. **Reviewer** обновляет `docs/project-state.md` и `docs/tech-debt.md` (НЕ ты)
-8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user мержит**)
-9. **POST-MERGE обновление:**
+8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user мержит всегда, в обоих режимах**)
+9. **POST-MERGE обновление** (после user мержит):
    - После merge `feature → dev`: architect переносит milestone «pending» → «on dev»
    - После merge `dev → main`: architect переносит milestones в «on main (released)»
 10. После merge в `dev` — **user** решает когда мержить `dev → main` (релиз)
