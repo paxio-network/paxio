@@ -158,10 +158,11 @@ paxio.network · Берлин · Конфиденциально
 
 | # | Строка на landing | Status | Owner | Effort | Blocked by |
 |---|---|---|---|---|---|
-| **M-L0** | Progressive Reveal wrapper в `@paxio/ui` | ⬜ QUEUED | frontend-dev | 1d | M01c-frontend |
-| **M-L1-contracts** | Per-source Zod схемы (ERC-8004, A2A, MCP, Fetch.ai, Virtuals) + `AgentSourceAdapter` port + Postgres migration | 🟡 IN PROGRESS | architect | 2d | — |
-| **M-L1-impl** | 5 source адаптеров + Postgres storage + crawler scheduler → `Agents count + Top agents table` live | ⬜ QUEUED | registry-dev | 4–5d | M-L1-contracts |
-| **M-L4a** | Rails Catalog (JSON) + Stub Router → `FAPDiagram 4 nodes live` | ⬜ READY TO START | backend-dev | 1d | — |
+| **M-L0** | Progressive Reveal wrapper в `@paxio/ui` (RED spec для frontend-dev) | ✅ DONE (contracts, 2026-04-24, `2c668c4`) | architect | 1d | — |
+| **M-L0-impl** | `<ConditionalSection>` + `<UpcomingBadge>` в `@paxio/ui` + wrap landing sections | ⬜ READY TO START | frontend-dev | 1d | M-L0 ✅ |
+| **M-L1-contracts** | Per-source Zod схемы (ERC-8004, A2A, MCP, Fetch.ai, Virtuals) + `CrawlerSourceAdapter` + `AgentStorage` ports + Postgres DDL + `AgentCard` extension + 56 RED tests | ✅ DONE (2026-04-24, `15492e1`) | architect | 2d | — |
+| **M-L1-impl** | 5 source адаптеров + Postgres storage + crawler scheduler → `Agents count + Top agents table` live | ⬜ READY TO START | registry-dev | 4–5d | M-L1-contracts ✅ |
+| **M-L4a** | Rails Catalog (JSON) + Stub Router → `FAPDiagram 4 nodes live` | ✅ DONE (2026-04-24, `c1f869e`) | backend-dev | 1d | — |
 | **M-L5** | Registry `peers: Did[]` field + NetworkGraph D3 → `NetworkGraph live` | ⬜ QUEUED | registry-dev + frontend-dev | 2d | M-L1-impl |
 | **M-L7a** | Wallet waitlist signup form + hidden counter → email list растёт | ⬜ QUEUED | frontend-dev + backend-dev | 1–2d | M-L0 |
 | **M-L4b** | Full x402/BTC Facilitator (on-chain verify + BTC L1 settlement) → `x402/BTC share + Rails share_pct` live | ⬜ BLOCKED | backend-dev + icp-dev | 2–3 недели | M02 Wallet ✅, M-L1-impl |
