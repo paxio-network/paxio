@@ -170,3 +170,26 @@ cargo clippy --workspace -- -D warnings
 - **Level 3** (touched other dev's code SILENTLY) → REJECT + tech-debt HIGH
 
 PreToolUse hook на `git commit` блокирует staged constitutional files автоматически. Не пытайся обойти.
+
+## Git Policy — ты работаешь ТОЛЬКО локально
+
+| Разрешено | Запрещено |
+|---|---|
+| `git status`, `git diff`, `git log`, `git blame` | `git push` (любой remote) |
+| `git add`, `git commit` (на ветку, которую подготовил architect) | `git fetch`, `git pull` |
+| `git branch` (list), `git switch` / `git checkout` в локальные ветки | `gh` любое (`gh pr create`, `gh pr merge`, `gh api`, `gh auth`) |
+| `git worktree list` (для dfx port isolation) | `ssh git@github.com`, любая network I/O с GitHub |
+|  | Создание PR / работа с remote tracking |
+
+**Workflow:**
+1. Architect создаёт `feature/*` ветку + worktree (для unique dfx replica port) **до** того как ты стартуешь.
+2. Ты делаешь `git commit` локально. НЕ пушишь.
+3. Когда `cargo test --workspace` GREEN + canister builds + scope чист — говоришь «готово».
+4. Architect делает `git push` + `gh pr create`, reviewer проверяет, user мержит.
+
+**Почему:**
+- Нет доступа к `gh auth` token в subagent context. Push упадёт с `fatal: could not read Username for 'https://github.com'` — не пытайся.
+- Canister deploys на mainnet — user-only операция, push не нужен для твоей работы.
+- Единый audit trail + architect ревьюит diff до публикации.
+
+Если кажется что push нужен — `!!! SCOPE VIOLATION REQUEST !!!`.

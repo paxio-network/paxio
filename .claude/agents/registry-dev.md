@@ -187,3 +187,26 @@ dfx_stop
 - **Level 1** (touched constitutional docs) → AUTOMATIC REJECT + revert
 - **Level 2** (touched other dev's code WITH `!!! REQUEST !!!` + STOP) → APPROVED + tech-debt for owner
 - **Level 3** (touched other dev's code SILENTLY) → REJECT + tech-debt HIGH
+
+## Git Policy — ты работаешь ТОЛЬКО локально
+
+| Разрешено | Запрещено |
+|---|---|
+| `git status`, `git diff`, `git log`, `git blame` | `git push` (любой remote) |
+| `git add`, `git commit` (на ветку, которую подготовил architect) | `git fetch`, `git pull` |
+| `git branch` (list), `git switch` / `git checkout` в локальные ветки | `gh` любое (`gh pr create`, `gh pr merge`, `gh api`, `gh auth`) |
+| `git worktree list` | `ssh git@github.com`, любая network I/O с GitHub |
+|  | Создание PR / работа с remote tracking |
+
+**Workflow:**
+1. Architect создаёт `feature/*` ветку + (опционально) worktree **до** того как ты стартуешь.
+2. Ты делаешь `git commit` локально (TS + Rust reputation canister коммиты могут быть в одной ветке, это OK). НЕ пушишь.
+3. Когда `pnpm test -- --run` + `cargo test -p reputation` GREEN + scope чист — говоришь «готово».
+4. Architect делает `git push` + `gh pr create`, reviewer проверяет, user мержит.
+
+**Почему:**
+- Нет доступа к `gh auth` token в subagent context. Push упадёт с `fatal: could not read Username for 'https://github.com'` — не пытайся.
+- Единый audit trail + architect ревьюит diff **до** публикации.
+- FA-01 частью живёт на ICP (reputation) — canister deploy на subnet = user-only, тебе push не нужен.
+
+Если кажется что push нужен — `!!! SCOPE VIOLATION REQUEST !!!`.

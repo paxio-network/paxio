@@ -130,4 +130,5 @@ feature/* → dev → main
 - **feature/\*** — одна фича, создаётся от dev
 - **dev** — рабочая интеграционная ветка
 - **main** — релизная (tagged v*)
+- **Push + PR creation = architect + user.** Dev-агенты (`backend-dev`, `frontend-dev`, `icp-dev`, `registry-dev`) работают только локально: commit → «готово». Они НЕ делают `git push`, НЕ создают PR, НЕ вызывают `gh *`. Architect после hand-off делает `git push` + `gh pr create` от своего имени (cм. «Git Policy» в `.claude/agents/<dev>.md`). Это убирает credential leak surface + единый audit trail + architect ревьюит diff до публикации.
 - **Merge decision = ONLY user.** Agents ask «мержить PR #N?» and wait OK. After explicit OK referencing PR number — architect executes `gh pr merge N --merge` himself (saves a round-trip). Без OK — merge запрещён. `git push --force` dev/main forbidden always.
