@@ -130,8 +130,35 @@ export const ZodAgentPreview = z.object({
 export type AgentPreview = z.infer<typeof ZodAgentPreview>;
 
 // --- Payment rails (FAP diagram + state row) ------------------------------------
+//
+// `RailInfo` is the canonical record returned by both:
+//   - GET /api/fap/rails        — FAP rails catalog (M-L4a)
+//   - GET /api/landing/rails    — landing FAPDiagram input (composed from FAP)
+//
+// Two sets of fields:
+//   1. Display fields  (name, share_pct, latency_ms, fee_description,
+//      color_hex, concentration_risk, growing) — for landing FAPDiagram.
+//   2. Catalog fields  (id, category, description, status) — added in M-L4a
+//      so the catalog can list supported rails honestly even before traffic.
+//
+// All catalog fields are optional for backward compat with older callers
+// that only set display fields. Once M-L4b lands and FAP populates the
+// canonical catalog at startup, all rails will have catalog fields.
+
+export const RAIL_CATEGORIES = [
+  'http',
+  'onchain-evm',
+  'onchain-btc',
+  'offchain',
+] as const;
+
+export const RAIL_STATUSES = ['supported', 'beta', 'planned'] as const;
+
+export const ZodRailCategory = z.enum(RAIL_CATEGORIES);
+export const ZodRailStatus = z.enum(RAIL_STATUSES);
 
 export const ZodRailInfo = z.object({
+  // --- Display fields (already shipped in M01c) ---
   name: z.string().min(1).max(40),               // "Coinbase x402", "Paxio FAP", "Skyfire", "Stripe MPP", "BTC L1", "USDC-Solana"
   share_pct: z.number().min(0).max(100),         // % of total FAP throughput
   latency_ms: z.number().nonnegative(),
@@ -139,7 +166,20 @@ export const ZodRailInfo = z.object({
   color_hex: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   concentration_risk: z.boolean(),               // true for rails > 50% share
   growing: z.boolean().optional(),
+
+  // --- Catalog fields (added in M-L4a) ---
+  // Stable kebab-case identifier used as routing key + URL slug.
+  id: z.string().regex(/^[a-z0-9-]+$/, 'rail id must be kebab-case').optional(),
+  // Where the rail lives architecturally.
+  category: ZodRailCategory.optional(),
+  // One-line marketing description, shown on FAPDiagram tooltips.
+  description: z.string().min(1).max(500).optional(),
+  // 'supported' = production. 'beta' = behind feature flag.
+  // 'planned' = listed honestly in catalog before code lands.
+  status: ZodRailStatus.optional(),
 });
+export type RailCategory = z.infer<typeof ZodRailCategory>;
+export type RailStatus = z.infer<typeof ZodRailStatus>;
 export type RailInfo = z.infer<typeof ZodRailInfo>;
 
 // --- Network snapshot (50-agent graph) ------------------------------------------
