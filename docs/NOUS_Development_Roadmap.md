@@ -159,11 +159,12 @@ paxio.network · Берлин · Конфиденциально
 | # | Строка на landing | Status | Owner | Effort | Blocked by |
 |---|---|---|---|---|---|
 | **M-L0** | Progressive Reveal wrapper в `@paxio/ui` (RED spec для frontend-dev) | ✅ DONE (contracts, 2026-04-24, `2c668c4`) | architect | 1d | — |
-| **M-L0-impl** | `<ConditionalSection>` + `<UpcomingBadge>` в `@paxio/ui` + wrap landing sections | ⬜ READY TO START | frontend-dev | 1d | M-L0 ✅ |
+| **M-L0-impl** | `<ConditionalSection>` + `<UpcomingBadge>` в `@paxio/ui` + wrap landing sections | ✅ DONE (2026-04-24, `4a8499e`) | frontend-dev | 1d | M-L0 ✅ |
 | **M-L1-contracts** | Per-source Zod схемы (ERC-8004, A2A, MCP, Fetch.ai, Virtuals) + `CrawlerSourceAdapter` + `AgentStorage` ports + Postgres DDL + `AgentCard` extension + 56 RED tests | ✅ DONE (2026-04-24, `15492e1`) | architect | 2d | — |
-| **M-L1-impl** | 5 source адаптеров + Postgres storage + crawler scheduler → `Agents count + Top agents table` live | ⬜ READY TO START | registry-dev | 4–5d | M-L1-contracts ✅ |
+| **M-L1-impl (MVP)** | Postgres AgentStorage real + MCP Smithery adapter real + 4 adapter stubs (a2a/erc8004/fetch-ai/virtuals — pure toCanonical) + `runCrawler` orchestrator + 63 new tests GREEN | ✅ DONE (2026-04-24, `cb687a7`) | registry-dev | 3d | M-L1-contracts ✅ |
+| **M-L1-expansion** | Real `fetchAgents()` implementations для 4 stub adapters (a2a/erc8004/fetch-ai/virtuals) — HTTP/RPC to each ecosystem | ⬜ QUEUED | registry-dev | 4–5d | M-L1-impl MVP ✅ |
 | **M-L4a** | Rails Catalog (JSON) + Stub Router → `FAPDiagram 4 nodes live` | ✅ DONE (2026-04-24, `c1f869e`) | backend-dev | 1d | — |
-| **M-L5** | Registry `peers: Did[]` field + NetworkGraph D3 → `NetworkGraph live` | ⬜ QUEUED | registry-dev + frontend-dev | 2d | M-L1-impl |
+| **M-L5** | Registry `peers: Did[]` field + NetworkGraph D3 → `NetworkGraph live` | ⬜ READY TO START | registry-dev + frontend-dev | 2d | M-L1-impl MVP ✅ |
 | **M-L7a** | Wallet waitlist signup form + hidden counter → email list растёт | ⬜ QUEUED | frontend-dev + backend-dev | 1–2d | M-L0 |
 | **M-L4b** | Full x402/BTC Facilitator (on-chain verify + BTC L1 settlement) → `x402/BTC share + Rails share_pct` live | ⬜ BLOCKED | backend-dev + icp-dev | 2–3 недели | M02 Wallet ✅, M-L1-impl |
 | **M-L2** | Paxio Intelligence Agent (коммерческий — x402 paywall, dogfood FAP + Wallet) → `Txns 24h` live + revenue demo | ⬜ BLOCKED | backend-dev + icp-dev | 1–2 недели | M-L4b, M02 ✅, M-L1-impl |
@@ -173,11 +174,12 @@ paxio.network · Берлин · Конфиденциально
 
 **Dependency chain:**
 ```
-M-L1-contracts (architect) ──► M-L1-impl ──► M-L5 (NetworkGraph)
-                                        └──► M-L2 (Intelligence Agent)
-                                        └──► M-L4b (Full Facilitator)
+M-L1-contracts (architect) ──► M-L1-impl MVP ──► M-L5 (NetworkGraph)
+                                          └──► M-L1-expansion
+                                          └──► M-L2 (Intelligence Agent)
+                                          └──► M-L4b (Full Facilitator)
 
-M-L0 (Progressive Reveal) ──► M-L7a (waitlist) ──► M-L7b (counter live)
+M-L0 (Progressive Reveal) ──► M-L0-impl ✅ ──► M-L7a (waitlist) ──► M-L7b (counter live)
 
 M-L4a (Stub Router) ──► M-L4b (Full Facilitator)
 
@@ -188,15 +190,27 @@ M-L8 независимо.
 
 **Progressive Reveal правило (M-L0):** секция landing рендерится ТОЛЬКО если есть не-нулевые данные. Landing честная, не показывает пустоту — вместо этого растёт по мере готовности продукта.
 
-### Ближайшие 2 недели (приоритет после M01c-frontend)
+### Завершённые milestones (Landing Data Completion Track)
 
-1. **M-L1-contracts** (architect) — активно, 2d
-2. **M-L4a** (backend-dev) — параллельно, 1d, ready to start
-3. **M-L0** (frontend-dev) — в очередь за TD-08/TD-09/M01c-frontend
-4. **M-L1-impl** (registry-dev) — после M-L1-contracts, 4–5d
-5. **M-L8** (backend-dev) — заполняющий, 2d
+- ✅ **M-L0** contracts (2026-04-24, `2c668c4`) — architect RED spec
+- ✅ **M-L0-impl** (2026-04-24, `4a8499e`) — frontend-dev: ConditionalSection + UpcomingBadge + landing wraps
+- ✅ **M-L1-contracts** (2026-04-24, `15492e1`) — architect: 5 per-source Zod + ports + DDL + 56 tests
+- ✅ **M-L1-impl MVP** (2026-04-24, `cb687a7`) — registry-dev: Postgres storage + MCP Smithery + 4 stubs + crawler orchestrator + 63 tests
+- ✅ **M-L4a** (2026-04-24, `c1f869e`) — backend-dev: Rails Catalog JSON + FapRouter factory + `/api/fap/rails`
 
-После этого: ждём Guard v1 от a3ka (разблокирует M-L3/M-L6) и M02-full-wallet (разблокирует M-L4b → M-L2).
+### Следующие доступные (unblocked)
+
+1. **M-L5** (registry-dev + frontend-dev, 2d) — `peers: Did[]` в AgentCard + NetworkGraph D3 live. Unblocked by M-L1-impl MVP.
+2. **M-L1-expansion** (registry-dev, 4–5d) — реальные `fetchAgents()` для 4 stub adapters.
+3. **M-L7a** (frontend-dev + backend-dev, 1–2d) — waitlist form + hidden counter.
+4. **M-L8** (backend-dev, 2d) — Uptime/SLA/FAP throughput.
+
+### Блокированные
+
+- **M-L4b** ждёт `M02-full-wallet` (threshold ECDSA + BTC L1 settlement)
+- **M-L2** ждёт M-L4b (нужен реальный facilitator для dogfood)
+- **M-L3 / M-L6** ждут Guard v1 от a3ka team (external repo)
+- **M-L7b** авто-включится когда M-L7a соберёт >50 signups
 
 
 
