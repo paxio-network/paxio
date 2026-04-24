@@ -1,5 +1,5 @@
 ---
-description: TEST-FIRST mandatory workflow — tests are specifications, not verification
+description: TEST-FIRST mandatory workflow — vitest for TS, cargo test for Rust
 globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "scripts/**"]
 ---
 
@@ -7,70 +7,134 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 ## Mandatory workflow: Scan → Plan → TEST → Implement → Review
 
-```
-1. Architect: scan project → write all failing tests for milestone (RED)
-2. Dev: read tests as spec → implement → GREEN
-3. Dev NEVER modifies tests — only implementation
-4. Reviewer: check tests GREEN, tests not changed, project-state updated
+1. **Architect** scans project → writes all failing tests for milestone (RED)
+2. **Programmer** reads tests as spec → implements → GREEN
+3. **Programmer НИКОГДА не модифицирует тесты** — only implementation
+4. **Reviewer** checks: tests GREEN, tests not changed, project-state updated
+
+## WHY: тест как спецификация, не верификация
+
+Тест — это НЕ проверка после факта. Тест — это СПЕЦИФИКАЦИЯ.
+Он определяет ЧТО код должен делать ДО того как код существует.
+
+## Test Frameworks
+
+### TypeScript — vitest
+
+```bash
+# Run ALL tests
+pnpm test -- --run
+# = vitest run
+
+# Run specific file
+pnpm test -- --run tests/classification.test.ts
+
+# Watch mode
+pnpm test
 ```
 
-## WHY: test as specification, not verification
+### Rust — cargo test
 
-The test is NOT a check after the fact. The test IS the specification.
-It defines WHAT the code must do BEFORE the code exists.
+```bash
+# All workspace crates
+cargo test --workspace
+
+# Specific crate
+cargo test -p wallet --features mock-ecdsa
+```
+
+### Формат теста (TS):
+
+```typescript
+import { describe, it, expect } from 'vitest';
+
+describe('classifyTool', () => {
+  it('should return high risk for prohibited system', () => {
+    const result = classifyTool({ name: 'social-scoring', type: 'scoring' });
+    expect(result.riskLevel).toBe('unacceptable');
+    expect(result.score).toBeGreaterThan(90);
+  });
+});
+```
+
+### Формат теста (Rust):
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_classify_prohibited_system() {
+        let result = classify_tool(&Tool { name: "social-scoring", r#type: ToolType::Scoring });
+        assert_eq!(result.risk_level, RiskLevel::Unacceptable);
+        assert!(result.score > 90);
+    }
+}
+```
 
 ## Правила хороших тестов-спецификаций
 
 ХОРОШИЙ тест:
-- ✅ Использует РЕАЛЬНЫЕ типы из `app/types/`
+- ✅ Использует РЕАЛЬНЫЕ типы из `packages/types/`
 - ✅ Конкретные входные данные
 - ✅ Конкретный ожидаемый результат с числами
 - ✅ Одна проверяемая вещь на тест
-- ✅ Понятное название: `describe(' функция ').it(' КОГДА_ЧТО '...`
+- ✅ Понятное название: `should VERB when CONDITION`
 - ✅ Не дублирует уже существующий тест
+- ✅ Тестирует поведение, не реализацию
 
 ПЛОХОЙ тест:
-- ❌ Предполагаемые типы (не читал types)
 - ❌ "returns something" без конкретного assert
 - ❌ Тест который всегда зелёный
 - ❌ Проверяет реализацию, а не поведение
 - ❌ Много вещей в одном тесте
+- ❌ Зависит от порядка выполнения
 
 ## Coverage Thresholds
 
 | Module | Threshold |
 |--------|-----------|
-| Security-critical (guard, wallet) | 80-100% |
-| Core (scanner, eval, FAP router) | 60-80% |
+| Security-critical (guard, wallet, security sidecar) | 80-100% |
+| Core (scanner, FAP router, registry search, Bitcoin agent) | 60-80% |
+| API handlers | 60-80% |
 | Utility (data transforms) | 40-60% |
 
 ## Test Types
 
-### Unit tests (Vitest)
-- `tests/**/*.test.ts` — функции, services, handlers
-- Run: `npm run test` or `npx vitest run`
+### Тип 1: Unit tests
 
-### TypeScript typecheck
-- `npm run typecheck` — tsc --noEmit
-- MUST pass before any PR
+**TypeScript:**
+- `tests/**/*.test.ts` — cross-FA тесты
+- `products/*/tests/**/*.test.ts` — per-FA тесты
+- Run: `pnpm test -- --run`
+- Для: domain functions, classification, risk engine, gap analysis, FAP routing
 
-### Integration tests
-- `tests/**/*.integration.ts` — component tests
-- Run: `npm run test:integration`
+**Rust canisters:**
+- `platform/canister-shared/tests/*.rs`
+- `products/*/canister*/tests/*.rs` + inline `#[cfg(test)] mod tests`
+- Run: `cargo test --workspace`
+- Для: canister logic, threshold ECDSA (mock), intent verification, audit log
 
-### Acceptance scripts
-- `scripts/verify_*.sh` — end-to-end verification
+### Тип 2: Acceptance scripts
+
+- `scripts/verify_*.sh` — infra + integration
 - Run: `bash scripts/verify_*.sh`
-- Must pass for milestone completion
+- Для: DB migrations, API health check, Docker compose, ICP replica + canister deploy, frontend build
 
-### Rust canister tests
-- `canisters/src/**/*.rs` — cargo test
-- Run: `cd canisters && cargo test`
+### Кто что проверяет
+
+| Роль | Unit (Тип 1) | Acceptance (Тип 2) |
+|---|---|---|
+| **architect** | Пишет RED тесты | Пишет FAIL scripts |
+| **dev** | Реализует → GREEN | Реализует → PASS |
+| **test-runner** | `pnpm test -- --run` + `cargo test --workspace` → GREEN? | `bash scripts/verify_*.sh` → PASS? |
+| **reviewer** | Тесты не изменены? | Script не изменён? |
 
 ## TEST-FIRST workflow per task type
 
 **Type 1 (logic):** unit test RED → GREEN
-- Architect writes RED test in `tests/*.test.ts`
+- Architect writes RED test in `tests/*.test.ts` / `products/*/tests/` / Rust tests
 - Dev implements to make GREEN
 - Dev NEVER changes the test
 
@@ -91,5 +155,5 @@ It defines WHAT the code must do BEFORE the code exists.
 1. **TEST-FIRST**: write the failing test BEFORE writing implementation code
 2. **RED → GREEN → REFACTOR**: write failing test, then implement, then refactor
 3. **NEVER modify tests** to make implementation pass
-4. **Run tests before commit**: `npm run typecheck && npm run test -- --run`
-5. **All tests GREEN before PR**: typecheck + unit tests + integration tests
+4. **Run tests before commit**: `pnpm typecheck && pnpm test -- --run` + `cargo test --workspace`
+5. **All tests GREEN before PR**: typecheck + unit tests + acceptance scripts
