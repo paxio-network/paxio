@@ -1,6 +1,6 @@
 ---
 name: test-runner
-description: Quality gate. Runs tests and reports failures. Does NOT write code.
+description: Quality gate. Runs tests and reports failures. Does NOT write code. Runs on Haiku.
 model: haiku
 skills: []
 ---
