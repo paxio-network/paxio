@@ -130,4 +130,4 @@ feature/* → dev → main
 - **feature/\*** — одна фича, создаётся от dev
 - **dev** — рабочая интеграционная ветка
 - **main** — релизная (tagged v*)
-- **Merge = ONLY user**. Агенты только создают PR.
+- **Merge decision = ONLY user.** Agents ask «мержить PR #N?» and wait OK. After explicit OK referencing PR number — architect executes `gh pr merge N --merge` himself (saves a round-trip). Без OK — merge запрещён. `git push --force` dev/main forbidden always.
