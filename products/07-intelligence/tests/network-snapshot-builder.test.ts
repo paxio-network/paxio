@@ -31,8 +31,8 @@ import { buildNetworkSnapshot } from '../app/domain/network-snapshot-builder.js'
 
 // --- Fixtures ---
 
-const FIXED_NOW_MS = 1_714_000_000_000; // 2024-04-24T21:46:40.000Z — ISO
-const FIXED_NOW_ISO = '2024-04-24T21:46:40.000Z';
+const FIXED_NOW_MS = 1_714_000_000_000; // 2024-04-24T23:06:40.000Z — ISO
+const FIXED_NOW_ISO = '2024-04-24T23:06:40.000Z';
 
 const cardA: AgentCard = {
   did: 'did:paxio:base:0xaaaa111122223333444455556666777788889999' as Did,
