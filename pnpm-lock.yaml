@@ -249,6 +249,9 @@ importers:
       '@paxio/hooks':
         specifier: workspace:*
         version: link:../../../packages/hooks
+      '@paxio/types':
+        specifier: workspace:*
+        version: link:../../../packages/types
       '@paxio/ui':
         specifier: workspace:*
         version: link:../../../packages/ui
