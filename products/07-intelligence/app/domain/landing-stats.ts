@@ -198,6 +198,14 @@ export interface LandingStatsDeps {
    * an empty array (Real Data Invariant — empty real > fake 2.4M).
    */
   getRailsCatalog: () => Promise<Result<readonly RailInfo[], LandingError>>;
+
+  /**
+   * AgentStorage port — provides listRecent for NetworkGraph nodes.
+   * Introduced M-L5. Optional until PostgresStorage is landed by registry-dev.
+   */
+  agentStorage?: {
+    listRecent(limit: number): Promise<Result<readonly import('@paxio/types').AgentCard[], LandingError>>;
+  };
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
@@ -322,15 +330,44 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getNetworkSnapshot ---
-  // Early phase: no agent graph data — return empty snapshot
   const getNetworkSnapshot = async (): Promise<Result<NetworkSnapshot, LandingError>> => {
+    // M-L5: populate nodes from agentStorage.listRecent when available.
+    // When agentStorage is absent (legacy/in-memory impl pre-PostgresStorage),
+    // return empty snapshot — Real Data Invariant (empty real > fake).
+    if (deps.agentStorage?.listRecent) {
+      try {
+        const cardsResult = await deps.agentStorage.listRecent(20);
+        if (!cardsResult.ok) {
+          return { ok: false, error: { code: 'upstream_error', message: String(cardsResult.error) } };
+        }
+        return {
+          ok: true,
+          value: Object.freeze({
+            nodes: Object.freeze(cardsResult.value.map((card) =>
+              Object.freeze({
+                id: card.did,
+                name: card.name.length > 80 ? card.name.slice(0, 80) : card.name,
+                x_pct: 0,
+                y_pct: 0,
+                volume_usd_5m: 0,
+                bitcoin_native: card.capability === 'WALLET',
+              }),
+            )),
+            pairs: Object.freeze([]),
+            generated_at: nowIso(deps.clock()),
+          }),
+        };
+      } catch (err) {
+        return { ok: false, error: { code: 'upstream_error', message: String(err) } };
+      }
+    }
     return {
       ok: true,
-      value: {
-        nodes: [],
-        pairs: [],
+      value: Object.freeze({
+        nodes: Object.freeze([]),
+        pairs: Object.freeze([]),
         generated_at: nowIso(deps.clock()),
-      },
+      }),
     };
   };
 
