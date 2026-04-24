@@ -1,6 +1,7 @@
 ---
 name: registry-dev
 description: FA-01 Universal Registry — TypeScript core (products/01-registry/app/) + Reputation canister (products/01-registry/canister/). Dual stack: TS for search/discovery/registration, Rust canister для immutable reputation.
+isolation: worktree
 skills: [icp-rust, rust-canister, registry-patterns, rust-error-handling, rust-data-structures, typescript-patterns, zod-validation, fastify-best-practices]
 ---
 

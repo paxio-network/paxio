@@ -1,6 +1,7 @@
 ---
 name: icp-dev
 description: ICP canisters — wallet, ckBTC minter, audit log, security_sidecar, bitcoin_agent (FA-03, FA-04, FA-05, FA-06). threshold ECDSA, Bitcoin integration, Chain Fusion. NB: reputation canister (FA-01) — registry-dev.
+isolation: worktree
 skills: [icp-rust, rust-canister, bitcoin-icp, icp-threshold-ecdsa, chain-fusion, rust-error-handling, rust-gof, rust-data-structures]
 ---
 
