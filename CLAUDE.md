@@ -261,7 +261,8 @@ feature/* → dev → main
 - **feature/\*** — одна фича или milestone, создаётся от `dev`
 - **dev** — рабочая интеграционная ветка
 - **main** — релиз (tagged `v*`)
-- **Merge = ТОЛЬКО user**. Агенты только создают PR. `git push --force` к main/dev — запрещён для всех агентов.
+- **Merge decision = ТОЛЬКО user.** Агенты спрашивают явное «мержить PR #N?» и ждут OK. После OK — architect может выполнить `gh pr merge N --merge` сам (экономит round-trip через UI). Без OK — merge запрещён. Executing merge после explicit OK ≠ autonomous decision. `git push --force` к main/dev — запрещён для всех агентов всегда, без исключений.
+- **Orchestration = ТОЛЬКО user** by default. Architect — planner, не orchestrator. После hand-off отчёта architect ОСТАНАВЛИВАЕТСЯ и ждёт команду user'а. Исключение: user может делегировать orchestration через wake-up / `/loop` / `<<autonomous-loop>>` sentinel — тогда architect входит в **Mode B** (см. `.claude/agents/architect.md::Boundaries` + `.claude/rules/architect-protocol.md` ФАЗА 6.5/6.6) и может запускать dev-агентов + reviewer + test-runner. В Mode B merge ОСТАЁТСЯ через «ask-and-execute»: architect всё равно спрашивает «мержить?» в wake-up отчёте user'у, wake-up firing не считается auto-OK.
 
 ## CI/CD (monorepo with path-filter workflows)
 

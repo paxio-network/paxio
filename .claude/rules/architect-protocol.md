@@ -185,7 +185,74 @@ docs/sprints/M0X-name.md
 - `scripts/verify_*.sh` — bash скрипты
 - Должны запускаться и FAIL (без реализации)
 - Не должны иметь ошибок среды (только логические fail)
-- Шаблон шапки: `set -euo pipefail; cd "$(dirname "$0")/.."; PASS=0; FAIL=0; ok(){...}; bad(){...}`
+- Шаблон шапки: `set -euo pipefail; cd "$(dirname "$0")/.."; mkdir -p "$HOME/tmp"; PASS=0; FAIL=0; ok(){...}; bad(){...}`
+
+### 4.2.1 — TD RED specs ОБЯЗАНЫ включать originating command (MANDATORY after TD-20)
+
+**Правило (introduced 2026-04-24 после TD-20 post-mortem):** Если TD description
+содержит failure command (`next build`, `cargo build`, `pnpm dev:server`,
+canister deploy) — RED spec НЕ может быть ТОЛЬКО unit/AST test. ОБЯЗАН включать
+acceptance script который воспроизводит failure после **clean install**.
+
+#### Шаблон TD RED spec
+
+Для TD-N с originating failure:
+
+**1. Unit/AST test** (архитектурный invariant):
+- Файл: `tests/_specs/<td-slug>.test.ts` либо `packages/<pkg>/tests/<slug>.test.ts`
+- Ловит pattern-level bug: отсутствие declaration в package.json, hardcoded fallback, etc.
+- Быстрый (≤1s), запускается через `pnpm test:specs`
+
+**2. Acceptance script** (originating command):
+- Файл: `scripts/verify_td<N>_<slug>.sh`
+- Структура:
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+  cd "$(dirname "$0")/.."
+  mkdir -p "$HOME/tmp"
+  PASS=0; FAIL=0
+  ok()  { echo "✅ $1"; PASS=$((PASS+1)); }
+  bad() { echo "❌ $1"; FAIL=$((FAIL+1)); }
+
+  # 1. Clean reinstall — ловит missing-symlink class bugs
+  pnpm install --frozen-lockfile >"$HOME/tmp/td<N>-install.log" 2>&1 \
+    && ok "pnpm install clean" \
+    || { bad "pnpm install failed — see $HOME/tmp/td<N>-install.log"; exit 1; }
+
+  # 2. Originating command (из TD description)
+  <command-that-fails-in-current-state> >"$HOME/tmp/td<N>-cmd.log" 2>&1 \
+    && ok "<human-readable description>" \
+    || bad "<command> FAILED — see $HOME/tmp/td<N>-cmd.log"
+
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "PASS: $PASS   FAIL: $FAIL"
+  [ $FAIL -eq 0 ]
+  ```
+
+**3. Tech-debt row updates:**
+- Колонка «Тест на fix» → перечислить ОБА: `tests/_specs/...test.ts` + `scripts/verify_td<N>_*.sh`
+- Статус: 🔴 OPEN (оба созданы RED/FAIL, ждут dev fix)
+
+#### Почему оба, а не один
+
+| Tool | Ловит | НЕ ловит |
+|---|---|---|
+| Unit/AST test | pattern в исходнике (declaration missing, fallback hardcode, import path) | runtime resolver mismatch, missing symlinks, stale dist/, Cargo.toml misconfig |
+| Acceptance script | реальный build failure через настоящий tool (next/cargo/tsc/dfx) | silent architectural drift после fix (e.g. dev убрал declaration снова) |
+
+Unit test = **permanent drift guard**. Script = **real-world fail reproduction**.
+Оба нужны.
+
+#### Когда достаточно одного
+
+**Только unit test** (без script) — если TD НЕ завязан на build/deploy command:
+- Governance TD (process note, не код) — никакого command'а нет
+- Code style / pattern TD — unit/AST grep достаточен
+- Tech-debt классификации документации — только docs change
+
+**Только script** (без unit test) — **никогда**. Всегда должен быть хотя бы
+smoke test который поедет в permanent suite как regression guard.
 
 ### 4.3 — E2E тесты (Тип 3)
 
@@ -425,6 +492,136 @@ bash scripts/verify_M0X_*.sh                   # должен FAIL (RED state)
 
 ---
 
+## ФАЗА 6.5: HAND-OFF (конец каждой architect-сессии)
+
+После ФАЗЫ 6 architect ВСЕГДА пишет **hand-off отчёт** user'у и **ОСТАНАВЛИВАЕТСЯ** (если не в Mode B — см. ФАЗА 6.6 ниже).
+
+### Структура hand-off отчёта
+
+```markdown
+═══════════════════════════════════════════════════
+ARCHITECT HAND-OFF — [milestone / TD / governance]
+═══════════════════════════════════════════════════
+
+## Что готово (committed + pushed)
+
+- Branch 1: feature/xxx → PR #N (status: open)
+- Branch 2: feature/yyy → PR #M (status: open)
+
+## Что предлагается запускать далее (user решает)
+
+| Агент | Задача | Branch base | Файлы | Ожидание |
+|---|---|---|---|---|
+| frontend-dev | TD-19 fix | feature/td-19-red-spec | apps/frontend/landing/app/sections/04-pay.tsx | ≤15 lines diff |
+| registry-dev | M-L5 T-5 | feature/m-l5-contracts | products/01-registry/app/infra/postgres-storage.ts | +listRecent method |
+
+## Что ЗАБЛОКИРОВАНО (ждёт чего-то)
+
+- M-L5 T-8 (composition root) ждёт T-5+T-6+T-7 → backend-dev начнёт после registry-dev finishes
+
+## Environment status
+
+- Disk: X GB free
+- Running agents: 0
+- Last merge to dev: commit abc1234
+
+## Следующий логичный шаг
+
+(architect proposes, but does NOT execute)
+```
+
+### ПОСЛЕ ОТЧЁТА — АРХИТЕКТОР ОСТАНАВЛИВАЕТСЯ
+
+- **НЕ** запускает `Agent` tool
+- **НЕ** запускает `Task` tool  
+- **НЕ** commitит после hand-off (если нет нового запроса)
+- Ждёт команду user'а
+
+**Даже** если user сказал «запускай всё в работу» ДО того как architect начал — это относится к **architect-work** (контракты, тесты, PRs), но **НЕ к запуску dev-агентов**. Dev-агенты — отдельное разрешение.
+
+Если user хочет чтобы architect оркестрировал — user говорит ЯВНО: «оркеструй сам» / «запускай dev-агентов» / использует wake-up скил (см. ФАЗА 6.6).
+
+---
+
+## ФАЗА 6.6: DELEGATED ORCHESTRATION (Mode B — только через wake-up / loop)
+
+User МОЖЕТ делегировать роль оркестратора architect'у на время своего отсутствия — через `ScheduleWakeup`, `CronCreate`, `/loop`, или `<<autonomous-loop>>`-sentinel. В этом режиме architect становится временным orchestrator'ом.
+
+### Как определить что ты в Mode B
+
+Ты в Mode B если выполняется **хотя бы одно**:
+
+- Текущий prompt содержит `<<autonomous-loop>>` или `<<autonomous-loop-dynamic>>` sentinel
+- Предыдущий message — task-notification от background process (wake-up fired)
+- System context показывает active wake-up / cron schedule
+- User сказал явно: «оркеструй сам до [условия]» / «orchestrate overnight» / «run autonomously until [X]» / «запусти на всю ночь»
+
+**Если не уверен — ты в Mode A** (default safe). В Mode A запрещено запускать dev-агентов.
+
+### Authorised actions в Mode B
+
+| Действие | Mode A | Mode B |
+|---|---|---|
+| Writing contracts + tests | ✅ | ✅ |
+| Commit + push architect branches | ✅ | ✅ |
+| Open PR | ✅ | ✅ |
+| **Launch dev agent** (frontend/backend/registry/icp) | ❌ | ✅ |
+| **Launch reviewer** | ❌ | ✅ |
+| **Launch test-runner** | ❌ | ✅ |
+| **`gh pr merge N --merge` (decision)** | ❌ (только user) | ❌ (только user, wake-up ≠ OK) |
+| **`gh pr merge N --merge` (execution после явного OK от user)** | ✅ | ✅ |
+| **Direct `git merge` в dev/main** (bypass PR) | ❌ всегда | ❌ всегда |
+| **`git push --force` dev/main** | ❌ всегда | ❌ всегда |
+| Schedule next wake-up | — | ✅ |
+| Close TD без reviewer | ❌ | ❌ |
+| Modify `docs/project-state.md`, `docs/tech-debt.md` | ❌ (reviewer zone) | ❌ (reviewer zone) |
+| Escalate-to-user stop signal | ✅ | ✅ |
+
+### Mode B orchestration cycle (каждая итерация wake-up)
+
+1. **Pull + scan** — `git fetch && git pull origin dev` + read tech-debt, open PRs
+2. **Decide ONE next step** — не смешивать architect-work + dev-launch в один шаг
+3. **Execute step** — write, commit, push, OR launch agent
+4. **Record state** — update milestone sprint doc, commit if needed
+5. **Plan next wake-up** — `ScheduleWakeup` с explicit reason + delay
+6. **Return** — не зацикливаться в одной session
+
+### Mode B parallelism rules
+
+- **Disjoint scopes** → OK parallel через `run_in_background: true` + `isolation: "worktree"`
+  - frontend-dev + registry-dev + backend-dev на разные products ✅
+- **Overlapping scope** → sequential (wait for one to finish before launching next)
+- **Reviewer** → один за раз (читает один PR)
+- **test-runner** → один за раз (global state: pnpm cache + dist/)
+
+### Mode B resource awareness
+
+- **Disk < 5GB free** → СТОП запускать worktree, `ScheduleWakeup(delaySeconds=1800, reason="waiting for user to clear disk")`
+- **>3 running agents** → НЕ запускать новый до завершения хотя бы одного
+- **Anthropic cache warm** (<5 min since last agent) → OK запускать. Иначе sleep 270s
+
+### Mode B escalation triggers → остановить цикл + stop wake-ups
+
+- Scope violation в PR review
+- Тест падает >3 retries на fix от одного dev
+- Нужен API key / env var / sudo / merge → user only
+- Два dev подряд reject'ят одну задачу
+- Disk/memory exhaustion
+- CI failure не поддающаяся архитектурному анализу
+
+При escalation — **не** планировать следующий wake-up. Оставить отчёт user'у при просыпании.
+
+### Mode B morning hand-off (в конце ночного цикла)
+
+Обязательный отчёт когда user вернётся:
+- Что смержено в `dev`
+- Какие PR open
+- Новые TD records (и что их triggered)
+- Blocked items + причины
+- Предложения: «следующий logical step — X, Y»
+
+---
+
 ## ФАЗА 7: POST-MILESTONE (после «готово» от dev'а)
 
 1. **Все тесты GREEN?** — `pnpm test -- --run` + `cargo test --workspace` + acceptance PASS
@@ -433,10 +630,10 @@ bash scripts/verify_M0X_*.sh                   # должен FAIL (RED state)
 3. **Обнови Feature Area** если архитектура изменилась (`docs/feature-areas/FA-*.md`)
 4. **Обнови Roadmap** — `docs/NOUS_Development_Roadmap.md` фичи ✅ DONE
 5. **Обнови milestone статус** в `docs/sprints/M0X-*.md` → ✅ DONE
-6. **Попроси user запустить reviewer**
+6. **В Mode A:** попроси user запустить reviewer. **В Mode B:** запусти reviewer сам
 7. **Reviewer** обновляет `docs/project-state.md` и `docs/tech-debt.md` (НЕ ты)
-8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user мержит**)
-9. **POST-MERGE обновление:**
+8. **Создай PR: `feature/M0X-name` → `dev`** (architect создаёт, **user решает merge, architect выполняет после OK**: architect пишет в hand-off «мержить PR #N?»; после user OK содержащей номер PR — architect выполняет `gh pr merge N --merge` сам)
+9. **POST-MERGE обновление** (после user мержит):
    - После merge `feature → dev`: architect переносит milestone «pending» → «on dev»
    - После merge `dev → main`: architect переносит milestones в «on main (released)»
 10. После merge в `dev` — **user** решает когда мержить `dev → main` (релиз)

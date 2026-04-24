@@ -40,6 +40,75 @@ skills: [typescript-patterns, error-handling, metarhia-principles, rust-canister
 
 ---
 
+### Phase 1.5: Originating-Failure Reproduction (MANDATORY для TD closures + frontend/canister PRs)
+
+**Root cause TD-20 (introduced 2026-04-24):** Reviewer принял TD-18 как CLOSED
+на основании только vitest GREEN + typecheck clean. Vitest использует
+`tsconfig.base.json::paths` — читает исходники через workspace-алиасы. Next.js
+использует настоящий Node resolver через `node_modules/<pkg>` symlinks. Разные
+resolver'ы → разные результаты. Symlinks в `node_modules/` созданы только после
+`pnpm install`, а после merge в `dev` никто не прогнал install → `next build`
+продолжал падать с тем же `Cannot find module '@paxio/types'` который TD-18
+должен был устранить.
+
+**Правило:** КАЖДЫЙ TD closure review ДОЛЖЕН воспроизвести ORIGINATING COMMAND
+из описания TD **после clean install**. Unit-тесты/type-checks НЕДОСТАТОЧНЫ.
+
+#### Шаги Phase 1.5
+
+1. **Clean reinstall** (имитирует fresh clone, ловит missing-symlink bugs):
+   ```bash
+   rm -rf node_modules \
+          apps/*/node_modules \
+          apps/frontend/*/node_modules \
+          packages/*/node_modules \
+          products/*/node_modules
+   pnpm install --frozen-lockfile
+   ```
+
+2. **Запустить originating command** из TD description (секция «Как воспроизвести»
+   или следующая строка после `Fix:`). Примеры:
+
+   | TD тип | Команда |
+   |---|---|
+   | frontend build failure | `pnpm --filter @paxio/<app>-app build` |
+   | backend type error | `pnpm --filter @paxio/<product> typecheck` |
+   | canister build failure | `cargo build -p <crate> --release` |
+   | handler not loaded | `pnpm build && node -e "require('./dist/<handler>.js')"` |
+   | server boot failure | `rm -rf dist/ && pnpm dev:server` (timeout 10s) |
+
+3. **Acceptance script preferred**. Если architect написал `scripts/verify_td<N>_*.sh`
+   — прогнать его. Эти скрипты уже включают step 1+2.
+
+4. **Decision matrix**:
+
+   | Unit tests | Originating command | Verdict |
+   |---|---|---|
+   | GREEN | PASS | ✅ APPROVED — закрываем TD |
+   | GREEN | FAIL | ❌ NOT CLOSED — REJECT, architect должен расширить RED spec |
+   | RED | any | ❌ BLOCKER — dev не завершил работу |
+
+#### Когда Phase 1.5 триггерится
+
+**Всегда для TD closure** (любой severity).
+
+**Plus triggers для frontend/canister milestones** (не только TD):
+
+- Любой PR trогает `apps/frontend/**` → ОБЯЗАН `pnpm --filter <app> build` after clean install
+- Любой PR трогает `products/*/canister*/**` → ОБЯЗАН `cargo build --release -p <crate>` after `cargo clean`
+- Любой PR трогает `packages/contracts/sql/*.sql` → ОБЯЗАН запустить migration against clean Postgres
+
+#### Почему это MANDATORY, не recommended
+
+В прошлом (до TD-20) reviewer доверял unit-тестам. История показала что:
+- `tsconfig paths` скрывают missing package declarations (TD-18)
+- Stale `dist/` скрывает build-pipeline gaps (TD-17)
+- Cached `cargo target/` скрывает Cargo.toml misconfigurations
+
+Все три класса багов **не ловятся unit-тестами** — только real build after clean state.
+
+---
+
 ### Phase 2: Identity Filter / Multi-Tenancy (CRITICAL — P0 BLOCKER)
 
 Identity filter leak = data visible across agents/organizations. **P0 security incident.**
@@ -110,6 +179,26 @@ const wallets = await db.query('SELECT * FROM wallets');
 - [ ] **D16. SRP** — Functions < 50 lines, files < 300 lines, single responsibility
 - [ ] **D17. DRY** — No duplicated logic. Search before writing
 - [ ] **D18. No dead code** — No commented-out, no stub без TODO + milestone reference
+- [ ] **D19. No `bind`/`call`/`apply`** — arrow functions + spread. Legacy `this`-binding = читаемость + source of bugs
+- [ ] **D20. No chained assignments** (`let a = b = c = 0`) — each variable declared separately (hoisting / accidental global)
+- [ ] **D21. Return objects, not arrays** for multi-value returns — `{ user, token }` > `[user, token]`. Позиция в tuple магична, имена — self-documenting
+
+---
+
+### Phase 4.1: Naming Consistency (single source for file / symbol naming)
+
+Cross-reference: `.claude/rules/code-style.md` + `.claude/rules/backend-code-style.md` (naming table). Reviewer enforces:
+
+- [ ] **N-1. Files TS/JS** — `kebab-case.ts` / `kebab-case.js` (tests: `*.test.ts`)
+- [ ] **N-2. Files Rust** — `snake_case.rs`
+- [ ] **N-3. Functions / variables** — `camelCase` (TS), `snake_case` (Rust)
+- [ ] **N-4. Types / interfaces** — `PascalCase` (обе lang)
+- [ ] **N-5. Constants** — `UPPER_SNAKE_CASE`
+- [ ] **N-6. Booleans** — `is` / `has` / `can` prefix (`isAuthenticated`, `hasPermission`)
+- [ ] **N-7. Factory functions** — `create` prefix (`createWalletService`, `createFAPRouter`)
+- [ ] **N-8. Zod schemas** — `Zod` prefix + `PascalCase` (`ZodAgentCard`, `ZodSignRequest`)
+- [ ] **N-9. Error classes** — `PascalCase` + `Error` suffix (`ValidationError`, `NotFoundError`)
+- [ ] **N-10. API paths** — `kebab-case` (`/api/registry/find`, `/api/wallet/sign-transaction`)
 
 ---
 
@@ -242,6 +331,10 @@ const wallets = await db.query('SELECT * FROM wallets');
   - Severity: 🔴 BLOCKER / 🟡 MEDIUM / 🟢 LOW / 🟢 INFO
   - Status: 🔴 OPEN (test exists) / 🟡 BACKLOG (no test yet) / 🟢 ACK (governance) / ✅ CLOSED
 - [ ] **N3. Flag patterns** that should become rules → propose addition в `.claude/rules/`
+- [ ] **N4. Auto-push после APPROVED.** Если verdict ✅ APPROVED — сразу делаешь `git push origin <branch>` сам, **не** оставляешь commit локально и **не** просишь user'а пушить. Merge остаётся за user'ом, но push reviewer-commits — зона ответственности самого reviewer'а (иначе commits теряются при context compaction / session timeout). Исключение: push rejected (CI hook, network) → репортишь и ждёшь.
+- [ ] **N5. Выведи Mandatory Output Format (см. ниже) — verbatim.** После N1-N4 финальное сообщение user'у = отчёт по шаблону «Mandatory Output Format». НЕ ad-hoc таблицы, НЕ сводки своими словами. Шаблон = контракт. Нельзя пропустить раздел, нельзя перефразировать заголовки. Если секция не применима (e.g. no SQL touched) — пиши «N/A — [причина]», не удаляй секцию.
+- [ ] **N6. Batch reviews (N>1 PRs в одной сессии).** Выведи N отдельных `# Review Report: PR #X` блоков — один на каждый PR. НЕ объединяй в «сводный» отчёт. Каждый PR review самодостаточен и должен быть читаем независимо. Порядок: PR с меньшим номером → PR с большим.
+- [ ] **N7. No idle phrases after Verdict.** Отчёт = self-contained hand-off. После последней строки Bookkeeping — **СТОП**. НЕ добавляй «standing by» / «жду команд» / «review complete» / «ready for next» / «next steps» summary. User видит отчёт, решает что делать. Idle-фразы = noise + токены.
 
 ---
 
@@ -255,10 +348,21 @@ const wallets = await db.query('SELECT * FROM wallets');
 
 ---
 
-## Review Output Format
+## Mandatory Output Format (use verbatim after N1-N4)
+
+> **Этот шаблон — КОНТРАКТ, не example.** Per N5 checklist выше, финальное
+> сообщение user'у ОБЯЗАНО быть построено по этому шаблону verbatim. Ad-hoc
+> сводки / объединённые таблицы / «сводный» отчёт по нескольким PRs = scope
+> violation (запишется как TD reviewer'ом-наблюдателем).
+>
+> **Нельзя выдать APPROVED / APPROVED WITH NOTES / NOT APPROVED без полного
+> отчёта по этому шаблону.** Пропущенная секция = работа не завершена.
+>
+> **Для batch reviews** (N PRs за сессию) — N отдельных блоков, один на PR
+> (per N6), не объединение.
 
 ```markdown
-# Review Report: [Milestone M0X]
+# Review Report: PR #N — [Milestone M0X / TD-N / governance]
 
 ## Build & Test Gate
 - pnpm typecheck: ✅ / 🔴 [details]
@@ -299,7 +403,10 @@ const wallets = await db.query('SELECT * FROM wallets');
 ## Bookkeeping (выполнено если APPROVED)
 - docs/project-state.md → updated (commits, milestone status, structure)
 - docs/tech-debt.md → recorded TD-XX items
+- Pushed reviewer commits to origin (per N4)
 ```
+
+**END OF REPORT.** Следующий character после последней fenced-code строки = next reviewer report (batch) или пустая строка если single-PR. НЕ добавлять «standing by» / «review complete» / «ready for next» — отчёт self-contained.
 
 ---
 

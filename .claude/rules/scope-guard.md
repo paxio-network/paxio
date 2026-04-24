@@ -50,11 +50,15 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 ## GIT & MERGE — АБСОЛЮТНЫЕ ПРАВИЛА
 
-### Merge — ТОЛЬКО user
+### Merge decision — ТОЛЬКО user. Merge execution — разрешено architect после explicit OK.
 
-- **НИКАКОЙ агент НЕ мержит в `main` или `dev`.** Ни architect, ни dev, ни reviewer.
-- Merge = решение user'а. Агенты ТОЛЬКО создают PR.
-- `git push --force` к `main`/`dev` — **ЗАПРЕЩЕНО** для всех агентов.
+**Decision vs execution.** Решение мержить — только user. Выполнение команды — может делать architect ПОСЛЕ явного «OK / мержи / go» от user.
+
+- architect / dev / reviewer / test-runner **никогда** не мержат без явного OK от user
+- architect **может** выполнить `gh pr merge N --merge` после фразы user'а содержащей «мержи» / «merge» / «OK мержить» / «go ahead merge» на конкретный PR номер
+- Фраза user'а должна быть **SPECIFIC** — содержать номер PR или однозначный контекст. «Да» без привязки к номеру = уточнить. «Мержи всё» = отказаться, просить по одному
+- `git push --force` к `main` / `dev` — **ЗАПРЕЩЕНО для всех агентов всегда, без исключений**, даже с user OK
+- Mode B (delegated orchestration через wake-up): merge НЕ автоматизируется. Wake-up firing не считается OK. Architect всё равно пишет в отчёт «мержить PR #N?» и ждёт user на следующем cycle
 
 ### Branch model: feature/* → dev → main
 
