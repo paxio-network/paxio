@@ -23,13 +23,13 @@ model: opus
 При каждом запуске определяй какой scope проверять:
 
 **Если `git log` показывает только frontend-коммиты (`apps/frontend/**`, `packages/{ui,hooks,api-client,auth}/**`):**
-- Смотри блоки: A, D, E, J (skip B, C Rust, F-I backend-specific)
+- Смотри: Phase 1, 4, 5, 10, 12, 13 (skip 2 Multi-Tenancy, 3 Architecture, 6-9 backend-specific, 11 Rust)
 
 **Если только canister-коммиты (`products/*/canister*/**`, `platform/canister-shared/**`):**
-- Смотри: A, C-Rust, D-Rust, F-Rust, H, K, L
+- Смотри: Phase 1, 2 (B5-B7), 3, 8, 11 Rust, 12, 13
 
 **Если смешанные или backend (`apps/back/**`, `products/*/app/**`, `packages/**`):**
-- Смотри ВСЕ блоки (A через L)
+- Смотри ВСЕ Phase (1 через 13)
 
 ## Workflow
 
