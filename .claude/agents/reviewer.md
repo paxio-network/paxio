@@ -40,6 +40,75 @@ skills: [typescript-patterns, error-handling, metarhia-principles, rust-canister
 
 ---
 
+### Phase 1.5: Originating-Failure Reproduction (MANDATORY для TD closures + frontend/canister PRs)
+
+**Root cause TD-20 (introduced 2026-04-24):** Reviewer принял TD-18 как CLOSED
+на основании только vitest GREEN + typecheck clean. Vitest использует
+`tsconfig.base.json::paths` — читает исходники через workspace-алиасы. Next.js
+использует настоящий Node resolver через `node_modules/<pkg>` symlinks. Разные
+resolver'ы → разные результаты. Symlinks в `node_modules/` созданы только после
+`pnpm install`, а после merge в `dev` никто не прогнал install → `next build`
+продолжал падать с тем же `Cannot find module '@paxio/types'` который TD-18
+должен был устранить.
+
+**Правило:** КАЖДЫЙ TD closure review ДОЛЖЕН воспроизвести ORIGINATING COMMAND
+из описания TD **после clean install**. Unit-тесты/type-checks НЕДОСТАТОЧНЫ.
+
+#### Шаги Phase 1.5
+
+1. **Clean reinstall** (имитирует fresh clone, ловит missing-symlink bugs):
+   ```bash
+   rm -rf node_modules \
+          apps/*/node_modules \
+          apps/frontend/*/node_modules \
+          packages/*/node_modules \
+          products/*/node_modules
+   pnpm install --frozen-lockfile
+   ```
+
+2. **Запустить originating command** из TD description (секция «Как воспроизвести»
+   или следующая строка после `Fix:`). Примеры:
+
+   | TD тип | Команда |
+   |---|---|
+   | frontend build failure | `pnpm --filter @paxio/<app>-app build` |
+   | backend type error | `pnpm --filter @paxio/<product> typecheck` |
+   | canister build failure | `cargo build -p <crate> --release` |
+   | handler not loaded | `pnpm build && node -e "require('./dist/<handler>.js')"` |
+   | server boot failure | `rm -rf dist/ && pnpm dev:server` (timeout 10s) |
+
+3. **Acceptance script preferred**. Если architect написал `scripts/verify_td<N>_*.sh`
+   — прогнать его. Эти скрипты уже включают step 1+2.
+
+4. **Decision matrix**:
+
+   | Unit tests | Originating command | Verdict |
+   |---|---|---|
+   | GREEN | PASS | ✅ APPROVED — закрываем TD |
+   | GREEN | FAIL | ❌ NOT CLOSED — REJECT, architect должен расширить RED spec |
+   | RED | any | ❌ BLOCKER — dev не завершил работу |
+
+#### Когда Phase 1.5 триггерится
+
+**Всегда для TD closure** (любой severity).
+
+**Plus triggers для frontend/canister milestones** (не только TD):
+
+- Любой PR trогает `apps/frontend/**` → ОБЯЗАН `pnpm --filter <app> build` after clean install
+- Любой PR трогает `products/*/canister*/**` → ОБЯЗАН `cargo build --release -p <crate>` after `cargo clean`
+- Любой PR трогает `packages/contracts/sql/*.sql` → ОБЯЗАН запустить migration against clean Postgres
+
+#### Почему это MANDATORY, не recommended
+
+В прошлом (до TD-20) reviewer доверял unit-тестам. История показала что:
+- `tsconfig paths` скрывают missing package declarations (TD-18)
+- Stale `dist/` скрывает build-pipeline gaps (TD-17)
+- Cached `cargo target/` скрывает Cargo.toml misconfigurations
+
+Все три класса багов **не ловятся unit-тестами** — только real build after clean state.
+
+---
+
 ### Phase 2: Identity Filter / Multi-Tenancy (CRITICAL — P0 BLOCKER)
 
 Identity filter leak = data visible across agents/organizations. **P0 security incident.**

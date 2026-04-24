@@ -185,7 +185,74 @@ docs/sprints/M0X-name.md
 - `scripts/verify_*.sh` — bash скрипты
 - Должны запускаться и FAIL (без реализации)
 - Не должны иметь ошибок среды (только логические fail)
-- Шаблон шапки: `set -euo pipefail; cd "$(dirname "$0")/.."; PASS=0; FAIL=0; ok(){...}; bad(){...}`
+- Шаблон шапки: `set -euo pipefail; cd "$(dirname "$0")/.."; mkdir -p "$HOME/tmp"; PASS=0; FAIL=0; ok(){...}; bad(){...}`
+
+### 4.2.1 — TD RED specs ОБЯЗАНЫ включать originating command (MANDATORY after TD-20)
+
+**Правило (introduced 2026-04-24 после TD-20 post-mortem):** Если TD description
+содержит failure command (`next build`, `cargo build`, `pnpm dev:server`,
+canister deploy) — RED spec НЕ может быть ТОЛЬКО unit/AST test. ОБЯЗАН включать
+acceptance script который воспроизводит failure после **clean install**.
+
+#### Шаблон TD RED spec
+
+Для TD-N с originating failure:
+
+**1. Unit/AST test** (архитектурный invariant):
+- Файл: `tests/_specs/<td-slug>.test.ts` либо `packages/<pkg>/tests/<slug>.test.ts`
+- Ловит pattern-level bug: отсутствие declaration в package.json, hardcoded fallback, etc.
+- Быстрый (≤1s), запускается через `pnpm test:specs`
+
+**2. Acceptance script** (originating command):
+- Файл: `scripts/verify_td<N>_<slug>.sh`
+- Структура:
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+  cd "$(dirname "$0")/.."
+  mkdir -p "$HOME/tmp"
+  PASS=0; FAIL=0
+  ok()  { echo "✅ $1"; PASS=$((PASS+1)); }
+  bad() { echo "❌ $1"; FAIL=$((FAIL+1)); }
+
+  # 1. Clean reinstall — ловит missing-symlink class bugs
+  pnpm install --frozen-lockfile >"$HOME/tmp/td<N>-install.log" 2>&1 \
+    && ok "pnpm install clean" \
+    || { bad "pnpm install failed — see $HOME/tmp/td<N>-install.log"; exit 1; }
+
+  # 2. Originating command (из TD description)
+  <command-that-fails-in-current-state> >"$HOME/tmp/td<N>-cmd.log" 2>&1 \
+    && ok "<human-readable description>" \
+    || bad "<command> FAILED — see $HOME/tmp/td<N>-cmd.log"
+
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "PASS: $PASS   FAIL: $FAIL"
+  [ $FAIL -eq 0 ]
+  ```
+
+**3. Tech-debt row updates:**
+- Колонка «Тест на fix» → перечислить ОБА: `tests/_specs/...test.ts` + `scripts/verify_td<N>_*.sh`
+- Статус: 🔴 OPEN (оба созданы RED/FAIL, ждут dev fix)
+
+#### Почему оба, а не один
+
+| Tool | Ловит | НЕ ловит |
+|---|---|---|
+| Unit/AST test | pattern в исходнике (declaration missing, fallback hardcode, import path) | runtime resolver mismatch, missing symlinks, stale dist/, Cargo.toml misconfig |
+| Acceptance script | реальный build failure через настоящий tool (next/cargo/tsc/dfx) | silent architectural drift после fix (e.g. dev убрал declaration снова) |
+
+Unit test = **permanent drift guard**. Script = **real-world fail reproduction**.
+Оба нужны.
+
+#### Когда достаточно одного
+
+**Только unit test** (без script) — если TD НЕ завязан на build/deploy command:
+- Governance TD (process note, не код) — никакого command'а нет
+- Code style / pattern TD — unit/AST grep достаточен
+- Tech-debt классификации документации — только docs change
+
+**Только script** (без unit test) — **никогда**. Всегда должен быть хотя бы
+smoke test который поедет в permanent suite как regression guard.
 
 ### 4.3 — E2E тесты (Тип 3)
 
