@@ -207,11 +207,13 @@ export const ZodNetworkPair = z.object({
 });
 export type NetworkPair = z.infer<typeof ZodNetworkPair>;
 
-export const ZodNetworkSnapshot = z.object({
-  nodes: z.array(ZodNetworkNode).min(0),
-  pairs: z.array(ZodNetworkPair).min(0),
-  generated_at: z.string().datetime(),           // ISO server timestamp
-});
+export const ZodNetworkSnapshot = z
+  .object({
+    nodes: z.array(ZodNetworkNode).min(0).readonly(),
+    pairs: z.array(ZodNetworkPair).min(0).readonly(),
+    generated_at: z.string().datetime(),           // ISO server timestamp
+  })
+  .readonly();
 export type NetworkSnapshot = z.infer<typeof ZodNetworkSnapshot>;
 
 // --- Threat heatmap (Radar section 6×6 grid) ------------------------------------
