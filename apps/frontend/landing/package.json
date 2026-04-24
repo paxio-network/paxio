@@ -19,6 +19,7 @@
     "@paxio/hooks": "workspace:*",
     "@paxio/api-client": "workspace:*",
     "@paxio/auth": "workspace:*",
+    "@paxio/types": "workspace:*",
     "@tanstack/react-query": ">=5.0.0"
   },
   "devDependencies": {
