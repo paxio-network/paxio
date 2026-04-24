@@ -83,7 +83,10 @@ else
 fi
 
 # Full baseline check — no regression in siblings
-if pnpm test -- --run >"$HOME/tmp/m_l5-vitest-full.log" 2>&1; then
+# TD-23 fix: `pnpm test -- --run` hangs in watch mode when prior M-L5 tests
+# fail (the `-- --run` arg gets swallowed somewhere in the turbo/pnpm layer).
+# Direct `pnpm vitest run` with an explicit timeout is robust.
+if timeout 120 pnpm vitest run >"$HOME/tmp/m_l5-vitest-full.log" 2>&1; then
   ok "full vitest suite GREEN (no regression)"
 else
   bad "vitest regression — see \$HOME/tmp/m_l5-vitest-full.log"
