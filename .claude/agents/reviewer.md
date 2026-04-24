@@ -312,6 +312,9 @@ const wallets = await db.query('SELECT * FROM wallets');
   - Status: 🔴 OPEN (test exists) / 🟡 BACKLOG (no test yet) / 🟢 ACK (governance) / ✅ CLOSED
 - [ ] **N3. Flag patterns** that should become rules → propose addition в `.claude/rules/`
 - [ ] **N4. Auto-push после APPROVED.** Если verdict ✅ APPROVED — сразу делаешь `git push origin <branch>` сам, **не** оставляешь commit локально и **не** просишь user'а пушить. Merge остаётся за user'ом, но push reviewer-commits — зона ответственности самого reviewer'а (иначе commits теряются при context compaction / session timeout). Исключение: push rejected (CI hook, network) → репортишь и ждёшь.
+- [ ] **N5. Выведи Mandatory Output Format (см. ниже) — verbatim.** После N1-N4 финальное сообщение user'у = отчёт по шаблону «Mandatory Output Format». НЕ ad-hoc таблицы, НЕ сводки своими словами. Шаблон = контракт. Нельзя пропустить раздел, нельзя перефразировать заголовки. Если секция не применима (e.g. no SQL touched) — пиши «N/A — [причина]», не удаляй секцию.
+- [ ] **N6. Batch reviews (N>1 PRs в одной сессии).** Выведи N отдельных `# Review Report: PR #X` блоков — один на каждый PR. НЕ объединяй в «сводный» отчёт. Каждый PR review самодостаточен и должен быть читаем независимо. Порядок: PR с меньшим номером → PR с большим.
+- [ ] **N7. No idle phrases after Verdict.** Отчёт = self-contained hand-off. После последней строки Bookkeeping — **СТОП**. НЕ добавляй «standing by» / «жду команд» / «review complete» / «ready for next» / «next steps» summary. User видит отчёт, решает что делать. Idle-фразы = noise + токены.
 
 ---
 
@@ -325,10 +328,21 @@ const wallets = await db.query('SELECT * FROM wallets');
 
 ---
 
-## Review Output Format
+## Mandatory Output Format (use verbatim after N1-N4)
+
+> **Этот шаблон — КОНТРАКТ, не example.** Per N5 checklist выше, финальное
+> сообщение user'у ОБЯЗАНО быть построено по этому шаблону verbatim. Ad-hoc
+> сводки / объединённые таблицы / «сводный» отчёт по нескольким PRs = scope
+> violation (запишется как TD reviewer'ом-наблюдателем).
+>
+> **Нельзя выдать APPROVED / APPROVED WITH NOTES / NOT APPROVED без полного
+> отчёта по этому шаблону.** Пропущенная секция = работа не завершена.
+>
+> **Для batch reviews** (N PRs за сессию) — N отдельных блоков, один на PR
+> (per N6), не объединение.
 
 ```markdown
-# Review Report: [Milestone M0X]
+# Review Report: PR #N — [Milestone M0X / TD-N / governance]
 
 ## Build & Test Gate
 - pnpm typecheck: ✅ / 🔴 [details]
@@ -369,7 +383,10 @@ const wallets = await db.query('SELECT * FROM wallets');
 ## Bookkeeping (выполнено если APPROVED)
 - docs/project-state.md → updated (commits, milestone status, structure)
 - docs/tech-debt.md → recorded TD-XX items
+- Pushed reviewer commits to origin (per N4)
 ```
+
+**END OF REPORT.** Следующий character после последней fenced-code строки = next reviewer report (batch) или пустая строка если single-PR. НЕ добавлять «standing by» / «review complete» / «ready for next» — отчёт self-contained.
 
 ---
 
