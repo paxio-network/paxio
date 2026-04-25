@@ -5,6 +5,10 @@
 // All functions are pure (no I/O inside the domain). Upstream calls happen
 // in API handlers or are injected as async deps.
 //
+// Node transformation (position hash, bitcoin_native, name truncation,
+// volume_usd_5m) is delegated to the pure `buildNetworkSnapshot` from
+// `network-snapshot-builder.ts` — no duplication.
+//
 import type {
   Result,
   HeroState,
@@ -17,6 +21,7 @@ import type {
 } from '@paxio/types';
 import { HEAT_ROWS, HEAT_COLS } from '@paxio/types';
 import type { LandingStats, LandingError } from '@paxio/interfaces';
+import { buildNetworkSnapshot } from './network-snapshot-builder.js';
 
 // --- Internal helpers (pure domain, no I/O) ---
 
@@ -206,6 +211,17 @@ export interface LandingStatsDeps {
   agentStorage?: {
     listRecent(limit: number): Promise<Result<readonly import('@paxio/types').AgentCard[], LandingError>>;
   };
+
+  /**
+   * Pure node transformer for NetworkGraph.
+   * Delegates to `buildNetworkSnapshot(cards, nowMs)` from
+   * `network-snapshot-builder.ts` — eliminates duplicated node-building logic
+   * (position hash, name truncation, bitcoin_native, volume_usd_5m).
+   *
+   * Optional: falls back to the real implementation when absent so existing
+   * callers (test fixtures, legacy code) are not broken.
+   */
+  buildNetworkSnapshot?: typeof import('./network-snapshot-builder.js').buildNetworkSnapshot;
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
@@ -330,6 +346,8 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getNetworkSnapshot ---
+  // Delegates node transformation to buildNetworkSnapshot (no duplication of
+  // position hash, name truncation, bitcoin_native, volume_usd_5m logic).
   const getNetworkSnapshot = async (): Promise<Result<NetworkSnapshot, LandingError>> => {
     // M-L5: populate nodes from agentStorage.listRecent when available.
     // When agentStorage is absent (legacy/in-memory impl pre-PostgresStorage),
@@ -340,35 +358,14 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
         if (!cardsResult.ok) {
           return { ok: false, error: { code: 'upstream_error', message: String(cardsResult.error) } };
         }
-        return {
-          ok: true,
-          value: Object.freeze({
-            nodes: Object.freeze(cardsResult.value.map((card) =>
-              Object.freeze({
-                id: card.did,
-                name: card.name.length > 80 ? card.name.slice(0, 80) : card.name,
-                x_pct: 0,
-                y_pct: 0,
-                volume_usd_5m: 0,
-                bitcoin_native: card.capability === 'WALLET',
-              }),
-            )),
-            pairs: Object.freeze([]),
-            generated_at: nowIso(deps.clock()),
-          }),
-        };
+        const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
+        return { ok: true, value: build(cardsResult.value, deps.clock()) };
       } catch (err) {
         return { ok: false, error: { code: 'upstream_error', message: String(err) } };
       }
     }
-    return {
-      ok: true,
-      value: Object.freeze({
-        nodes: Object.freeze([]),
-        pairs: Object.freeze([]),
-        generated_at: nowIso(deps.clock()),
-      }),
-    };
+    const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
+    return { ok: true, value: build([], deps.clock()) };
   };
 
   // --- getHeatmap ---
