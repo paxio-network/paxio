@@ -212,20 +212,77 @@ async function bundleFile(file, alias, nodePaths) {
   await writeFile(file, `${bundled}\n__paxio_module;\n`, 'utf8');
 }
 
+/**
+ * Bundle an infra/ file (e.g. postgres-storage.js) as ESM.
+ *
+ * Unlike domain files (IIFE for vm.Script), infra files are loaded via
+ * dynamic `import()` in db.cjs.  We use `format: 'esm'` so the dynamic
+ * import resolves.  The `pg` driver stays external (db.cjs wires it
+ * separately); all `@paxio/*` workspace imports are inlined so the
+ * production Docker image's ESM resolver never has to look them up.
+ *
+ * Output is pure ESM — no `__paxio_module` suffix needed.
+ */
+async function bundleInfraFile(file, alias) {
+  await build({
+    entryPoints: [file],
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    outfile: file,
+    allowOverwrite: true,
+    write: true,
+    // pg driver is external — db.cjs provides the real Pool at runtime.
+    // @paxio/* packages are inlined via alias so they are resolvable.
+    external: ['pg'],
+    alias,
+    minify: false,
+    sourcemap: false,
+    logLevel: 'silent',
+  });
+}
+
 async function main() {
   const files = await collectDomainFiles();
-  if (files.length === 0) {
-    console.log('[bundle-vm-modules] no domain files found in dist/');
-    return;
-  }
   const alias = buildPackageAliases();
-  const nodePaths = await collectNodePaths();
-  for (const file of files) {
-    await bundleFile(file, alias, nodePaths);
+
+  // Pass 1 — VM sandbox domain files (IIFE, inlined @paxio/*)
+  if (files.length > 0) {
+    const nodePaths = await collectNodePaths();
+    for (const file of files) {
+      await bundleFile(file, alias, nodePaths);
+    }
+    console.log(
+      `[bundle-vm-modules] processed ${files.length} domain files in dist/`,
+    );
+  } else {
+    console.log('[bundle-vm-modules] no domain files found in dist/');
   }
-  console.log(
-    `[bundle-vm-modules] processed ${files.length} domain files in dist/`,
+
+  // Pass 2 — infra ESM bundle (TD-27: postgres-storage.js)
+  // db.cjs uses dynamic import() so this file must be valid ESM.
+  // Workspace imports (@paxio/*) are inlined; pg stays external.
+  const postgresStorageFile = join(
+    REPO_ROOT,
+    'dist',
+    'products',
+    '01-registry',
+    'app',
+    'infra',
+    'postgres-storage.js',
   );
+  try {
+    const { stat: statAsync } = await import('node:fs/promises');
+    await statAsync(postgresStorageFile);
+    await bundleInfraFile(postgresStorageFile, alias);
+    console.log('[bundle-vm-modules] bundled postgres-storage.js (ESM)');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      console.log('[bundle-vm-modules] postgres-storage.js not found — skipping TD-27 pass');
+    } else {
+      throw err;
+    }
+  }
 }
 
 main().catch((err) => {
