@@ -467,11 +467,42 @@ export const createPostgresStorage = async (
     return ok(Object.freeze(buckets));
   };
 
+  const listRecent = async (
+    rawLimit: number,
+  ): Promise<Result<readonly AgentCard[], StorageError>> => {
+    // Contract requires [1, 100] — enforce at storage boundary.
+    const limit = Math.max(1, Math.min(rawLimit, 100));
+
+    let res: PgQueryResult<AgentCardRow>;
+    try {
+      res = await deps.pool.query<AgentCardRow>(
+        `SELECT did, name, description, capability, endpoint, version,
+                source, external_id, source_url, crawled_at, created_at
+         FROM agent_cards
+         ORDER BY updated_at DESC, did ASC
+         LIMIT $1`,
+        [limit],
+      );
+    } catch (e) {
+      return err(toStorageError(e));
+    }
+
+    const cards: AgentCard[] = [];
+    for (const row of res.rows) {
+      const cardResult = rowToCard(row);
+      // Contract: skip malformed rows rather than returning an error.
+      // One bad row in the DB should not poison the whole response.
+      if (cardResult.ok) cards.push(cardResult.value);
+    }
+    return ok(Object.freeze(cards));
+  };
+
   return Object.freeze({
     upsert,
     resolve,
     find,
     count,
     countBySource,
+    listRecent,
   });
 };

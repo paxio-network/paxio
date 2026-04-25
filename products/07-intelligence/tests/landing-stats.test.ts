@@ -6,6 +6,7 @@
 //
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createLandingStats } from '../app/domain/landing-stats.js';
+import { buildNetworkSnapshot } from '../app/domain/network-snapshot-builder.js';
 
 // --- Fixtures ---
 
@@ -29,6 +30,11 @@ const mockDeps = (overrides: {
    */
   agentCards?: any[];
   agentStorageError?: boolean;
+  /**
+   * Pass the real `buildNetworkSnapshot` so the factory uses it instead of
+   * falling back to the module-level import. Makes tests explicit.
+   */
+  buildNetworkSnapshot?: typeof import('../app/domain/network-snapshot-builder.js').buildNetworkSnapshot;
 }) => {
   const {
     registryCount = 0,
@@ -38,6 +44,7 @@ const mockDeps = (overrides: {
     clockMs = 1_733_184_000_000, // 2024-12-03T00:00:00.000Z — deterministic
     agentCards = [],
     agentStorageError = false,
+    buildNetworkSnapshot: buildSnapshotFn = buildNetworkSnapshot,
   } = overrides;
 
   // AgentStorage port mock — only listRecent is used by getNetworkSnapshot
@@ -67,6 +74,7 @@ const mockDeps = (overrides: {
 
   return {
     clock: vi.fn().mockReturnValue(clockMs),
+    buildNetworkSnapshot: buildSnapshotFn,
     agentStorage,
     getRegistryCount: vi.fn().mockImplementation(() =>
       registryCount < 0

@@ -5,6 +5,10 @@
 // All functions are pure (no I/O inside the domain). Upstream calls happen
 // in API handlers or are injected as async deps.
 //
+// Node transformation (position hash, bitcoin_native, name truncation,
+// volume_usd_5m) is delegated to the pure `buildNetworkSnapshot` from
+// `network-snapshot-builder.ts` — no duplication.
+//
 import type {
   Result,
   HeroState,
@@ -17,6 +21,7 @@ import type {
 } from '@paxio/types';
 import { HEAT_ROWS, HEAT_COLS } from '@paxio/types';
 import type { LandingStats, LandingError } from '@paxio/interfaces';
+import { buildNetworkSnapshot } from './network-snapshot-builder.js';
 
 // --- Internal helpers (pure domain, no I/O) ---
 
@@ -198,6 +203,25 @@ export interface LandingStatsDeps {
    * an empty array (Real Data Invariant — empty real > fake 2.4M).
    */
   getRailsCatalog: () => Promise<Result<readonly RailInfo[], LandingError>>;
+
+  /**
+   * AgentStorage port — provides listRecent for NetworkGraph nodes.
+   * Introduced M-L5. Optional until PostgresStorage is landed by registry-dev.
+   */
+  agentStorage?: {
+    listRecent(limit: number): Promise<Result<readonly import('@paxio/types').AgentCard[], LandingError>>;
+  };
+
+  /**
+   * Pure node transformer for NetworkGraph.
+   * Delegates to `buildNetworkSnapshot(cards, nowMs)` from
+   * `network-snapshot-builder.ts` — eliminates duplicated node-building logic
+   * (position hash, name truncation, bitcoin_native, volume_usd_5m).
+   *
+   * Optional: falls back to the real implementation when absent so existing
+   * callers (test fixtures, legacy code) are not broken.
+   */
+  buildNetworkSnapshot?: typeof import('./network-snapshot-builder.js').buildNetworkSnapshot;
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
@@ -322,16 +346,26 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getNetworkSnapshot ---
-  // Early phase: no agent graph data — return empty snapshot
+  // Delegates node transformation to buildNetworkSnapshot (no duplication of
+  // position hash, name truncation, bitcoin_native, volume_usd_5m logic).
   const getNetworkSnapshot = async (): Promise<Result<NetworkSnapshot, LandingError>> => {
-    return {
-      ok: true,
-      value: {
-        nodes: [],
-        pairs: [],
-        generated_at: nowIso(deps.clock()),
-      },
-    };
+    // M-L5: populate nodes from agentStorage.listRecent when available.
+    // When agentStorage is absent (legacy/in-memory impl pre-PostgresStorage),
+    // return empty snapshot — Real Data Invariant (empty real > fake).
+    if (deps.agentStorage?.listRecent) {
+      try {
+        const cardsResult = await deps.agentStorage.listRecent(20);
+        if (!cardsResult.ok) {
+          return { ok: false, error: { code: 'upstream_error', message: String(cardsResult.error) } };
+        }
+        const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
+        return { ok: true, value: build(cardsResult.value, deps.clock()) };
+      } catch (err) {
+        return { ok: false, error: { code: 'upstream_error', message: String(err) } };
+      }
+    }
+    const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
+    return { ok: true, value: build([], deps.clock()) };
   };
 
   // --- getHeatmap ---
