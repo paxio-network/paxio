@@ -2,14 +2,15 @@
   "name": "@paxio/radar-app",
   "version": "0.1.0",
   "private": true,
-  "description": "radar.paxio.network — Intelligence free tier",
+  "description": "radar.paxio.network \u2014 Intelligence free tier",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",

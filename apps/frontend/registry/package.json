@@ -2,14 +2,15 @@
   "name": "@paxio/registry-app",
   "version": "0.1.0",
   "private": true,
-  "description": "registry.paxio.network — Universal Registry explorer",
+  "description": "registry.paxio.network \u2014 Universal Registry explorer",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
