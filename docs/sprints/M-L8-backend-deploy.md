@@ -26,7 +26,7 @@
 | Layer | How |
 |---|---|
 | Unit | `pnpm vitest run tests/health-endpoint.test.ts` — 8 GREEN |
-| Local stack | `bash scripts/verify_M-L8_local.sh` — PASS=9 FAIL=0 |
+| Local stack | `bash scripts/verify_M-L8_local.sh` — PASS=11 FAIL=0 |
 | Production smoke | `bash scripts/verify_M-L8_smoke.sh` — PASS=6 FAIL=0 |
 | E2E | manually: open https://paxio.network in browser, confirm Hero strip + NetworkGraph + Heatmap render real data (or zero, but no skeleton) |
 
@@ -88,7 +88,7 @@ git push main → .github/workflows/deploy-backend.yml:
 | T-5 | backend-dev | `docker-compose.yml` (dev) + `docker-compose.production.yml` (host-side reference) | repo root | `bash scripts/verify_M-L8_local.sh` step 4 PASS | services: backend + postgres:16-alpine; named volumes; healthchecks for both; `depends_on: { postgres: { condition: service_healthy } }`; networks: bridge; production version uses `image: ghcr.io/...:latest` not `build:` |
 | T-6 | architect | `infra/paxio-prod/` host template | `infra/paxio-prod/{docker-compose.yml,caddy/Caddyfile,.env.production.example,secrets/.gitkeep,.gitignore,README.md}` | scp-copyable to Hetzner, README runbook complete | Caddy 2-alpine, HSTS preload, `flush_interval -1` for SSE, OPTIONS preflight handler, `secrets:` directive for Postgres pw, no real secrets committed |
 | T-7 | architect | M-L8 milestone doc + verify deploy-backend.yml paths | `docs/sprints/M-L8-backend-deploy.md`, `.github/workflows/deploy-backend.yml` | this file + workflow runs cleanly on `main` push | path filter includes `infra/paxio-prod/**`, `docker-compose.production.yml`; `actions/checkout@v4` added to deploy job so smoke-script is in workspace |
-| T-8 | architect | Run E2E acceptance | `bash scripts/verify_M-L8_local.sh` | PASS=9 FAIL=0 | local stack boot under 90s, idempotent (re-runs work) |
+| T-8 | architect | Run E2E acceptance | `bash scripts/verify_M-L8_local.sh` | PASS=11 FAIL=0 | local stack boot under 90s, idempotent (re-runs work) |
 | T-9 | architect | Commit + branch + handoff | `feature/m-l8-deploy` | branch pushed; PR opened after backend-dev T-3..T-5 done | architect commits T-1, T-2, T-6, T-7 only; backend-dev commits T-3, T-4, T-5 to same branch |
 
 ## Предусловия среды (architect обеспечивает ДО запуска backend-dev)
