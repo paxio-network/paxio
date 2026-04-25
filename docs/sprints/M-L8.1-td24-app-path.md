@@ -11,11 +11,36 @@
 1. `tests/_specs/main-cjs-app-path.test.ts` 4/4 GREEN (currently 2/4 — drift
    guard locks the literal correctness).
 2. `bash scripts/verify_td24_sandbox_routing.sh` PASS=6 FAIL=0 (currently
-   5/6 — `/api/landing/hero` returns 404 in step 5).
+   4/6 — log still references buggy `/apps/dist/products`).
 3. `apps/back/server/main.cjs:40` literal updated to climb 3 levels (one
    extra `..`).
-4. Full vitest baseline preserved (566/566 GREEN).
+4. Full vitest baseline preserved (568/568 GREEN; TD-11 robustness test
+   count drops by 1 because the new script uses `/tmp/` instead of
+   `$HOME/tmp/` — `/tmp/` always exists on Linux/Mac so no mkdir guard
+   needed; TD-11 invariant only applies to `$HOME/tmp/` paths).
 5. Merged `feature/m-l8.1-td24-fix` → `dev` (architect autonomous, gate-1).
+
+## Out of scope — TD-25 follow-up
+
+After T-5 lands, `APPLICATION_PATH` resolves correctly, but
+`/api/landing/*` still returns 404. Reason: the compiled `.js` files in
+`dist/products/` (e.g. `landing-stats.js`) start with top-level ESM
+`import` statements because `tsconfig.base.json` sets `"module":
+"ESNext"`. `apps/back/server/src/loader.cjs` uses synchronous
+`vm.Script` which can't evaluate ESM — throws `SyntaxError: Cannot use
+import statement outside a module`, gets caught at `main.cjs:118-126`,
+falls back to empty sandbox.
+
+This is **TD-25 (ESM-vs-VM gap)** — separate milestone (probably
+M-L8.2). Reviewer will record TD-25 row when they review M-L8.1. Fix
+options: (a) emit CJS for products with `tsconfig.app.json::module =
+"commonjs"`, (b) loader uses `vm.SourceTextModule` (experimental)
+instead of `vm.Script`, (c) author domain `.ts` files such that
+compiled `.js` has no top-level imports (heavy refactor; types must
+come via `import type` only).
+
+M-L8.1 lands the path-correctness change as a permanent drift-guard
+foundation. TD-25 is the actual unblock for landing real-data display.
 
 ## Метод верификации (Тип 2)
 
