@@ -2,14 +2,15 @@
   "name": "@paxio/docs-app",
   "version": "0.1.0",
   "private": true,
-  "description": "docs.paxio.network — platform and SDK documentation",
+  "description": "docs.paxio.network \u2014 platform and SDK documentation",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",

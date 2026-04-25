@@ -2,14 +2,15 @@
   "name": "@paxio/wallet-app",
   "version": "0.1.0",
   "private": true,
-  "description": "wallet.paxio.network — Wallet and Bitcoin Agents",
+  "description": "wallet.paxio.network \u2014 Wallet and Bitcoin Agents",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
