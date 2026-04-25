@@ -107,16 +107,27 @@ const pinoLogger = pino(loggerConfig);
   // agentStorage = null when DB not configured (production-safe zero fallback).
   const agentStorage = dbClient && !dbClient._isNoop ? dbClient.agentStorage : null;
 
-  // Load application code (app/lib, app/domain, app/api) into VM sandbox
+  // Load application code (app/lib, app/domain, app/api) into VM sandbox.
+  //
+  // Composition root (wireProducts) is passed as a callback so loader can
+  // run it AFTER raw domain modules are loaded but BEFORE the outer
+  // domain object is frozen and BEFORE api handlers are loaded — that
+  // ordering is what makes the wired service tree visible to handlers.
   let appSandbox;
   try {
-    appSandbox = await loadApplication(APPLICATION_PATH, {
-      console: logger,
-      config,
-      errors,
-      telemetry: broadcaster,
-      agentStorage,
-    });
+    appSandbox = await loadApplication(
+      APPLICATION_PATH,
+      {
+        console: logger,
+        config,
+        errors,
+        telemetry: broadcaster,
+        agentStorage,
+      },
+      {
+        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage }),
+      },
+    );
   } catch (err) {
     pinoLogger.warn(
       { err: err.message },
@@ -125,12 +136,6 @@ const pinoLogger = pino(loggerConfig);
     );
     appSandbox = { lib: {}, domain: {}, api: {}, config };
   }
-
-  // Composition root — wire factory outputs into service slots.
-  // API handlers expect domain['<product>'].landing.getHero() and
-  // domain['<product>'].fap.getRails(); the loader leaves raw factories
-  // under 'landing-stats' / 'fap-router'.  wireProducts bridges that gap.
-  wireProducts(appSandbox.domain, { agentStorage });
 
   initSecurityHeaders(server);
   initRequestId(server);
