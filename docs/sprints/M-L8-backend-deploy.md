@@ -105,16 +105,47 @@ These are **not** agent deliverables. After M-L8 merges to `main`,
 user does:
 
 1. Provision Hetzner CX22 (or reuse existing complior box if disk allows).
+   ✅ DONE — reusing complior box at 148.251.131.204 (`nous` user has
+   docker group, paxio joins `complior-prod_complior` network).
 2. `scp -r infra/paxio-prod/ user@hetzner:~/paxio-prod/` (one-time).
+   ✅ DONE — `/home/nous/paxio-prod/` exists. NB: on-host
+   `docker-compose.yml` was modified to PIGGYBACK on `complior-caddy`
+   (removed `paxio-caddy`, added `complior_caddy` external network) —
+   the in-repo `infra/paxio-prod/docker-compose.yml` still documents
+   the standalone path for the day complior is decommissioned.
 3. `ssh hetzner` → write real `secrets/db_password.txt` + `.env.production`
    per `infra/paxio-prod/README.md`.
+   ✅ DONE — secrets exist with proper permissions (0600).
 4. DNS A-record `api.paxio.network` → Hetzner IP (Cloudflare proxy OFF).
+   ✅ DONE — `dig api.paxio.network` resolves to 148.251.131.204; Caddy
+   issued Let's Encrypt cert via TLS-ALPN-01 on first reload.
 5. GitHub repo Secrets: `HETZNER_HOST`, `HETZNER_USER`, `HETZNER_SSH_KEY`.
+   ✅ DONE — set via `gh secret set` (HETZNER_HOST=148.251.131.204,
+   HETZNER_USER=nous, HETZNER_SSH_KEY=ed25519 for `nous` user; SSH
+   keypair generated as `~/.ssh/gha_deploy` with pubkey appended to
+   `~/.ssh/authorized_keys`).
 6. Vercel env `NEXT_PUBLIC_API_URL=https://api.paxio.network` × 8 apps,
    trigger redeploy.
+   ⏳ STILL TO-DO — backend is reachable but Vercel apps still point at
+   localhost/none. Tracked as M-L8.5 (frontend wiring milestone).
 
-After step 6, landing `paxio.network` renders real numbers from
-`api.paxio.network` and M-L8 is **ВЫПОЛНЕН**.
+### CI deploy chain — VERIFIED 2026-04-25
+
+After PR #25 (trigger on `dev`) + PR #26 (buildx driver) + PR #27
+(ghcr.io login + smoke softening) merged to `dev`:
+
+`gh workflow run deploy-backend.yml --ref dev` → run id `24938037252`:
+- Build Docker image     : ✅ success (push to ghcr.io)
+- Deploy to Hetzner      : ✅ success (login → pull → tag → up -d → 90s healthy → cleanup → logout)
+- Smoke test             : ✅ verify_M-L8_smoke.sh PASS=6/6
+- Total duration         : 111s
+- External /health       : 200 OK, status='ok', version=0.1.0
+
+The chain is now repeatable: any push to `dev`/`main` matching the path
+filter, OR `workflow_dispatch`, redeploys.
+
+After step 6 (Vercel env vars) lands, landing `paxio.network` renders
+real numbers from `api.paxio.network` and M-L8 is **ВЫПОЛНЕН**.
 
 ## Не делаем в M-L8 (явный non-scope)
 
@@ -135,3 +166,29 @@ After step 6, landing `paxio.network` renders real numbers from
 - **TD candidate**: `docker-compose.production.yml` lives in repo root AND
   `infra/paxio-prod/docker-compose.yml` exists — two compose files. Document
   in README which is "source of truth"; DRY later.
+
+## Tech debt actually discovered during M-L8 deploy work
+
+These need reviewer to register (architect can't write `tech-debt.md` rows):
+
+- **TD-26 candidate** — `apps/back/server/main.cjs` mounts handlers from the
+  VM-loader as raw factory function references (e.g. `domain['07-intelligence']
+  .landing.getHero` is `undefined`). Loader returns the IIFE-wrapped factory,
+  not a constructed service object. Wiring layer is missing: each FA's
+  factory needs to be invoked with its deps to produce the service the
+  routes can call. Symptom in production: any non-`/health` route 500s.
+  Hot-fix milestone: M-L8.3.
+- **TD-27 candidate** — `apps/back/server/infrastructure/db.cjs` requires
+  `postgres-storage.js` whose source has top-level `import { ... } from
+  '@paxio/types'`. Native Node CJS cannot resolve that ESM workspace import,
+  so db.cjs catches the error and returns `checks.database='skipped'` even
+  though Postgres IS reachable from the backend container (paxio + paxio-postgres
+  share a docker network). Smoke test soft-accepts `'skipped'` until this
+  closes; reverting to strict `'ok'` is the closure marker.
+  Hot-fix milestone: M-L8.4.
+
+Both were uncovered while the deploy chain was being validated end-to-end.
+The deploy chain itself is GREEN; these are pre-existing wiring gaps that
+the deploy makes visible (because the previous on-host image was the same
+buggy state). Production CAN run with these open — `/health` returns 200 —
+but no business-logic endpoints work yet.
