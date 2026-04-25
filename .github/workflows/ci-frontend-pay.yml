@@ -10,13 +10,6 @@ on:
       - 'packages/hooks/**'
       - 'packages/api-client/**'
       - 'packages/auth/**'
-      - 'packages/types/**'
-      - 'packages/interfaces/**'
-      - 'packages/errors/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'turbo.json'
-      - 'tsconfig.base.json'
       - '.github/workflows/ci-frontend-pay.yml'
   push:
     branches: [dev, main]
@@ -26,10 +19,6 @@ on:
       - 'packages/hooks/**'
       - 'packages/api-client/**'
       - 'packages/auth/**'
-      - 'packages/types/**'
-      - 'packages/interfaces/**'
-      - 'packages/errors/**'
-      - 'pnpm-lock.yaml'
 
 concurrency:
   group: ci-fe-pay-${{ github.ref }}

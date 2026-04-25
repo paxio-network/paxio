@@ -5,6 +5,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# TD-11 fix: ensure log directory exists before any redirect. The script was
+# written with paths under $HOME/tmp/ which is not guaranteed on fresh dev
+# machines or CI runners. Without this mkdir, the very first redirect
+# `>>"$HOME/tmp/m01c-contracts.log"` fails because the directory is missing,
+# the `if` branch falls into `bad`, and the failure is indistinguishable
+# from a real test failure. Result: 4/29 steps report ❌ FAILED while the
+# underlying vitest runs never even started. `mkdir -p` is idempotent and
+# creates nothing if the dir already exists.
+mkdir -p "$HOME/tmp"
+
 PASS=0
 FAIL=0
 
@@ -13,10 +23,10 @@ bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 step() { echo; echo "▶ $1"; }
 
 step "1. Contract tests GREEN"
-if pnpm vitest run tests/landing-contracts.test.ts --reporter=dot >/tmp/m01c-contracts.log 2>&1; then
+if pnpm vitest run tests/landing-contracts.test.ts --reporter=dot >>"$HOME/tmp/m01c-contracts.log" 2>&1; then
   ok "landing-contracts.test.ts (41 tests)"
 else
-  bad "contracts FAILED — see /tmp/m01c-contracts.log"
+  bad "contracts FAILED — see $HOME/tmp/m01c-contracts.log"
 fi
 
 step "2. Backend LandingStats factory + 7 handlers exist"
@@ -27,10 +37,10 @@ for handler in landing hero ticker agents-top rails network-snapshot heatmap; do
 done
 
 step "3. Backend domain tests GREEN"
-if pnpm vitest run products/07-intelligence/tests/landing-stats.test.ts --reporter=dot >/tmp/m01c-backend.log 2>&1; then
+if pnpm vitest run products/07-intelligence/tests/landing-stats.test.ts --reporter=dot >>"$HOME/tmp/m01c-backend.log" 2>&1; then
   ok "landing-stats.test.ts GREEN"
 else
-  bad "backend behavior tests FAILED — see /tmp/m01c-backend.log"
+  bad "backend behavior tests FAILED — see $HOME/tmp/m01c-backend.log"
 fi
 
 step "4. Frontend sections exist"
@@ -62,17 +72,17 @@ for comp in LiveTicker AgentTable Sparkline FAPDiagram NetworkGraph TerminalWidg
 done
 
 step "7. Frontend build clean"
-if pnpm turbo run build --filter=@paxio/landing-app >/tmp/m01c-build.log 2>&1; then
+if pnpm turbo run build --filter=@paxio/landing-app >>"$HOME/tmp/m01c-build.log" 2>&1; then
   ok "landing build"
 else
-  bad "landing build FAILED — see /tmp/m01c-build.log"
+  bad "landing build FAILED — see $HOME/tmp/m01c-build.log"
 fi
 
 step "8. Frontend smoke test"
-if pnpm vitest run apps/frontend/landing/tests/ --reporter=dot >/tmp/m01c-frontend.log 2>&1; then
+if pnpm vitest run apps/frontend/landing/tests/ --reporter=dot >>"$HOME/tmp/m01c-frontend.log" 2>&1; then
   ok "landing smoke tests"
 else
-  bad "landing smoke tests FAILED — see /tmp/m01c-frontend.log"
+  bad "landing smoke tests FAILED — see $HOME/tmp/m01c-frontend.log"
 fi
 
 echo

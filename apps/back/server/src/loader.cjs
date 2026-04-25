@@ -16,6 +16,25 @@ const OPTIONS = {
   displayErrors: false,
 };
 
+// Loads a single .js file under the VM sandbox. Two file shapes coexist:
+//
+//  1. Hand-written `api/*.js` — eOlympus-style IIFE. The file's last
+//     expression IS the exports literal (e.g. `({ httpMethod, path,
+//     method })`). Wrapping in `'use strict';\n{\n${src}\n}` makes
+//     `vm.Script.runInContext` return that literal directly.
+//
+//  2. esbuild-bundled `domain/*.js` — produced by `scripts/bundle-vm-
+//     modules.mjs` post-tsc. Output is `var __paxio_module = (() => {
+//     ... })();\n__paxio_module;\n`. Inside the wrap the trailing
+//     `__paxio_module;` is the last expression statement, so the
+//     wrapped block evaluates to the bundle's exports object. As an
+//     extra safety net we also read `__paxio_module` off the context
+//     (esbuild's `var` assigns onto the script's global), preferring
+//     it when the script's own return value is undefined.
+//
+// The sandbox slot `__paxio_module: undefined` exists so the bundled
+// IIFE has a writable global to bind onto — vm.createContext freezes
+// the *prototype chain*, not the slot, when the slot is pre-declared.
 const load = async (filePath, sandbox) => {
   const src = await fsp.readFile(filePath, 'utf8');
   const code = `'use strict';\n{\n${src}\n}`;
@@ -23,8 +42,15 @@ const load = async (filePath, sandbox) => {
     ...OPTIONS,
     lineOffset: -2,
   });
-  const context = vm.createContext(Object.freeze({ ...sandbox }));
-  return script.runInContext(context, OPTIONS);
+  const sandboxWithSlot = { ...sandbox, __paxio_module: undefined };
+  const context = vm.createContext(sandboxWithSlot);
+  const result = script.runInContext(context, OPTIONS);
+  // For hand-written api/*.js result IS the IIFE literal.
+  // For bundled domain/*.js result is also __paxio_module (trailing
+  // expression appended by bundle-vm-modules.mjs); fall back to the
+  // context slot if for some reason the trailing expression evaluates
+  // to undefined first (e.g. early bundler version without suffix).
+  return result ?? sandboxWithSlot.__paxio_module;
 };
 
 const loadDir = async (dir, sandbox) => {
@@ -57,7 +83,13 @@ const loadDeepDir = async (dir, sandbox) => {
 };
 
 const loadApplication = async (appPath, serverContext) => {
-  const { console: logger, config, errors, telemetry } = serverContext;
+  const {
+    console: logger,
+    config,
+    errors,
+    telemetry,
+    agentStorage,
+  } = serverContext;
 
   // Base sandbox — available to all VM layers
   const sandbox = {
@@ -74,6 +106,7 @@ const loadApplication = async (appPath, serverContext) => {
     config: Object.freeze(config),
     errors: Object.freeze(errors),
     telemetry: Object.freeze(telemetry),
+    agentStorage: Object.freeze(agentStorage ?? null),
   };
 
   // Layer 1: lib (permissions, validation helpers, Zod schemas)

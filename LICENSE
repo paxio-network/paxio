@@ -1,0 +1,75 @@
+Paxio Network — Proprietary License
+====================================
+
+Copyright (c) 2026 Paxio Network. All Rights Reserved.
+
+This repository and its contents (the "Software") are the proprietary and
+confidential property of Paxio Network. The Software is published on a
+public Git hosting service ONLY for the purposes of transparency,
+collaboration with authorized contributors, and internal continuous
+integration tooling. Public visibility does NOT constitute a grant of any
+rights to any third party.
+
+NO RIGHTS GRANTED
+-----------------
+No part of the Software, in source or compiled form, may be:
+  (a) used, executed, or run, whether for personal, academic, or commercial
+      purposes;
+  (b) copied, reproduced, or duplicated, in whole or in part;
+  (c) modified, adapted, translated, or made into derivative works;
+  (d) merged with other software, embedded in other products, or combined
+      with other code;
+  (e) published, distributed, redistributed, sublicensed, or sold;
+  (f) reverse-engineered, decompiled, or disassembled;
+  (g) used to train, fine-tune, evaluate, or benchmark machine-learning,
+      LLM, AI, or other automated systems;
+
+without the prior, written, express permission of an authorized
+representative of Paxio Network.
+
+CONTRIBUTIONS
+-------------
+Pull requests and issues opened by external parties are welcome ONLY when
+the contributor has signed a separate Contributor License Agreement (CLA)
+provided by Paxio Network. Submitting a pull request without a signed CLA
+does NOT grant the contributor any rights and does NOT obligate Paxio
+Network to accept, review, or respond to the contribution. Any code
+submitted without an executed CLA may be ignored, declined, or, at the
+sole discretion of Paxio Network, accepted with the contributor's
+implicit assignment of all rights to Paxio Network under this license.
+
+ENFORCEMENT
+-----------
+Unauthorized use, copying, modification, distribution, or any other
+exercise of any right reserved above constitutes copyright infringement
+and a violation of applicable intellectual property and trade secret
+laws. Paxio Network reserves the right to pursue all available legal
+remedies, including injunctive relief and damages.
+
+NO WARRANTY
+-----------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND
+TITLE. IN NO EVENT SHALL PAXIO NETWORK, ITS AFFILIATES, OFFICERS,
+EMPLOYEES, OR AGENTS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+NO TRADEMARK LICENSE
+--------------------
+"Paxio", "Paxio Network", and any associated logos, names, or marks are
+trademarks of Paxio Network. Nothing in this license grants any right or
+permission to use any trademark of Paxio Network in any way.
+
+CONTACT FOR LICENSING INQUIRIES
+-------------------------------
+Commercial licensing, partnership, and CLA inquiries: open a private
+issue or contact Paxio Network through the contact information published
+at https://paxio.network.
+
+This license supersedes any inconsistent terms suggested by package
+manifests (e.g. `"license"` field in `package.json`) which may default to
+short SPDX identifiers (such as `UNLICENSED`) for tooling compatibility.
+In case of any conflict, the terms of this LICENSE file govern.

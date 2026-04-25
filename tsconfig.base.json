@@ -24,7 +24,10 @@
       "@paxio/errors": ["packages/errors/src/index.ts"],
       "@paxio/utils": ["packages/utils/src/index.ts"],
       "@paxio/utils/clock": ["packages/utils/src/clock.ts"],
-      "@paxio/utils/logger": ["packages/utils/src/logger.ts"]
+      "@paxio/utils/logger": ["packages/utils/src/logger.ts"],
+      "@paxio/api-client": ["packages/api-client/src/index.ts"],
+      "@paxio/hooks": ["packages/hooks/src/index.ts"],
+      "@paxio/ui": ["packages/ui/src/index.tsx"]
     },
     "types": ["node"]
   },

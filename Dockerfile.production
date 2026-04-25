@@ -1,0 +1,150 @@
+# syntax=docker/dockerfile:1.7
+#
+# Paxio backend production image (M-L8).
+#
+# Pattern adapted from /home/openclaw/PROJECT/Dockerfile.production but ported
+# from npm/single-package to pnpm/Turborepo monorepo via corepack.
+#
+# Stages:
+#   1. deps    — install full workspace deps under pnpm
+#   2. build   — run `pnpm build` (tsc → dist/ + copy-api-handlers.mjs)
+#   3. runtime — minimal node:22-alpine, non-root, only what server needs at runtime
+#
+# Final image runs `node apps/back/server/main.cjs` which loads VM-sandboxed
+# handlers from `dist/products/<fa>/app/api/*.js`.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1: deps  — install workspace dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS deps
+
+ENV CI=true
+ENV PNPM_HOME=/root/.local/share/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+
+WORKDIR /app
+
+# Enable corepack so pnpm version is pinned via packageManager field of
+# package.json (currently pnpm@10.33.0).
+RUN corepack enable
+
+# Copy lockfile + workspace metadata + every package.json so pnpm can resolve
+# the full workspace graph without copying source (better layer caching:
+# changing a `.ts` file does NOT invalidate this layer).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
+COPY turbo.json tsconfig*.json ./
+
+# Workspace package.json files. We use `--parents` so the relative directory
+# structure is preserved (apps/back/package.json → /app/apps/back/package.json).
+COPY apps/back/package.json ./apps/back/
+COPY apps/frontend/landing/package.json ./apps/frontend/landing/
+COPY apps/frontend/registry/package.json ./apps/frontend/registry/
+COPY apps/frontend/pay/package.json ./apps/frontend/pay/
+COPY apps/frontend/radar/package.json ./apps/frontend/radar/
+COPY apps/frontend/intel/package.json ./apps/frontend/intel/
+COPY apps/frontend/docs/package.json ./apps/frontend/docs/
+COPY apps/frontend/wallet/package.json ./apps/frontend/wallet/
+COPY apps/frontend/fleet/package.json ./apps/frontend/fleet/
+COPY packages/types/package.json ./packages/types/
+COPY packages/interfaces/package.json ./packages/interfaces/
+COPY packages/errors/package.json ./packages/errors/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/hooks/package.json ./packages/hooks/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/auth/package.json ./packages/auth/
+COPY products/01-registry/package.json ./products/01-registry/
+COPY products/02-facilitator/package.json ./products/02-facilitator/
+COPY products/03-wallet/package.json ./products/03-wallet/
+COPY products/04-security/package.json ./products/04-security/
+COPY products/05-bitcoin-agent/package.json ./products/05-bitcoin-agent/
+COPY products/06-compliance/package.json ./products/06-compliance/
+COPY products/07-intelligence/package.json ./products/07-intelligence/
+
+# `pnpm install` on the workspace fetches everything and links it. We want a
+# faithful install (frozen lockfile), but no postinstall scripts that touch
+# git submodules / native deps in production builds.
+RUN pnpm config set ignore-scripts true \
+ && pnpm install --frozen-lockfile
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2: build  — compile TS → dist/ + copy VM-sandbox handlers
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS build
+
+ENV PNPM_HOME=/root/.local/share/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+
+WORKDIR /app
+
+RUN corepack enable
+
+# Pull installed deps from stage 1
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps ./apps
+COPY --from=deps /app/packages ./packages
+COPY --from=deps /app/products ./products
+COPY --from=deps /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/turbo.json ./
+COPY --from=deps /app/tsconfig*.json ./
+
+# Now bring in source code
+COPY scripts ./scripts
+COPY apps/back ./apps/back
+COPY packages ./packages
+COPY products ./products
+
+# Build: tsc -p tsconfig.app.json + node scripts/copy-api-handlers.mjs
+# Output → dist/ at /app/dist
+RUN pnpm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 3: runtime  — minimal final image
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS runtime
+
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV HOST=0.0.0.0
+
+# wget is provided by busybox in alpine — used by HEALTHCHECK below. Curl is
+# NOT needed.
+
+WORKDIR /app
+
+# Non-root user (matches /home/openclaw/PROJECT pattern, uid 1001).
+RUN addgroup -g 1001 -S nodejs \
+ && adduser -S nodejs -u 1001 -G nodejs
+
+# We need:
+#   - apps/back/server/**         (CJS Fastify infrastructure, runs as entrypoint)
+#   - apps/back/package.json      (declares pg + fastify + pino dependencies)
+#   - dist/                       (compiled TS + copied VM-sandbox handlers)
+#   - node_modules/               (resolved by pnpm — the symlinks need full graph)
+#   - package.json                (read at boot for /health version field)
+#   - products/*/app/{config,data}/*.json (reference data — not part of dist)
+#
+# We DO NOT need: tests, frontend apps, opensrc, docs, .git, .claude, ...
+# (excluded by .dockerignore from the source COPY but stage 2 has them — so we
+# copy selectively here from stage 2.)
+
+COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=build --chown=nodejs:nodejs /app/apps/back ./apps/back
+COPY --from=build --chown=nodejs:nodejs /app/products ./products
+COPY --from=build --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=build --chown=nodejs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+
+USER nodejs
+
+EXPOSE 3001
+
+# HEALTHCHECK: docker-compose passes through; Caddy upstream uses its own
+# health probe. wget --spider only checks for HTTP 200 — body.status semantics
+# (ok|degraded) are surfaced via /health response body for Prometheus scraping,
+# not via the Docker healthcheck signal.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1:3001/health || exit 1
+
+CMD ["node", "apps/back/server/main.cjs"]

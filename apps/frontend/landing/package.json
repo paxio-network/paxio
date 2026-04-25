@@ -2,14 +2,15 @@
   "name": "@paxio/landing-app",
   "version": "0.1.0",
   "private": true,
-  "description": "paxio.network — main marketing landing",
+  "description": "paxio.network \u2014 main marketing landing",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
@@ -18,7 +19,9 @@
     "@paxio/ui": "workspace:*",
     "@paxio/hooks": "workspace:*",
     "@paxio/api-client": "workspace:*",
-    "@paxio/auth": "workspace:*"
+    "@paxio/auth": "workspace:*",
+    "@paxio/types": "workspace:*",
+    "@tanstack/react-query": ">=5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -29,6 +32,8 @@
     "vitest": "^2.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@testing-library/react": "^16.0.0",
-    "@testing-library/dom": "^10.0.0"
+    "@testing-library/dom": "^10.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.0.0"
   }
 }

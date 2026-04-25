@@ -1,0 +1,100 @@
+# Paxio backend production image — exclude dev artifacts from build context.
+#
+# Keep build context small: less I/O at `docker build` start, fewer layers
+# invalidated on unrelated edits, and fewer accidentally-leaked secrets.
+#
+# Be aware: stage 1 (deps) ONLY copies package.json files (never source), so
+# this list mostly matters for stage 2 (build) where we `COPY apps/back …`.
+
+# Node + lockfile artifacts (re-installed inside the image)
+node_modules
+**/node_modules
+.pnpm-store
+.npm
+
+# Git
+.git
+.gitignore
+.gitmodules
+.gitattributes
+
+# Secrets — never leak into image layers
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Build outputs (we rebuild inside the image; bringing host dist would
+# overwrite the freshly-built one)
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+out
+**/out
+build
+**/build
+coverage
+
+# Tests + test fixtures (not needed at runtime)
+tests
+**/tests
+**/__tests__
+*.test.ts
+*.test.tsx
+*.test.js
+*.spec.ts
+*.spec.tsx
+
+# Docs / readmes (not needed at runtime)
+docs
+*.md
+**/README.md
+**/CHANGELOG.md
+
+# External source references (huge — opensrc/repos has cloned upstream sources)
+opensrc
+
+# Tooling configs not needed in image
+.claude
+.github
+.vscode
+.idea
+.editorconfig
+.eslintignore
+.prettierignore
+
+# Frontend apps — backend image doesn't need source. But pnpm
+# `--frozen-lockfile` requires every workspace's package.json to be present
+# when resolving the workspace graph (otherwise `ERR_PNPM_NO_LOCKFILE`-ish
+# errors), so we exclude frontend SOURCE while keeping each manifest.
+apps/frontend
+!apps/frontend/*/package.json
+!apps/frontend/*/package-lock.json
+
+# Logs / temp
+*.log
+logs
+tmp
+.cache
+
+# Docker (don't recursively include the dockerfile context inside itself)
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose*.yml
+
+# Rust / canister artifacts (backend image is Node-only)
+target
+**/target
+.dfx
+canisters
+products/*/canister
+products/*/canisters
+products/*/cli
+products/*/http-proxy
+platform

@@ -2,14 +2,15 @@
   "name": "@paxio/intel-app",
   "version": "0.1.0",
   "private": true,
-  "description": "intel.paxio.network — Intelligence Terminal (paid)",
+  "description": "intel.paxio.network \u2014 Intelligence Terminal (paid)",
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
@@ -29,6 +30,8 @@
     "vitest": "^2.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@testing-library/react": "^16.0.0",
-    "@testing-library/dom": "^10.0.0"
+    "@testing-library/dom": "^10.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.0.0"
   }
 }

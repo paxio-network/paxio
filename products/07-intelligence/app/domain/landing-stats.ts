@@ -5,6 +5,10 @@
 // All functions are pure (no I/O inside the domain). Upstream calls happen
 // in API handlers or are injected as async deps.
 //
+// Node transformation (position hash, bitcoin_native, name truncation,
+// volume_usd_5m) is delegated to the pure `buildNetworkSnapshot` from
+// `network-snapshot-builder.ts` — no duplication.
+//
 import type {
   Result,
   HeroState,
@@ -16,7 +20,8 @@ import type {
   LandingPayload,
 } from '@paxio/types';
 import { HEAT_ROWS, HEAT_COLS } from '@paxio/types';
-import type { LandingStats, LandingError } from '@paxio/interfaces';
+import type { AgentStorage, LandingStats, LandingError } from '@paxio/interfaces';
+import { buildNetworkSnapshot } from './network-snapshot-builder.js';
 
 // --- Internal helpers (pure domain, no I/O) ---
 
@@ -28,8 +33,8 @@ const zeroHeatmap = (): HeatGrid => ({
   window_hours: 24,
 });
 
-/** Build zero rail array (early-phase FAP not ready). */
-const zeroRails = (): RailInfo[] => [];
+/** Build zero rail array (fallback when upstream FAP is unreachable). */
+const zeroRails = (): readonly RailInfo[] => Object.freeze<RailInfo[]>([]);
 
 /** Build zero hero state (all zeros — real empty product state). */
 const zeroHero = (): HeroState => ({
@@ -187,9 +192,43 @@ export interface LandingStatsDeps {
    * If not available, return 0.
    */
   getGuardAttacks24h: () => Promise<Result<number, LandingError>>;
+
+  /**
+   * FAP rails catalog — canonical list of payment rails Paxio exposes
+   * (x402, MPP, TAP, BTC L1, …). Returned by FapRouter.getRails().
+   *
+   * Injected as a dep so landing stays independent of FA-02 internals.
+   * When upstream FAP is unreachable, implementations should resolve to
+   * `err({ code: 'upstream_error', … })` and landing will fall back to
+   * an empty array (Real Data Invariant — empty real > fake 2.4M).
+   */
+  getRailsCatalog: () => Promise<Result<readonly RailInfo[], LandingError>>;
+
+  /**
+   * AgentStorage port — provides listRecent for NetworkGraph nodes.
+   * Introduced M-L5. Optional until PostgresStorage is landed by registry-dev.
+   */
+  agentStorage: AgentStorage;
+
+  /**
+   * Pure node transformer for NetworkGraph.
+   * Delegates to `buildNetworkSnapshot(cards, nowMs)` from
+   * `network-snapshot-builder.ts` — eliminates duplicated node-building logic
+   * (position hash, name truncation, bitcoin_native, volume_usd_5m).
+   *
+   * Optional: falls back to the real implementation when absent so existing
+   * callers (test fixtures, legacy code) are not broken.
+   */
+  buildNetworkSnapshot?: typeof import('./network-snapshot-builder.js').buildNetworkSnapshot;
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
+  // Dual-path DI: deps.agentStorage (tests) takes priority over globalThis.agentStorage (production sandbox).
+  // Both provide the same AgentStorage interface; this lets tests override without modifying production code.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sandboxAgentStorage = typeof globalThis !== 'undefined' && (globalThis as any).agentStorage;
+  const agentStorage = deps.agentStorage ?? sandboxAgentStorage;
+
   // --- getHero ---
   const getHero = async (): Promise<Result<HeroState, LandingError>> => {
     try {
@@ -263,6 +302,8 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
     const heroResult = await getHero();
     if (!heroResult.ok) return heroResult;
     const hero = heroResult.value;
+    // Ticker RAILS lane doesn't need the FAP catalog when traffic is zero
+    // (all share_pct=0 → no interesting "top rail"). Keep it empty here.
     const rails = zeroRails();
     return {
       ok: true,
@@ -292,22 +333,43 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getRails ---
-  // Early phase: FAP not ready — return empty array, frontend shows skeleton
+  // Pulls the canonical catalog from the FAP router (FA-02). Real data:
+  // 4 rails with `share_pct = 0` until M-L4b wires traffic metering.
+  // On upstream failure we fall back to an empty array — Real Data
+  // Invariant says "empty real is better than fake populated".
   const getRails = async (): Promise<Result<readonly RailInfo[], LandingError>> => {
-    return { ok: true, value: [] };
+    try {
+      const result = await deps.getRailsCatalog();
+      if (!result.ok) {
+        return { ok: true, value: zeroRails() };
+      }
+      return { ok: true, value: result.value };
+    } catch (err) {
+      return { ok: true, value: zeroRails() };
+    }
   };
 
   // --- getNetworkSnapshot ---
-  // Early phase: no agent graph data — return empty snapshot
+  // Uses agentStorage.listRecent (injected via deps or VM globalThis).
+  // Falls back to empty snapshot on StorageError — Real Data Invariant.
   const getNetworkSnapshot = async (): Promise<Result<NetworkSnapshot, LandingError>> => {
-    return {
-      ok: true,
-      value: {
-        nodes: [],
-        pairs: [],
-        generated_at: nowIso(deps.clock()),
-      },
-    };
+    if (!agentStorage?.listRecent) {
+      return { ok: true, value: buildNetworkSnapshot([], deps.clock()) };
+    }
+    try {
+      const cardsResult = await agentStorage.listRecent(20);
+      if (!cardsResult.ok) {
+        // StorageError discriminated union: 'message' key only on db_unavailable,
+        // 'not_found' has no message field — use guard to extract safely.
+        const msg = 'message' in cardsResult.error
+          ? (cardsResult.error as { message: string }).message
+          : String(cardsResult.error);
+        return { ok: false, error: { code: 'upstream_error', message: msg } };
+      }
+      return { ok: true, value: buildNetworkSnapshot(cardsResult.value, deps.clock()) };
+    } catch (err) {
+      return { ok: false, error: { code: 'upstream_error', message: String(err) } };
+    }
   };
 
   // --- getHeatmap ---
@@ -317,12 +379,14 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getLanding ---
-  // SSR one-shot — aggregates all incremental responses into one payload
+  // SSR one-shot — aggregates all incremental responses into one payload.
   const getLanding = async (): Promise<Result<LandingPayload, LandingError>> => {
-    const [heroResult, tickerResult, agentsResult] = await Promise.allSettled([
+    const [heroResult, tickerResult, agentsResult, railsResult, networkResult] = await Promise.allSettled([
       getHero(),
       getTickerLanes(),
       getTopAgents(20),
+      getRails(),
+      getNetworkSnapshot(),
     ]);
 
     const hero = heroResult.status === 'fulfilled' && heroResult.value.ok
@@ -341,6 +405,13 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
       ? agentsResult.value.value as AgentPreview[]
       : [] as AgentPreview[];
 
+    // ZodLandingPayload requires rails.length >= 1. Once the FAP catalog
+    // lands we always have ≥4 rails; the zero-rails fallback here is for
+    // the narrow window where FAP is down and the landing still renders.
+    const rails = railsResult.status === 'fulfilled' && railsResult.value.ok
+      ? railsResult.value.value as RailInfo[]
+      : zeroRails() as RailInfo[];
+
     const ts = deps.clock();
     return {
       ok: true,
@@ -348,12 +419,10 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
         hero,
         ticker_lanes,
         agents,
-        rails: [],
-        network: {
-          nodes: [],
-          pairs: [],
-          generated_at: nowIso(ts),
-        },
+        rails,
+        network: networkResult.status === 'fulfilled' && networkResult.value.ok
+          ? networkResult.value.value
+          : { nodes: [], pairs: [], generated_at: nowIso(ts) },
         heatmap: zeroHeatmap(),
         generated_at: nowIso(ts),
       },

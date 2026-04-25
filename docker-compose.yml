@@ -1,0 +1,81 @@
+# Paxio backend — LOCAL DEVELOPMENT stack (M-L8).
+#
+# This compose file builds the Dockerfile.production image FROM LOCAL CONTEXT
+# (`build: .`) for `bash scripts/verify_M-L8_local.sh` to exercise. It is NOT
+# the file that runs on Hetzner — production uses
+# `infra/paxio-prod/docker-compose.yml` which pulls
+# `image: ghcr.io/paxio-network/paxio-backend:latest` instead.
+#
+# Mirrors the proven /home/openclaw/PROJECT/docker-compose.yml pattern, ported
+# to Paxio service names (paxio-postgres, paxio-backend) so verify_M-L8_local.sh
+# can `docker inspect paxio-backend` deterministically.
+#
+# What's included: postgres + backend.
+# What's excluded (intentional, see milestone "Не делаем"):
+#   - Redis     — no caching layer used yet (M-L9+)
+#   - Qdrant    — no vector search yet (Intelligence FA)
+#   - ICP local replica — production talks to mainnet IC; replica is dev-only
+#   - Caddy     — local stack hits backend directly via 3001:3001
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paxio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paxio
+      POSTGRES_USER: paxio
+      # Dev-only credentials — hardcoded is fine for a local stack that lives
+      # behind `docker compose down -v` cleanup. Production uses Docker secrets
+      # (see infra/paxio-prod/docker-compose.yml `POSTGRES_PASSWORD_FILE`).
+      POSTGRES_PASSWORD: paxio
+    ports:
+      # Expose 5432 for direct psql / migration tooling on the dev host.
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - paxio_net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U paxio -d paxio']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    image: paxio-backend:m-l8-local
+    container_name: paxio-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://paxio:paxio@postgres:5432/paxio
+    ports:
+      - '3001:3001'
+    networks:
+      - paxio_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Match Dockerfile.production HEALTHCHECK timing for consistency. The
+      # verify_M-L8_local.sh script polls `docker inspect paxio-backend`
+      # State.Health.Status; start_period: 40s lets the Node process boot +
+      # open the listener before the first probe counts.
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:3001/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  pgdata:
+
+networks:
+  paxio_net:
+    driver: bridge

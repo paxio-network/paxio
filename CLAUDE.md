@@ -261,7 +261,12 @@ feature/* → dev → main
 - **feature/\*** — одна фича или milestone, создаётся от `dev`
 - **dev** — рабочая интеграционная ветка
 - **main** — релиз (tagged `v*`)
-- **Merge = ТОЛЬКО user**. Агенты только создают PR. `git push --force` к main/dev — запрещён для всех агентов.
+- **Git push / PR creation = ТОЛЬКО architect + user.** Dev-агенты (`backend-dev`, `frontend-dev`, `icp-dev`, `registry-dev`) работают **только локально**: `git commit` на ветку которую architect подготовил, затем говорят «готово». `git push`, `gh pr create`, `gh api` — запрещены для dev-агентов (см. «Git Policy» секцию в каждом `.claude/agents/<dev>.md`). Причины: (1) dev-агенты не имеют доступа к `gh auth` token в subagent context — push всё равно упадёт; (2) единый audit trail (pushes атрибутируются architect/user); (3) architect ревьюит diff **до** публикации. Reviewer и test-runner тоже не пушат; test-runner полностью локальный.
+- **Two merge gates** (см. `.claude/rules/scope-guard.md::GIT & MERGE`):
+  - **`feature/* → dev`**: architect мержит **сам автоматически** после reviewer APPROVED + must-fix закрыты + CI green. Не нужен OK от user. Это убирает round-trip и не блокирует параллельные milestones.
+  - **`dev → main`**: ТОЛЬКО после явного OK от user с PR номером. Релиз — продуктовое решение, а не техническое; merge в main триггерит deploy-backend.yml.
+  - dev / reviewer / test-runner **никогда** не мержат куда бы то ни было. `git push --force` к main/dev запрещён всегда, без исключений.
+- **Orchestration = ТОЛЬКО user.** Architect — planner, не orchestrator. После hand-off отчёта architect ОСТАНАВЛИВАЕТСЯ и ждёт команду user'а. Architect НЕ запускает dev-агентов сам без явного приказа user'а на конкретный запуск.
 
 ## CI/CD (monorepo with path-filter workflows)
 

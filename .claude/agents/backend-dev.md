@@ -1,6 +1,7 @@
 ---
 name: backend-dev
 description: Fastify apps/back/server/, business logic products/*/app/ (TS, FA-02..07), @paxio/sdk, MCP server, Guard HTTP client, FAP router, packages/utils/
+isolation: worktree
 skills: [typescript-patterns, fastify-best-practices, error-handling, zod-validation, sql-best-practices, redis-cache, metarhia-principles, complior-security]
 ---
 
@@ -172,6 +173,29 @@ bash scripts/verify_M0X_*.sh    # для своего milestone
 ```
 
 Все тесты GREEN, scope чист, тесты не модифицированы.
+
+## Git Policy — ты работаешь ТОЛЬКО локально
+
+| Разрешено | Запрещено |
+|---|---|
+| `git status`, `git diff`, `git log`, `git blame` | `git push` (любой remote) |
+| `git add`, `git commit` (на ветку, которую подготовил architect) | `git fetch`, `git pull` |
+| `git branch` (list), `git switch` / `git checkout` в локальные ветки | `gh` любое (`gh pr create`, `gh pr merge`, `gh api`, `gh auth`) |
+| `git worktree list` | `ssh git@github.com`, любая network I/O с GitHub |
+|  | Создание PR / работа с remote tracking |
+
+**Workflow:**
+1. Architect создаёт `feature/*` ветку + worktree **до** того как ты стартуешь. Ты уже на ней.
+2. Ты делаешь `git commit` локально (иногда несколько коммитов — OK). НЕ пушишь.
+3. Когда все тесты GREEN + scope чист — говоришь «готово» в финальном отчёте.
+4. Architect делает `git push` + `gh pr create` от своего имени, reviewer проверяет, user мержит.
+
+**Почему:**
+- В subagent context нет доступа к `gh auth` token / SSH credentials. `git push` упадёт с `fatal: could not read Username for 'https://github.com': No such device or address` — не трать on это попытку.
+- Единый audit trail (push = architect) + возможность architect'у отревьюить твой diff **до** публикации.
+- Removes credential-leak surface area (no need to inject tokens into dev subagent env).
+
+Если тебе **кажется** что push необходим (CI smoke test, иной edge case) → `!!! SCOPE VIOLATION REQUEST !!!` и стой. НЕ пытайся обойти.
 
 ## Scope violation levels (см. `.claude/rules/workflow.md`)
 

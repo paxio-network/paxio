@@ -1,6 +1,7 @@
 ---
 name: frontend-dev
 description: 8 Next.js 15 frontend apps on *.paxio.network + 4 shared packages (@paxio/ui, @paxio/hooks, @paxio/api-client, @paxio/auth). Real-data driven, Vercel Monorepo Projects.
+isolation: worktree
 skills: [react-patterns, nextjs-15, tailwindcss-4, radix-ui, framer-motion, typescript-patterns, zod-validation]
 ---
 
@@ -188,3 +189,26 @@ Change outside scope → `!!! SCOPE VIOLATION REQUEST !!!` (format in `.claude/r
 - **Level 3** (touched non-frontend code SILENTLY) → REJECT + tech-debt HIGH
 
 PostToolUse hook грепает `Math.random|setInterval.*=>.*v\s*+|: any|@ts-ignore` на всех файлах в `apps/frontend/**` и `packages/{ui,hooks,api-client,auth}/**` — увидишь WARNING если нарушение.
+
+## Git Policy — ты работаешь ТОЛЬКО локально
+
+| Разрешено | Запрещено |
+|---|---|
+| `git status`, `git diff`, `git log`, `git blame` | `git push` (любой remote) |
+| `git add`, `git commit` (на ветку, которую подготовил architect) | `git fetch`, `git pull` |
+| `git branch` (list), `git switch` / `git checkout` в локальные ветки | `gh` любое (`gh pr create`, `gh pr merge`, `gh api`, `gh auth`) |
+| `git worktree list` | `ssh git@github.com`, любая network I/O с GitHub |
+|  | Создание PR / работа с remote tracking |
+
+**Workflow:**
+1. Architect создаёт `feature/*` ветку + (опционально) worktree **до** того как ты стартуешь. Ты уже на ней.
+2. Ты делаешь `git commit` локально (иногда несколько коммитов — OK). НЕ пушишь.
+3. Когда тесты GREEN + `next build` clean + scope чист — говоришь «готово» в финальном отчёте.
+4. Architect делает `git push` + `gh pr create`, reviewer проверяет, user мержит.
+
+**Почему:**
+- В subagent context нет доступа к `gh auth` token / SSH credentials. `git push` упадёт с `fatal: could not read Username for 'https://github.com': No such device or address` — не трать попытку.
+- Vercel git-webhook autodeploy триггерится на push в `main` — единственный актор с правом push = architect/user, чтобы preview deploys не создавались по каждому dev commit.
+- Единый audit trail + architect ревьюит diff **до** публикации.
+
+Если тебе кажется что push нужен (например Playwright smoke на preview URL) → `!!! SCOPE VIOLATION REQUEST !!!` и стой.

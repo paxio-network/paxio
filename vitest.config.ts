@@ -24,16 +24,19 @@ export default defineConfig({
     // Default run = green baseline. RED specs for pending tech-debt live in
     // `tests/_specs/` and run via `pnpm test:specs` (uses vitest.specs.config.ts).
     // Keeping them out of default CI — they're guidance for dev, not regressions.
-    include: ['tests/**/*.test.ts', 'products/*/tests/**/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'products/*/tests/**/*.test.ts',
+      'apps/frontend/landing/tests/**/*.test.ts',
+      'apps/frontend/landing/tests/**/*.test.tsx',
+    ],
     exclude: [
       'tests/**/*.integration.ts',
       'tests/_specs/**',
       'node_modules',
       'dist',
       'canisters',
-      'apps/frontend',
-      'products/*/canister',
-      'products/*/canisters',
+      'opensrc',
       'products/*/cli',
       'products/*/http-proxy',
       'products/*/ml',
@@ -47,4 +50,13 @@ export default defineConfig({
     },
     environment: 'node',
   },
+  workspace: [
+    {
+      extends: './apps/frontend/landing/vitest.config.ts',
+      test: {
+        include: ['apps/frontend/landing/tests/**/*.test.ts', 'apps/frontend/landing/tests/**/*.test.tsx'],
+        environment: 'node',  // landing smoke test uses module import, not DOM render
+      },
+    },
+  ],
 });
