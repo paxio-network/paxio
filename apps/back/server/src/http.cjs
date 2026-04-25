@@ -7,13 +7,66 @@
 const crypto = require('node:crypto');
 const { AppError } = require('../lib/errors.cjs');
 
-const initHealth = (server) => {
-  server.get('/health', async () => ({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    version: '0.1.0',
-    service: 'paxio-server',
-  }));
+// Read package.json once at module load — used as `version` field in /health.
+// Pattern mirrors /home/openclaw/PROJECT/server/src/http.js:4 (`const pkg =
+// require('../../package.json')`). If the file is unreadable in some exotic
+// runtime, fall back to a non-empty placeholder so ZodHealthResponse.version
+// (z.string().min(1)) stays valid.
+let PKG_VERSION = '0.1.0';
+try {
+  // ../../package.json relative to this file is repo root package.json.
+  // eslint-disable-next-line global-require
+  PKG_VERSION = require('../../../../package.json').version || '0.1.0';
+} catch {
+  // keep fallback
+}
+
+// Probe a single dependency. Returns one of:
+//   'ok'      — dependency reachable
+//   'error'   — dependency configured but unreachable / threw
+//   'skipped' — dependency not configured for this deployment
+// Failure is intentionally swallowed into a status string (NOT thrown) — health
+// endpoint must never 500 on a downed subsystem; degradation goes into
+// body.status. We log via console.error so operators see the underlying cause.
+const probeDb = async (db) => {
+  if (!db || typeof db.ping !== 'function') {
+    return 'skipped';
+  }
+  try {
+    await db.ping();
+    return 'ok';
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[health] db.ping failed:', err && err.message ? err.message : err);
+    return 'error';
+  }
+};
+
+// initHealth(server, deps) — exposes GET /health.
+//
+// `deps` is an optional object of injected probes:
+//   - deps.db.ping(): Promise<unknown> — Postgres reachability check
+//   - (future) deps.redis.ping, deps.qdrant.ping etc. — see ZodHealthChecks
+//     `.catchall(ZodHealthCheckStatus)` extension point.
+//
+// Body shape conforms to ZodHealthResponse (packages/types/src/health.ts).
+// HTTP status is ALWAYS 200, even when body.status='degraded' — Docker
+// HEALTHCHECK uses `wget --spider` which only checks for 200; semantic state
+// goes into body.status for Prometheus / k8s probes.
+const initHealth = (server, deps = {}) => {
+  server.get('/health', async () => {
+    const checks = {
+      database: await probeDb(deps && deps.db),
+    };
+    const anyError = Object.values(checks).some((v) => v === 'error');
+    return {
+      status: anyError ? 'degraded' : 'ok',
+      timestamp: new Date().toISOString(),
+      version: PKG_VERSION,
+      service: 'paxio-server',
+      checks,
+    };
+  });
 };
 
 const initCors = (server) => {

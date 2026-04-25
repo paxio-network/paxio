@@ -25,6 +25,7 @@ const errors = require('./lib/errors.cjs');
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 const APPLICATION_PATH = path.join(__dirname, '..', '..', 'dist', 'products');
+const DATABASE_URL = process.env.DATABASE_URL || '';
 
 const loggerConfig = { level: process.env.LOG_LEVEL || 'info' };
 
@@ -85,7 +86,34 @@ const pinoLogger = pino(loggerConfig);
   initCors(server);
   initErrorHandler(server);
 
-  initHealth(server);
+  // Lazy pg Pool — created only when DATABASE_URL is configured. Without it the
+  // /health endpoint reports checks.database='skipped' (acceptable: no DB →
+  // not degraded). With it, /health probes via SELECT 1 inside Pool.query.
+  let pgPool = null;
+  if (DATABASE_URL) {
+    try {
+      // eslint-disable-next-line global-require
+      const { Pool } = require('pg');
+      pgPool = new Pool({ connectionString: DATABASE_URL });
+      pgPool.on('error', (err) => {
+        // pg emits 'error' on idle clients losing connection — log but don't
+        // crash the process; next query reconnects.
+        pinoLogger.warn({ err: err.message }, 'pg pool idle client error');
+      });
+      pinoLogger.info(`Postgres pool initialized for ${DATABASE_URL.replace(/:[^:@/]*@/, ':***@')}`);
+    } catch (err) {
+      pinoLogger.warn(
+        { err: err.message },
+        'DATABASE_URL is set but `pg` module is not installed — health probe will be skipped',
+      );
+    }
+  }
+
+  const healthDeps = pgPool
+    ? { db: { ping: () => pgPool.query('SELECT 1') } }
+    : {};
+
+  initHealth(server, healthDeps);
   initWs(server, broadcaster);
   registerSandboxRoutes(server, appSandbox.api);
 
@@ -98,6 +126,10 @@ const pinoLogger = pino(loggerConfig);
     pinoLogger.info(`${signal} received, shutting down...`);
     try {
       await server.close();
+      if (pgPool) {
+        await pgPool.end();
+        pinoLogger.info('Postgres pool closed');
+      }
       pinoLogger.info('Server closed');
       process.exit(0);
     } catch (err) {
