@@ -106,7 +106,11 @@ describe('TD-25: VM sandbox loader can evaluate compiled product domain files', 
     it('vm.Script can construct (no SyntaxError)', () => {
       const src = readFileSync(fullPath, 'utf8');
       const code = wrapForLoader(src);
-      expect(() => new Script(code, { displayErrors: false })).not.toThrow();
+      // Note: `displayErrors: false` is a valid Node runtime option for
+      // vm.Script but is missing from the current `ScriptOptions` typing
+      // in `@types/node`. Default (display on stderr) is fine for unit
+      // tests — keeps the type checker happy without an `as any` cast.
+      expect(() => new Script(code)).not.toThrow();
     });
 
     it('vm.Script.runInContext produces a defined value (loader contract)', () => {
@@ -117,7 +121,7 @@ describe('TD-25: VM sandbox loader can evaluate compiled product domain files', 
       // statement in the block.
       const src = readFileSync(fullPath, 'utf8');
       const code = wrapForLoader(src);
-      const script = new Script(code, { displayErrors: false });
+      const script = new Script(code);
       const context = createContext({ ...minimalSandbox() });
       const result = script.runInContext(context, { timeout: 5000 });
       expect(
@@ -133,7 +137,7 @@ describe('TD-25: VM sandbox loader can evaluate compiled product domain files', 
       'utf8',
     );
     const code = wrapForLoader(src);
-    const script = new Script(code, { displayErrors: false });
+    const script = new Script(code);
     const context = createContext({ ...minimalSandbox() });
     const result = script.runInContext(context, { timeout: 5000 });
 
