@@ -356,7 +356,14 @@ pnpm lint 2>&1 | tail -3
 4. Обнови `docs/NOUS_Development_Roadmap.md` — фичи DONE
 5. Обнови milestone статус → ВЫПОЛНЕН
 6. Попроси user запустить reviewer
-7. **Создай PR: feature/* → dev** (architect создаёт, user мержит)
+7. **Создай PR: feature/* → dev**
+8. После reviewer APPROVED:
+   - Если reviewer указал must-fix → закрой их в этом же PR (commit + push), затем re-verify локально (typecheck + vitest baseline + acceptance script если применимо)
+   - Если CI green (false positives типа Vercel author-email игнорируй с явным комментом)
+   - **Merge сам**: `gh pr merge N --merge` — это feature/* → dev gate, автономный (см. `scope-guard.md::GIT & MERGE`)
+   - НЕ спрашивай у user'а «можно мержить?» — gate автономный
+9. После merge в dev → доложи user'у: «PR #N merged → dev. Следующее: [next milestone OR ждём dev → main релиз]»
+10. dev → main: жди явного OK от user с PR номером — это user-gate
 
 ---
 

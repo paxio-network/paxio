@@ -50,14 +50,26 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 ## GIT & MERGE — АБСОЛЮТНЫЕ ПРАВИЛА
 
-### Merge decision — ТОЛЬКО user. Merge execution — разрешено architect после explicit OK.
+### Two merge gates: feature/* → dev (architect autonomous) vs dev → main (user-only)
 
-**Decision vs execution.** Решение мержить — только user. Выполнение команды — может делать architect ПОСЛЕ явного «OK / мержи / go» от user.
+**Гейт 1 — `feature/* → dev`: architect мержит сам автоматически.** Не нужен явный OK от user. Условия (ВСЕ должны выполниться):
+1. Reviewer вынес `APPROVED` (с must-fix или без)
+2. Если были must-fix → architect их закрыл + локально проверил (typecheck clean, vitest baseline GREEN, acceptance script PASS если применимо)
+3. CI на PR зелёный (GitHub Actions all checks passed) — false positives типа Vercel author-email можно игнорировать с явным комментом «known false positive»
+4. Branch up-to-date с base (`dev`) — если есть конфликт, architect ребейзит сам
 
-- architect / dev / reviewer / test-runner **никогда** не мержат без явного OK от user
-- architect **может** выполнить `gh pr merge N --merge` после фразы user'а содержащей «мержи» / «merge» / «OK мержить» / «go ahead merge» на конкретный PR номер
+После всех 4 условий — `gh pr merge N --merge` + сообщение пользователю «PR #N merged → dev» + переход к следующему пункту плана. Не спрашивать «можно мержить?».
+
+**Гейт 2 — `dev → main`: ТОЛЬКО user.** Решение релизить — только user. Architect может выполнить `gh pr merge N --merge` для PR `dev → main` ТОЛЬКО после фразы user'а содержащей «мержи» / «merge» / «OK мержить» / «go ahead merge» на конкретный PR номер.
+
 - Фраза user'а должна быть **SPECIFIC** — содержать номер PR или однозначный контекст. «Да» без привязки к номеру = уточнить. «Мержи всё» = отказаться, просить по одному
 - `git push --force` к `main` / `dev` — **ЗАПРЕЩЕНО для всех агентов всегда, без исключений**, даже с user OK
+- dev / reviewer / test-runner **никогда** не мержат куда бы то ни было
+
+### Зачем разделение
+
+- `dev` — рабочая интеграционная ветка. Каждый успешно проревьюенный feature должен попадать туда без round-trip через user. Это убирает bottleneck когда работают параллельные milestones.
+- `main` — релизная. Merge туда = новая версия + tag + auto-trigger deploy-backend.yml. Решение «релизить именно сейчас» — продуктовое, требует user.
 
 ### Branch model: feature/* → dev → main
 

@@ -309,22 +309,27 @@ User явно попросил (2026-04-24): «говори короче но к
 
 | # | Кто | Что | Команда / деталь |
 |---|---|---|---|
-| 1 | user | «мержи PR #N» | — |
-| 2 | architect | `gh pr merge N --merge` | — |
+| 1 | reviewer | re-verify must-fix закрыты | — |
+| 2 | architect | `gh pr merge N --merge` (feature → dev, автономно) | — |
 | 3 | architect | rebase dependent branch | `git fetch && git rebase origin/dev && git push --force-with-lease` |
-| 4 | user | запустить reviewer на PR #M | — |
+| 4 | user | OK на dev → main для PR #M (с номером) | — |
+| 5 | architect | `gh pr merge M --merge` (dev → main, после OK user) | — |
 
 Каждая строка = одно действие, один актор, одна команда (или explicit `—` если действие очевидное). Нет «а вообще можно ещё…».
 
+**Ключевое разделение** (см. `.claude/rules/scope-guard.md::GIT & MERGE`):
+- `feature/* → dev`: architect мержит САМ автоматически (после APPROVED + must-fix done + CI green). Не спрашивай user.
+- `dev → main`: ТОЛЬКО после явного OK от user с PR номером. Без OK — НЕ мержи.
+
 ### Anti-pattern example (плохо)
 
-> «Можно либо смержить PR #11 сразу, либо подождать reviewer'а на #12 — оба варианта работают. Я в Mode A поэтому жду команд.»
+> «Можно либо смержить PR #11 сразу, либо подождать reviewer'а на #12 — оба варианта работают. Жду команд.»
 
 ### Correct (хорошо)
 
-> «Мержи PR #11 (unblocks #13 rebase). PR #12 можно параллельно — blockers no. После `gh pr merge 11 --merge` я сам rebash'у #13 + force-push + проверю typecheck.»
+> «PR #11 reviewer APPROVED + must-fix закрыт + CI green → merge → dev (выполняю сам). PR #12 идёт параллельно — blockers нет. Когда оба в dev и user даст OK на релиз → merge dev → main.»
 
-Разница: конкретика, рекомендация, исполнители, следующий шаг явен.
+Разница: конкретика, рекомендация, исполнители, явный gate (auto vs OK), следующий шаг.
 
 ---
 
