@@ -1,8 +1,12 @@
 name: Deploy · Backend (Hetzner)
 
 on:
+  # Deploy from `dev` for now (single staging+prod env on Hetzner). Switch to
+  # `[main]` only after we add a real staging or remove dev as the prod source.
+  # Mirrors PROJECT pattern (single-branch deploy) — the branch name is the
+  # only difference.
   push:
-    branches: [main]
+    branches: [dev, main]
     paths:
       - 'apps/back/**'
       - 'products/*/app/**'
