@@ -5,13 +5,13 @@
 
 ## Версия
 **Version:** 0.1.0
-**Last Updated:** 2026-04-24
-**Last Commit on dev:** `e898102` (merge: PR #2 `feature/reviewer-protocol-hardening`; contains `08937a2` N4 auto-push rule + `6952d11` reviewer APPROVED + TD-22 + `f5a1095`/`eff7f71`/`0aa60db` architect Phase 1.5 / Mode A/B constitutional fix)
+**Last Updated:** 2026-04-25
+**Last Commit on dev:** `63b557c` (merge: PR #16 `fix/frontend-lint-scripts`; baseline `pnpm vitest run` 566/566 GREEN, `pnpm typecheck` clean)
 
-**Open PRs awaiting user merge (all 3 reviewer-APPROVED 2026-04-24):**
-- PR #3 `feature/td-19-red-spec` (`f106908`) — TD-19 RED spec + corrected diagnosis (architect). Base is `3e756b4`, needs rebase onto current dev before merge.
-- PR #4 `feature/m-l5-contracts` (`fa9c573`) — M-L5 NetworkSnapshot contracts + 15-test RED spec + 11 dev-target RED tests (7 postgres-storage.listRecent + 4 landing-stats.getNetworkSnapshot). Base is `3e756b4`, needs rebase.
-- PR #5 `feature/reviewer-polish-from-complior` (`8b72792`) — reviewer-rule polish D19-D21 + Phase 4.1 Naming (architect). Already rebased onto `e898102` ✓.
+**Open PRs reviewer-APPROVED 2026-04-25, ready for architect to merge under new gate-1 rule:**
+- PR #18 `docs/protocol-architect-self-merge-to-dev` (`1f90ad7`) — constitutional patch: split single «merge=user» rule into two gates (`feature/* → dev` autonomous architect, `dev → main` user-only). 5 files, +48/−16, docs-only. **APPROVED**. Merge first; landing this rule lets architect merge PR #17 under it (recursive eat-your-own-dogfood).
+- PR #17 `feature/m-l8-deploy` (`18bc94d`) — M-L8 Backend Deploy: `ZodHealthResponse` contract + 8 GREEN unit specs + `initHealth(server, deps)` widened with `checks.database` probe + multi-stage `Dockerfile.production` + dev/prod `docker-compose.{,production.}yml` + `infra/paxio-prod/` host runbook + `deploy-backend.yml` path-filter. Commit `466f12d` additionally addresses 6 must-fix items carried over from PR #13 M-L5 (DI wiring + StorageError guard + Promise.allSettled fix + AgentStorage typing + docstring + NODE_PATH bootstrap). 25 files, +1554/−45. CI all green except Vercel author-email FAIL (known false-positive per TD-22). **APPROVED**. Merge after PR #18.
+- TD-24 recorded (🟡 MED, NOT blocking PR #17): pre-existing `APPLICATION_PATH` path bug at `apps/back/server/main.cjs:40` is one `..` short — `loadApplication` ENOENT in production → empty sandbox fallback → VM-sandbox API routes never mount → M-L5 `agentStorage` wiring code is correct but doesn't actually flow until path bug fixed. Owned by backend-dev with two architect deliverables (acceptance script + drift-guard test).
 
 **Last Commit:** `8b72792` on `feature/reviewer-polish-from-complior` (PR #5 — reviewer polish: D19-D21 no-bind/chained-assign/object-returns + Phase 4.1 Naming 10-checkbox reference, 20-line addition to `.claude/agents/reviewer.md`; docs-only, 515/515 vitest GREEN + typecheck clean baseline unchanged; reviewer APPROVED 2026-04-24 — along with PR #3 and PR #4 approvals in same session)
 
