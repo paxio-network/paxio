@@ -67,13 +67,23 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          # Ephemeral GITHUB_TOKEN with packages:read; valid only for this run.
+          # Forwarded into the SSH session via `envs:` so we can `docker login`
+          # ghcr.io on the host without storing a long-lived PAT there.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
             set -euo pipefail
             cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
+
+            echo "=== Login to ghcr.io ==="
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             echo "=== Pull new image ==="
             docker pull ghcr.io/${{ github.repository_owner }}/paxio-backend:${{ github.sha }}
@@ -95,6 +105,9 @@ jobs:
 
             echo "=== Cleanup older images ==="
             docker image prune -f
+
+            echo "=== Logout ghcr.io (don't leave creds on disk) ==="
+            docker logout ghcr.io || true
 
             echo "=== Done: ${{ github.sha }} ==="
 
@@ -118,8 +131,13 @@ jobs:
             set -euo pipefail
             cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
             echo "=== ROLLBACK ==="
+            # No ghcr.io pull needed — rollback uses an image already on disk.
             PREV=$(docker images ghcr.io/${{ github.repository_owner }}/paxio-backend \
               --format "{{.Tag}}" | grep -v latest | sort | tail -2 | head -1)
+            if [ -z "$PREV" ]; then
+              echo "No previous image — nothing to roll back to."
+              exit 0
+            fi
             docker tag \
               ghcr.io/${{ github.repository_owner }}/paxio-backend:$PREV \
               ghcr.io/${{ github.repository_owner }}/paxio-backend:latest
