@@ -8,14 +8,29 @@
 // Loader nests by file stem: products/07-intelligence/app/domain/landing-stats.ts
 // becomes rawDomain['landing-stats'] = { createLandingStats, ... }.
 //
-// Original 91c27ad impl read `rawDomain.createLandingStats` directly, missing
-// the file-stem hop. Same crash-loop class as 02-facilitator (see comment
-// there).
+// `createLandingStats` requires three upstream-data callbacks plus a clock.
+// Until Registry / Audit / Guard integrations land (M-L9+), every callback
+// returns `ok(0)` so /api/landing/hero serves the real-empty zero state
+// (M-L8 invariant: "zero is real data" — never fake numbers in render).
+// agentStorage is forwarded for the network-snapshot path which DOES read
+// from the registry table directly.
+
+const okZero = async () => ({ ok: true, value: 0 });
 
 const wireIntelligenceDomain = (rawDomain, deps) => {
   const { createLandingStats } = rawDomain['landing-stats'];
-  // agentStorage is threaded through from the composition root (main.cjs).
-  return Object.freeze({ landing: createLandingStats(deps) });
+  return Object.freeze({
+    landing: createLandingStats({
+      agentStorage: deps.agentStorage,
+      clock: () => Date.now(),
+      // Zero-fallback callbacks — replaced when Registry/Audit/Guard wire
+      // through in their respective FA milestones. Until then handlers
+      // serve real-empty state (agents=0, txns=0, attacks24=0) via these.
+      getRegistryCount: okZero,
+      getAuditCount24h: okZero,
+      getGuardAttacks24h: okZero,
+    }),
+  });
 };
 
 module.exports = { wireIntelligenceDomain };

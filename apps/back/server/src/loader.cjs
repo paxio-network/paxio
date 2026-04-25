@@ -82,7 +82,7 @@ const loadDeepDir = async (dir, sandbox) => {
   return container;
 };
 
-const loadApplication = async (appPath, serverContext) => {
+const loadApplication = async (appPath, serverContext, options = {}) => {
   const {
     console: logger,
     config,
@@ -90,6 +90,21 @@ const loadApplication = async (appPath, serverContext) => {
     telemetry,
     agentStorage,
   } = serverContext;
+
+  // Composition-root hook. Called after domain modules are loaded but
+  // BEFORE the outer domain object is frozen and BEFORE api handlers
+  // are loaded. The callback receives the raw domain tree (loader's
+  // file-stem nesting still in place — `domain[product][file-stem]`)
+  // and must return the WIRED tree that api handlers will see at
+  // call-time (e.g. `domain[product].<service>`). Returning the same
+  // tree (or omitting the option) means no wiring — handlers see raw
+  // factories.
+  //
+  // The callback runs inside loader so the returned tree can be frozen
+  // alongside lib/api in one pass. Without this hook main.cjs can't
+  // affect what VM handlers see, since loader builds its own internal
+  // sandbox and never re-exports it.
+  const { wireProducts } = options;
 
   // Base sandbox — available to all VM layers
   const sandbox = {
@@ -148,12 +163,20 @@ const loadApplication = async (appPath, serverContext) => {
     const productAppDomain = path.join(appPath, entry.name, 'app', 'domain');
     try {
       const productDomain = await loadDeepDir(productAppDomain, sandbox);
-      domain[entry.name] = Object.freeze(productDomain);
+      // Per-product NOT frozen here — composition-root callback (above)
+      // may rebuild slots; final freeze happens after wireProducts runs.
+      domain[entry.name] = productDomain;
     } catch (err) {
       if (err.code !== 'ENOENT') throw err;
     }
   }
-  sandbox.domain = Object.freeze(domain);
+
+  // Composition root — produces the wired domain tree the VM handlers
+  // see. If no callback was supplied, raw factory tree is exposed.
+  const wiredDomain = wireProducts
+    ? wireProducts(domain, serverContext)
+    : domain;
+  sandbox.domain = Object.freeze(wiredDomain);
 
   // Layer 3: api (HTTP handlers — also per-product)
   const apiPath = path.join(appPath, 'api');
@@ -176,7 +199,9 @@ const loadApplication = async (appPath, serverContext) => {
   }
   sandbox.api = Object.freeze(api);
 
-  return Object.freeze({ lib, domain, api, config });
+  // Return the WIRED domain tree (= what's on sandbox.domain) so callers
+  // see the same view as VM handlers. Falls back to raw if no callback.
+  return Object.freeze({ lib, domain: wiredDomain, api, config });
 };
 
 module.exports = { load, loadDir, loadDeepDir, loadApplication };

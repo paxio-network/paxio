@@ -102,9 +102,9 @@ step "6. /api/landing/hero values can be 0 (real empty state, not faked)"
 if echo "$BODY" | python3 -c '
 import json, sys
 b = json.load(sys.stdin)
-assert isinstance(b.get("agents"), int), f"agents not int: {b.get(\"agents\")!r}"
-assert isinstance(b.get("txns"), int), f"txns not int: {b.get(\"txns\")!r}"
-assert isinstance(b.get("attacks24"), int), f"attacks24 not int: {b.get(\"attacks24\")!r}"
+assert isinstance(b.get("agents"), int)
+assert isinstance(b.get("txns"), int)
+assert isinstance(b.get("attacks24"), int)
 ' 2>/dev/null; then
   ok "agents/txns/attacks24 are integers"
 else
