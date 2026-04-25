@@ -19,6 +19,7 @@ const {
   registerSandboxRoutes,
 } = require('./src/http.cjs');
 const { initWs, createBroadcaster } = require('./src/ws.cjs');
+const { wireProducts } = require('./wiring/index.cjs'); // agentStorage → wiring
 
 const errors = require('./lib/errors.cjs');
 
@@ -124,6 +125,12 @@ const pinoLogger = pino(loggerConfig);
     );
     appSandbox = { lib: {}, domain: {}, api: {}, config };
   }
+
+  // Composition root — wire factory outputs into service slots.
+  // API handlers expect domain['<product>'].landing.getHero() and
+  // domain['<product>'].fap.getRails(); the loader leaves raw factories
+  // under 'landing-stats' / 'fap-router'.  wireProducts bridges that gap.
+  wireProducts(appSandbox.domain, { agentStorage });
 
   initSecurityHeaders(server);
   initRequestId(server);
