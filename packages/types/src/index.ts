@@ -14,6 +14,8 @@ export * from './security.js';
 export * from './audit-log.js';
 // Landing (real-data API for paxio.network)
 export * from './landing.js';
+// Health (GET /health — Docker HEALTHCHECK + deploy smoke tests)
+export * from './health.js';
 // Per-source Zod schemas for Universal Registry crawler (FA-01, M-L1).
 // Each external ecosystem (ERC-8004, A2A, MCP, Fetch.ai, Virtuals) has a
 // dedicated schema describing its raw format; adapters validate and project

@@ -1,0 +1,96 @@
+# Paxio production host stack — runs on Hetzner.
+# Mirrors /home/openclaw/complior-prod/docker-compose.yml pattern.
+#
+# DEPLOY MODEL:
+# - Backend image is BUILT in CI by .github/workflows/deploy-backend.yml
+#   and pushed to ghcr.io/paxio-network/paxio-backend:latest.
+# - This compose file is COPIED to Hetzner host (`/home/$HETZNER_USER/paxio-prod/`)
+#   ONCE manually by user (initial bootstrap), and never re-copied unless this
+#   file changes — `appleboy/ssh-action` only runs `docker compose up -d backend`
+#   to pull the new image, restart that one service, leave others untouched.
+# - Caddy terminates TLS for api.paxio.network. Auto-issues + renews Let's Encrypt
+#   certs (no manual cert mgmt). HTTP/3 enabled (port 443/udp).
+#
+# NOT INCLUDED (intentional):
+# - Qdrant: deferred to Intelligence FA milestone (M-L9+). Backend graceful-skips
+#   when QDRANT_URL absent — checks.qdrant='skipped' in /health.
+# - Redis: deferred. Same pattern.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paxio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paxio
+      POSTGRES_USER: paxio
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - paxio
+    # No ports exposed — only accessible inside Docker network.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U paxio -d paxio']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  backend:
+    image: ghcr.io/paxio-network/paxio-backend:latest
+    container_name: paxio-backend
+    restart: unless-stopped
+    env_file: .env.production
+    networks:
+      - paxio
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: paxio-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - paxio
+    depends_on:
+      - backend
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  paxio:
+    driver: bridge

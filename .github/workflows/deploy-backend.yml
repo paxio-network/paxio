@@ -9,6 +9,8 @@ on:
       - 'packages/**'
       - 'Dockerfile.production'
       - 'docker-compose.yml'
+      - 'docker-compose.production.yml'
+      - 'infra/paxio-prod/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
   workflow_dispatch:
@@ -50,6 +52,8 @@ jobs:
     environment: production
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -86,7 +90,10 @@ jobs:
       - name: Smoke test
         run: |
           sleep 10
-          curl -sf https://api.paxio.network/health || exit 1
+          # Use checked-in script so the same gates run locally + in CI.
+          # PAXIO_API_URL override allows targeting staging if we add one.
+          chmod +x scripts/verify_M-L8_smoke.sh
+          PAXIO_API_URL=https://api.paxio.network bash scripts/verify_M-L8_smoke.sh
           echo "✅ Smoke test passed"
 
       - name: Rollback on failure
