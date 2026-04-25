@@ -37,7 +37,7 @@ const errors = require('./lib/errors.cjs');
 
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
-const APPLICATION_PATH = path.join(__dirname, '..', '..', 'dist', 'products');
+const APPLICATION_PATH = path.join(__dirname, '..', '..', '..', 'dist', 'products');
 const DATABASE_URL = process.env.DATABASE_URL || '';
 
 const loggerConfig = { level: process.env.LOG_LEVEL || 'info' };
