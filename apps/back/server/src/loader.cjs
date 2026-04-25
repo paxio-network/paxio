@@ -57,7 +57,7 @@ const loadDeepDir = async (dir, sandbox) => {
 };
 
 const loadApplication = async (appPath, serverContext) => {
-  const { console: logger, config, errors, telemetry } = serverContext;
+  const { console: logger, config, errors, telemetry, agentStorage } = serverContext;
 
   // Base sandbox — available to all VM layers
   const sandbox = {
@@ -74,6 +74,7 @@ const loadApplication = async (appPath, serverContext) => {
     config: Object.freeze(config),
     errors: Object.freeze(errors),
     telemetry: Object.freeze(telemetry),
+    agentStorage: Object.freeze(agentStorage ?? null),
   };
 
   // Layer 1: lib (permissions, validation helpers, Zod schemas)

@@ -1,0 +1,97 @@
+# Paxio backend — PRODUCTION stack reference (M-L8).
+#
+# This file at repo ROOT is a REFERENCE template that mirrors the actual
+# host file `infra/paxio-prod/docker-compose.yml` deployed to Hetzner. The
+# host copy is the source of truth for production; this root copy exists so:
+#   (a) Schema diffs vs dev compose are visible in code review.
+#   (b) New developers see a single repo file documenting the prod topology.
+#
+# Source-of-truth rule (until DRY is applied — TD candidate noted in
+# M-L8 milestone): any change to prod compose MUST go to BOTH files in the
+# same PR. The Hetzner host pulls `infra/paxio-prod/docker-compose.yml`
+# (path-filtered in `.github/workflows/deploy-backend.yml`).
+#
+# Differences from `docker-compose.yml` (dev):
+#   - backend uses `image:` (ghcr.io) not `build:` — image is built in CI
+#   - postgres uses Docker `secrets:` not env-var password
+#   - Caddy fronts TLS for api.paxio.network on 443
+#   - no port 5432:5432 — postgres only reachable inside docker network
+#   - `env_file: .env.production` for runtime config (kept on host)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paxio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paxio
+      POSTGRES_USER: paxio
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - paxio
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U paxio -d paxio']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  backend:
+    image: ghcr.io/paxio-network/paxio-backend:latest
+    container_name: paxio-backend
+    restart: unless-stopped
+    env_file: .env.production
+    networks:
+      - paxio
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: paxio-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - paxio
+    depends_on:
+      - backend
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  paxio:
+    driver: bridge
