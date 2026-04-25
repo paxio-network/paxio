@@ -22,6 +22,19 @@ const { initWs, createBroadcaster } = require('./src/ws.cjs');
 
 const errors = require('./lib/errors.cjs');
 
+// Bootstrap NODE_PATH so that require('pg') resolves to the correct pnpm
+// installation path (pg lives at node_modules/.pnpm/pg@8.20.0/node_modules/pg/).
+{
+  const nodeModulesIndex = __dirname.indexOf('/node_modules/');
+  if (nodeModulesIndex !== -1) {
+    const pnpmPg = __dirname.slice(0, nodeModulesIndex) + '/node_modules/.pnpm/pg@8.20.0/node_modules';
+    process.env.NODE_PATH = (process.env.NODE_PATH
+      ? process.env.NODE_PATH + ':' + pnpmPg
+      : pnpmPg);
+    require('module')._initPaths();
+  }
+}
+
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 const HOST = process.env.HOST || '0.0.0.0';
 const APPLICATION_PATH = path.join(__dirname, '..', '..', 'dist', 'products');
@@ -63,6 +76,36 @@ const pinoLogger = pino(loggerConfig);
     },
   };
 
+  // createDbClient: initialises pg pool + createsPostgresStorage agentStorage.
+  // Returns no-op sentinel when DATABASE_URL absent so /health reports 'skipped'.
+  const { createDbClient } = require('./infrastructure/db.cjs');
+  let dbClient = null;
+  try {
+    dbClient = await createDbClient({ databaseUrl: DATABASE_URL });
+    pinoLogger.info(dbClient._isNoop
+      ? 'Postgres: no DATABASE_URL — agentStorage + health use no-op'
+      : `Postgres pool initialized for ${DATABASE_URL.replace(/:[^:@/]*@/, ':***@')}`);
+  } catch (err) {
+    pinoLogger.warn({ err: err.message }, 'createDbClient failed — using no-op');
+    dbClient = Object.freeze({
+      _isNoop: true,
+      pool: Object.freeze({ query: async () => ({ rows: [], fields: [] }), end: async () => {}, on: () => {} }),
+      agentStorage: Object.freeze({
+        upsert: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+        resolve: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+        find: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+        count: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+        countBySource: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+        listRecent: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
+      }),
+      shutdown: async () => {},
+    });
+  }
+
+  // Resolve agentStorage from dbClient — passed to VM sandbox via loadApplication.
+  // agentStorage = null when DB not configured (production-safe zero fallback).
+  const agentStorage = dbClient && !dbClient._isNoop ? dbClient.agentStorage : null;
+
   // Load application code (app/lib, app/domain, app/api) into VM sandbox
   let appSandbox;
   try {
@@ -71,6 +114,7 @@ const pinoLogger = pino(loggerConfig);
       config,
       errors,
       telemetry: broadcaster,
+      agentStorage,
     });
   } catch (err) {
     pinoLogger.warn(
@@ -86,32 +130,9 @@ const pinoLogger = pino(loggerConfig);
   initCors(server);
   initErrorHandler(server);
 
-  // Lazy pg Pool — created only when DATABASE_URL is configured. Without it the
-  // /health endpoint reports checks.database='skipped' (acceptable: no DB →
-  // not degraded). With it, /health probes via SELECT 1 inside Pool.query.
-  let pgPool = null;
-  if (DATABASE_URL) {
-    try {
-      // eslint-disable-next-line global-require
-      const { Pool } = require('pg');
-      pgPool = new Pool({ connectionString: DATABASE_URL });
-      pgPool.on('error', (err) => {
-        // pg emits 'error' on idle clients losing connection — log but don't
-        // crash the process; next query reconnects.
-        pinoLogger.warn({ err: err.message }, 'pg pool idle client error');
-      });
-      pinoLogger.info(`Postgres pool initialized for ${DATABASE_URL.replace(/:[^:@/]*@/, ':***@')}`);
-    } catch (err) {
-      pinoLogger.warn(
-        { err: err.message },
-        'DATABASE_URL is set but `pg` module is not installed — health probe will be skipped',
-      );
-    }
-  }
-
-  const healthDeps = pgPool
-    ? { db: { ping: () => pgPool.query('SELECT 1') } }
-    : {};
+  const healthDeps = dbClient._isNoop
+    ? {}
+    : { db: { ping: () => dbClient.pool.query('SELECT 1') } };
 
   initHealth(server, healthDeps);
   initWs(server, broadcaster);
@@ -126,8 +147,8 @@ const pinoLogger = pino(loggerConfig);
     pinoLogger.info(`${signal} received, shutting down...`);
     try {
       await server.close();
-      if (pgPool) {
-        await pgPool.end();
+      if (dbClient && dbClient.shutdown) {
+        await dbClient.shutdown();
         pinoLogger.info('Postgres pool closed');
       }
       pinoLogger.info('Server closed');

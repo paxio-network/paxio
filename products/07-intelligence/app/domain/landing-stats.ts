@@ -20,7 +20,7 @@ import type {
   LandingPayload,
 } from '@paxio/types';
 import { HEAT_ROWS, HEAT_COLS } from '@paxio/types';
-import type { LandingStats, LandingError } from '@paxio/interfaces';
+import type { AgentStorage, LandingStats, LandingError } from '@paxio/interfaces';
 import { buildNetworkSnapshot } from './network-snapshot-builder.js';
 
 // --- Internal helpers (pure domain, no I/O) ---
@@ -208,9 +208,7 @@ export interface LandingStatsDeps {
    * AgentStorage port — provides listRecent for NetworkGraph nodes.
    * Introduced M-L5. Optional until PostgresStorage is landed by registry-dev.
    */
-  agentStorage?: {
-    listRecent(limit: number): Promise<Result<readonly import('@paxio/types').AgentCard[], LandingError>>;
-  };
+  agentStorage: AgentStorage;
 
   /**
    * Pure node transformer for NetworkGraph.
@@ -225,6 +223,12 @@ export interface LandingStatsDeps {
 }
 
 export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
+  // Dual-path DI: deps.agentStorage (tests) takes priority over globalThis.agentStorage (production sandbox).
+  // Both provide the same AgentStorage interface; this lets tests override without modifying production code.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sandboxAgentStorage = typeof globalThis !== 'undefined' && (globalThis as any).agentStorage;
+  const agentStorage = deps.agentStorage ?? sandboxAgentStorage;
+
   // --- getHero ---
   const getHero = async (): Promise<Result<HeroState, LandingError>> => {
     try {
@@ -346,26 +350,26 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   };
 
   // --- getNetworkSnapshot ---
-  // Delegates node transformation to buildNetworkSnapshot (no duplication of
-  // position hash, name truncation, bitcoin_native, volume_usd_5m logic).
+  // Uses agentStorage.listRecent (injected via deps or VM globalThis).
+  // Falls back to empty snapshot on StorageError — Real Data Invariant.
   const getNetworkSnapshot = async (): Promise<Result<NetworkSnapshot, LandingError>> => {
-    // M-L5: populate nodes from agentStorage.listRecent when available.
-    // When agentStorage is absent (legacy/in-memory impl pre-PostgresStorage),
-    // return empty snapshot — Real Data Invariant (empty real > fake).
-    if (deps.agentStorage?.listRecent) {
-      try {
-        const cardsResult = await deps.agentStorage.listRecent(20);
-        if (!cardsResult.ok) {
-          return { ok: false, error: { code: 'upstream_error', message: String(cardsResult.error) } };
-        }
-        const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
-        return { ok: true, value: build(cardsResult.value, deps.clock()) };
-      } catch (err) {
-        return { ok: false, error: { code: 'upstream_error', message: String(err) } };
-      }
+    if (!agentStorage?.listRecent) {
+      return { ok: true, value: buildNetworkSnapshot([], deps.clock()) };
     }
-    const build = deps.buildNetworkSnapshot ?? buildNetworkSnapshot;
-    return { ok: true, value: build([], deps.clock()) };
+    try {
+      const cardsResult = await agentStorage.listRecent(20);
+      if (!cardsResult.ok) {
+        // StorageError discriminated union: 'message' key only on db_unavailable,
+        // 'not_found' has no message field — use guard to extract safely.
+        const msg = 'message' in cardsResult.error
+          ? (cardsResult.error as { message: string }).message
+          : String(cardsResult.error);
+        return { ok: false, error: { code: 'upstream_error', message: msg } };
+      }
+      return { ok: true, value: buildNetworkSnapshot(cardsResult.value, deps.clock()) };
+    } catch (err) {
+      return { ok: false, error: { code: 'upstream_error', message: String(err) } };
+    }
   };
 
   // --- getHeatmap ---
@@ -377,11 +381,12 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
   // --- getLanding ---
   // SSR one-shot — aggregates all incremental responses into one payload.
   const getLanding = async (): Promise<Result<LandingPayload, LandingError>> => {
-    const [heroResult, tickerResult, agentsResult, railsResult] = await Promise.allSettled([
+    const [heroResult, tickerResult, agentsResult, railsResult, networkResult] = await Promise.allSettled([
       getHero(),
       getTickerLanes(),
       getTopAgents(20),
       getRails(),
+      getNetworkSnapshot(),
     ]);
 
     const hero = heroResult.status === 'fulfilled' && heroResult.value.ok
@@ -415,11 +420,9 @@ export const createLandingStats = (deps: LandingStatsDeps): LandingStats => {
         ticker_lanes,
         agents,
         rails,
-        network: {
-          nodes: [],
-          pairs: [],
-          generated_at: nowIso(ts),
-        },
+        network: networkResult.status === 'fulfilled' && networkResult.value.ok
+          ? networkResult.value.value
+          : { nodes: [], pairs: [], generated_at: nowIso(ts) },
         heatmap: zeroHeatmap(),
         generated_at: nowIso(ts),
       },
