@@ -31,7 +31,7 @@ export function Radar() {
         </div>
         <HeatmapGrid grid={grid} className="mb-6" />
         <p className="text-center text-xs font-mono text-white/20">
-          Guard Agent: {grid.cells.flat().reduce((s, v) => s + v, 0)} total attacks blocked · window: {grid.window_hours}h
+          Guard-blocked attacks: {grid.cells.flat().reduce((s, v) => s + v, 0)} (24h) · window: {grid.window_hours}h
         </p>
       </div>
     </SectionFrame>

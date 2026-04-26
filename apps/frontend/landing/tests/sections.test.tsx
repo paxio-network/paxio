@@ -19,6 +19,11 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+// NOTE: vi.mock is hoisted — factories run BEFORE the module body.
+// Therefore mock data must be inlined inside the factory, NOT referenced
+// from module scope.  wrap() below re-declares the same data inline for
+// setQueryData() — duplication is intentional to satisfy the hoisting rule.
+
 // Mock the api-client so sections can render without a live backend.
 vi.mock('@paxio/api-client', () => ({
   paxioClient: {
@@ -40,6 +45,16 @@ vi.mock('@paxio/api-client', () => ({
         fap_throughput: 0,
         paei: 0,
         paei_d: 0,
+        btc: 0,
+        btc_d: 0,
+        legal: 0,
+        legal_d: 0,
+        finance: 0,
+        finance_d: 0,
+        research: 0,
+        research_d: 0,
+        cx: 0,
+        cx_d: 0,
       }),
       getHeatmap: vi.fn().mockResolvedValue({
         rows: [],
@@ -56,9 +71,72 @@ vi.mock('@paxio/api-client', () => ({
   },
 }));
 
+// Mock @paxio/ui so section components can render in jsdom without real UI deps.
+vi.mock('@paxio/ui', () => {
+  const React = require('react');
+  return {
+    SectionFrame: ({ id, eyebrow, children }: { id?: string; eyebrow?: string; children: React.ReactNode }) =>
+      React.createElement('section', { id, 'data-eyebrow': eyebrow }, children),
+    TerminalWidget: ({ lines }: { lines?: string[] }) =>
+      React.createElement('div', { 'data-testid': 'terminal' },
+        (lines ?? []).map((l, i) => React.createElement('div', { key: i }, l))),
+    AgentTable: ({ agents }: { agents?: unknown[] }) =>
+      React.createElement('table', { 'data-testid': 'agent-table' },
+        (agents ?? []).map((a, i) => React.createElement('tr', { key: i }))),
+    NetworkGraph: () => React.createElement('div', { 'data-testid': 'network-graph' }),
+    HeatmapGrid: () => React.createElement('div', { 'data-testid': 'heatmap-grid' }),
+    FAPDiagram: () => React.createElement('div', { 'data-testid': 'fap-diagram' }),
+    Footer: ({ dark }: { dark?: boolean }) =>
+      React.createElement('footer', { 'data-dark': dark }),
+    LiveTicker: () => React.createElement('div', { 'data-testid': 'live-ticker' }),
+    BrandMark: () => React.createElement('span', { 'data-testid': 'brand-mark' }),
+    StateStrip: () => React.createElement('div', { 'data-testid': 'state-strip' }),
+    TickerLane: () => React.createElement('div', { 'data-testid': 'ticker-lane' }),
+    PreviewRibbon: () => React.createElement('div', { 'data-testid': 'preview-ribbon' }),
+    DoorCard: () => React.createElement('div', { 'data-testid': 'door-card' }),
+    Sparkline: () => React.createElement('div', { 'data-testid': 'sparkline' }),
+    RailsSkeleton: () => React.createElement('div', { 'data-testid': 'rails-skeleton' }),
+    EmptyGraph: () => React.createElement('div', { 'data-testid': 'empty-graph' }),
+    ConditionalSection: ({ children }: { children: React.ReactNode }) => children,
+    UpcomingBadge: () => React.createElement('span', { 'data-testid': 'upcoming-badge' }),
+    AgentTableSkeleton: () => React.createElement('div', { 'data-testid': 'agent-table-skeleton' }),
+  };
+});
+
 const wrap = (ui: React.ReactNode) => {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  // Pre-populate cache so useQuery resolves synchronously — no microtask timing.
+  // Data must be inline (not referenced) because vi.mock hoisting makes
+  // module-scope const undefined in factories.
+  qc.setQueryData(['landing-hero'], {
+    agents: 0,
+    txns: 0,
+    attacks24: 0,
+    wallet_adoption: 0,
+    wallet_adoption_d: 0,
+    x402_share: 0,
+    x402_share_d: 0,
+    btc_share: 0,
+    btc_share_d: 0,
+    hhi: 0,
+    drift7: 0,
+    sla_p50: 0,
+    uptime_avg: 0,
+    fap_throughput: 0,
+    paei: 0,
+    paei_d: 0,
+    btc: 0,
+    btc_d: 0,
+    legal: 0,
+    legal_d: 0,
+    finance: 0,
+    finance_d: 0,
+    research: 0,
+    research_d: 0,
+    cx: 0,
+    cx_d: 0,
   });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 };
@@ -107,21 +185,24 @@ describe('M-L9 Hero section (01-hero.tsx)', () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
     wrap(<mod.Hero />);
-    expect(screen.getByText(/State of the Agentic Economy/i)).toBeTruthy();
+    // Appears in both the eyebrow strip and the stats card — use getAllByText
+    expect(screen.getAllByText(/State of the Agentic Economy/i).length).toBeGreaterThan(0);
   });
 
   it('renders agents-indexed marker', async () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
     wrap(<mod.Hero />);
-    expect(screen.getByText(/agents indexed/i)).toBeTruthy();
+    // Appears in both the stats card label and the bottom copy strip
+    expect(screen.getAllByText(/agents indexed/i).length).toBeGreaterThan(0);
   });
 
   it('renders FAP throughput marker', async () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
     wrap(<mod.Hero />);
-    expect(screen.getByText(/FAP throughput/i)).toBeTruthy();
+    // Appears in both the stats card label and the bottom copy strip
+    expect(screen.getAllByText(/FAP throughput/i).length).toBeGreaterThan(0);
   });
 });
 
@@ -142,8 +223,10 @@ describe('M-L9 Bitcoin-native section (02b-bitcoin.tsx)', () => {
       () => null,
     );
     if (!mod) return;
-    wrap(<mod.Bitcoin />);
-    expect(screen.getByText(/register|did:paxio|btc\+usdc/i)).toBeTruthy();
+    wrap(<mod.BitcoinSection />);
+    // DEMO_LINES contain "register", "did:paxio", and "btc+usdc" — one of them is enough
+    const matches = screen.getAllByText(/register|did:paxio|btc\+usdc/i);
+    expect(matches.length).toBeGreaterThan(0);
   });
 });
 

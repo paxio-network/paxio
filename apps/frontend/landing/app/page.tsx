@@ -18,7 +18,9 @@ export default function LandingPage() {
         <PreviewRibbon />
         <Header />
         <LiveTicker className="sticky top-[65px] z-40" />
-        <Hero />
+        <section id="registry" aria-label="Hero — State of the Agentic Economy">
+          <Hero />
+        </section>
         <Quickstart />
         <BitcoinSection />
         <Radar />
