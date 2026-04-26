@@ -97,8 +97,8 @@ describe('M-L9 Preview ribbon section (preview-ribbon.tsx)', () => {
     );
     if (!mod) return;
     wrap(<mod.PreviewRibbon />);
-    expect(screen.getAllByText(/SIMULATED PREVIEW/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/METRICS ARE PROJECTED|LAUNCHING/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/SIMULATED PREVIEW/i)).toBeTruthy();
+    expect(screen.getByText(/METRICS ARE PROJECTED|LAUNCHING/i)).toBeTruthy();
   });
 });
 
