@@ -12,6 +12,7 @@ import { Doors } from './sections/06-doors';
 import { Footer } from './sections/07-foot';
 
 export default function LandingPage() {
+  const year = new Date().getFullYear();
   return (
     <Providers>
       <main className="min-h-screen bg-[--color-dark] text-white">
@@ -27,7 +28,7 @@ export default function LandingPage() {
         <Pay />
         <Network />
         <Doors />
-        <Footer />
+        <Footer year={year} />
       </main>
     </Providers>
   );
