@@ -176,8 +176,38 @@ fn test_classify_biometric_high_risk() {
 ```
 
 ### 4.2 — Acceptance scripts (Тип 2)
-- `scripts/verify_*.sh` — bash скрипты
-- Должны запускаться и FAIL (без реализации)
+
+**Naming convention** (M-Q1):
+- Canonical: `scripts/verify_<MILESTONE-ID>.sh` (e.g. `verify_M-L9.sh`, `verify_M-Q1.sh`, `verify_TD-29.sh`)
+- Header line 2: `# <MILESTONE-ID> acceptance — <descriptive name>` — это позволяет `quality-gate.sh` найти script через fallback header-tag matching
+- `set -euo pipefail` обязательно
+- PASS=N FAIL=M counter + `[ $FAIL -eq 0 ] || exit 1` в конце
+
+Пример skeleton:
+```bash
+#!/usr/bin/env bash
+# M-XX acceptance — descriptive name
+set -euo pipefail
+cd "$(dirname "$0")/.."
+PASS=0; FAIL=0
+ok()  { echo "  ✅ $1"; PASS=$((PASS+1)); }
+bad() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
+step(){ echo; echo "▶ $1"; }
+
+step "1. Что-то проверяется"
+if [ ... ]; then ok "..."; else bad "..."; fi
+
+# ... остальные шаги ...
+
+echo "M-XX ACCEPTANCE — PASS=$PASS FAIL=$FAIL"
+[ $FAIL -eq 0 ] || exit 1
+```
+
+Этот script запускается:
+- direct: `bash scripts/verify_M-XX.sh` (для local dev verification)
+- через quality-gate: `bash scripts/quality-gate.sh M-XX` step 6/6 (test-runner использует только это)
+
+Scripts должны запускаться и FAIL (без реализации) — это часть RED спеки для milestone типа 2.
 
 ### 4.3 — Архитектурные проверки в тестах (ОБЯЗАТЕЛЬНО)
 
@@ -278,10 +308,19 @@ fn test_storable_bound_is_bounded() {
 ```bash
 pnpm install
 pnpm typecheck 2>&1 | tail -5
-pnpm test -- --run 2>&1 | tail -5
+pnpm exec vitest run 2>&1 | tail -5     # ROOT (M-Q1: catches workspace drift)
 pnpm lint 2>&1 | tail -3
 cargo build --workspace 2>&1 | tail -5
 cargo test --workspace 2>&1 | tail -5
+```
+
+### 5.1b — Quality gate dry-run (ПЕРЕД коммитом RED)
+```bash
+# Проверь что quality-gate.sh сможет найти твой acceptance script:
+bash scripts/quality-gate.sh <milestone-id>
+# Должен дойти до step 6 и сказать «no acceptance script» — это OK
+# для RED state. После создания verify_<milestone>.sh — должен fail
+# на step 6 (acceptance script ожидаемо красный).
 ```
 
 ### 5.2 — ICP среда (если milestone касается canister'ов)
@@ -324,27 +363,40 @@ git checkout dev && git pull origin dev
 git checkout -b feature/M0X-name
 ```
 
-### 6.2 — Коммить ВСЁ
+### 6.2 — Identity check ПЕРЕД commit'ом (M-Q1)
+```bash
+# .husky/pre-commit hook сам проверит, но architect должен убедиться заранее:
+git config user.name      # должно быть: architect
+git config user.email     # должно быть: architect@paxio.network
+# Mismatch = hook откажет commit. Если нужно поменять для конкретной ветки:
+# git config user.email architect@paxio.network
+```
+
+### 6.3 — Коммить ВСЁ
 ```bash
 git add packages/types/ packages/interfaces/ packages/errors/  # контракты
 git add tests/*.test.ts products/*/tests/**/*.test.ts          # RED тесты
 git add platform/canister-shared/                               # если менялся
-git add scripts/verify_*.sh                                     # acceptance
+git add scripts/verify_<milestone-id>.sh                        # acceptance (canonical name!)
 git add docs/sprints/M*.md                                      # milestone
 git add docs/feature-areas/FA-*.md                              # FA если обновлялись
-git commit -m "feat(M0X): contracts, RED tests, acceptance scripts, milestone"
+git commit -m "feat(M0X): contracts, RED tests, acceptance script, milestone"
+# ↳ pre-commit hook проверит identity + scope. Pass или reject.
 ```
 
-### 6.3 — Проверь после коммита
+### 6.4 — Проверь после коммита
 ```bash
-pnpm typecheck 2>&1 | tail -5    # build errors — НЕТ
-pnpm test -- --run 2>&1 | tail -5 # RED тесты — ок
+pnpm typecheck 2>&1 | tail -5             # build errors — НЕТ
+pnpm exec vitest run 2>&1 | tail -5       # ROOT — RED тесты ожидаемо fail
 cargo build --workspace 2>&1 | tail -5
 pnpm lint 2>&1 | tail -3
+bash scripts/quality-gate.sh <milestone>  # dry-run — должен fail на конкретном
+                                          # step (RED expected before dev impl)
 ```
 
-### 6.4 — Скажи user'у кого запускать
-"Запускай [agent-name]. Milestone: M0X. Branch: feature/M0X-name. Тесты закоммичены."
+### 6.5 — Скажи user'у кого запускать
+"Запускай [agent-name]. Milestone: M0X. Branch: feature/M0X-name. Тесты закоммичены.
+ Quality gate: bash scripts/quality-gate.sh M0X (test-runner запускает после impl)."
 
 ---
 

@@ -48,6 +48,34 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 **Почему:** LLM-агент может «оптимизировать» правила убрав ограничения которые ему мешают. Это не баг — это предсказуемое поведение. Поэтому запрет **абсолютный**.
 
+## MECHANICAL ENFORCEMENT — `.husky/pre-commit` hook (M-Q1 T-2)
+
+Помимо текстовых правил выше, scope нарушения механически блокируются git
+pre-commit hook'ом. Файл `.husky/pre-commit` запускается **до** каждого
+commit'а и проверяет:
+
+1. **Identity mapping** — `git config user.name` ↔ `git config user.email` должны совпадать по таблице:
+   - `architect` ↔ `architect@paxio.network`
+   - `reviewer` ↔ `reviewer@paxio.network`
+   - `backend-dev` ↔ `backend-dev@paxio.network`
+   - `frontend-dev` ↔ `frontend-dev@paxio.network`
+   - `icp-dev` ↔ `icp-dev@paxio.network`
+   - `registry-dev` ↔ `registry-dev@paxio.network`
+   - `test-runner` ↔ `test-runner@paxio.network`
+   Mismatch → commit blocked. Это закрывает паттерн «name=architect, email=frontend-dev» который наблюдался на M-L9.
+
+2. **Path-based scope** — diff в защищённом каталоге проверяется против identity:
+   - `tests/`, `products/*/tests/`, `apps/frontend/*/tests/` — только architect
+   - `docs/{sprints,feature-areas,fa-registry,NOUS_*}.md` — только architect
+   - `docs/{tech-debt,project-state}.md` — только reviewer
+   - `.claude/`, `CLAUDE.md` — architect или reviewer
+
+Hook не зависит от LLM-памяти. Не нужно «помнить» правила выше — git сам отказывается принимать commit. Это **страховка** от рецидивов TD-22/28/30 которые наблюдались 8+ раз.
+
+Hook запускается локально (`.husky/_/husky.sh` инжектируется через `pnpm install`'s `prepare` script). На CI hooks не запускаются — там CI workflow проверяет идентичные правила pos-push.
+
+Если hook отказал commit — это правильное поведение. **Не bypass'ить через `--no-verify`** (см. CLAUDE.md «Git Safety Protocol»). Сделай `!!! SCOPE VIOLATION REQUEST !!!` маркер + переключись на right identity.
+
 ## GIT & MERGE — АБСОЛЮТНЫЕ ПРАВИЛА
 
 ### Two merge gates: feature/* → dev (architect autonomous) vs dev → main (user-only)

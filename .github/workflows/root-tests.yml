@@ -1,0 +1,88 @@
+name: CI · Root tests
+
+# M-Q1 — Catches workspace config drift that per-app CI workflows miss.
+# Runs on EVERY PR + push to dev/main with NO path filter. Cost: ~30s.
+#
+# Background: M-L9 round-2 rejection had per-app `pnpm --filter
+# @paxio/landing-app test` GREEN (16/16) but `pnpm exec vitest run`
+# (root) RED with 11 `document is not defined` failures. Root config
+# forced `environment: 'node'` for landing tests via workspace block,
+# while per-app config used `jsdom`. Per-app CI didn't catch it because
+# it doesn't run root vitest. This workflow does.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: ci-root-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: '10.33.0'
+  NODE_VERSION: '22'
+
+jobs:
+  root-typecheck-and-vitest:
+    name: typecheck + root vitest (workspace drift guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: pnpm typecheck (root, all packages)
+        run: pnpm typecheck
+      - name: pnpm exec vitest run (ROOT — workspace + cross-package)
+        run: pnpm exec vitest run
+
+  drift-guard-tests:
+    name: Quality-gate.sh drift guard (M-Q1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Verify scripts/quality-gate.sh has all 6 mandatory steps
+        run: |
+          if [ -f tests/quality-gate.test.ts ]; then
+            pnpm exec vitest run tests/quality-gate.test.ts
+          else
+            echo "::warning::tests/quality-gate.test.ts not present yet (M-Q1 not landed)"
+          fi
+      - name: Sanity — quality-gate.sh exists and is executable
+        run: |
+          if [ -f scripts/quality-gate.sh ]; then
+            test -x scripts/quality-gate.sh
+            head -10 scripts/quality-gate.sh | grep -q 'set -euo pipefail'
+            echo "✅ quality-gate.sh OK"
+          else
+            echo "::warning::scripts/quality-gate.sh not present yet (M-Q1 not landed)"
+          fi
+
+  status-check:
+    name: All Root Checks Passed
+    runs-on: ubuntu-latest
+    needs: [root-typecheck-and-vitest, drift-guard-tests]
+    if: always()
+    steps:
+      - name: Verify all jobs passed
+        run: |
+          for r in "${{ needs.root-typecheck-and-vitest.result }}" "${{ needs.drift-guard-tests.result }}"; do
+            if [ "$r" != "success" ]; then echo "❌ job failed: $r"; exit 1; fi
+          done
+          echo "✅ All root checks passed (no workspace config drift)"
