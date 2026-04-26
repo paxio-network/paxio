@@ -82,7 +82,7 @@ vi.mock('@paxio/ui', () => {
         (lines ?? []).map((l, i) => React.createElement('div', { key: i }, l))),
     AgentTable: ({ agents }: { agents?: unknown[] }) =>
       React.createElement('table', { 'data-testid': 'agent-table' },
-        (agents ?? []).map((a, i) => React.createElement('tr', { key: i }))),
+        (agents ?? []).map((_, i) => React.createElement('tr', { key: i }))),
     NetworkGraph: () => React.createElement('div', { 'data-testid': 'network-graph' }),
     HeatmapGrid: () => React.createElement('div', { 'data-testid': 'heatmap-grid' }),
     FAPDiagram: () => React.createElement('div', { 'data-testid': 'fap-diagram' }),
