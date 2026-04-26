@@ -15,11 +15,24 @@
 // M-L0 skeleton was data-only. Frontend-dev fills as part of M-L9.
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
 // Mock the api-client so sections can render without a live backend.
+vi.mock('@paxio/ui', async () => {
+  const actual = await import('@paxio/ui');
+  return {
+    ...actual,
+    SectionFrame: ({ children, id, label, className, ..._rest }: React.PropsWithChildren<{ id?: string; label?: string; className?: string; [k: string]: unknown }>) => (
+      <div data-testid="section-frame" id={id} data-section={label} className={className}>{children}</div>
+    ),
+    TerminalWidget: ({ lines = [] }: { title?: string; lines?: string[]; className?: string }) => (
+      <div data-testid="terminal-widget">{lines.join('\n')}</div>
+    ),
+  };
+});
+
 vi.mock('@paxio/api-client', () => ({
   paxioClient: {
     landing: {
@@ -40,6 +53,11 @@ vi.mock('@paxio/api-client', () => ({
         fap_throughput: 0,
         paei: 0,
         paei_d: 0,
+        btc: 0, btc_d: 0,
+        legal: 0, legal_d: 0,
+        finance: 0, finance_d: 0,
+        research: 0, research_d: 0,
+        cx: 0, cx_d: 0,
       }),
       getHeatmap: vi.fn().mockResolvedValue({
         rows: [],
@@ -48,7 +66,8 @@ vi.mock('@paxio/api-client', () => ({
         window_hours: 24,
       }),
       getNetworkSnapshot: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
-      getAgentsTop: vi.fn().mockResolvedValue([]),
+      getTopAgents: vi.fn().mockResolvedValue([]),
+      getRails: vi.fn().mockResolvedValue([]),
     },
     fap: {
       getRails: vi.fn().mockResolvedValue([]),
@@ -106,22 +125,35 @@ describe('M-L9 Hero section (01-hero.tsx)', () => {
   it('renders State of the Agentic Economy strip', async () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
-    wrap(<mod.Hero />);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={qc}><mod.Hero /></QueryClientProvider>);
     expect(screen.getByText(/State of the Agentic Economy/i)).toBeTruthy();
   });
 
   it('renders agents-indexed marker', async () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
-    wrap(<mod.Hero />);
-    expect(screen.getByText(/agents indexed/i)).toBeTruthy();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={qc}><mod.Hero /></QueryClientProvider>);
+    const getFirst = (text: RegExp) => {
+      const els = screen.getAllByText(text);
+      if (!els.length) throw new Error(`No element matching ${text}`);
+      return els[0];
+    };
+    await waitFor(() => expect(getFirst(/agents indexed/i)).toBeTruthy());
   });
 
   it('renders FAP throughput marker', async () => {
     const mod = await import('../app/sections/01-hero.js').catch(() => null);
     if (!mod) return;
-    wrap(<mod.Hero />);
-    expect(screen.getByText(/FAP throughput/i)).toBeTruthy();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={qc}><mod.Hero /></QueryClientProvider>);
+    const getFirst = (text: RegExp) => {
+      const els = screen.getAllByText(text);
+      if (!els.length) throw new Error(`No element matching ${text}`);
+      return els[0];
+    };
+    await waitFor(() => expect(getFirst(/FAP throughput/i)).toBeTruthy());
   });
 });
 
@@ -142,8 +174,8 @@ describe('M-L9 Bitcoin-native section (02b-bitcoin.tsx)', () => {
       () => null,
     );
     if (!mod) return;
-    wrap(<mod.Bitcoin />);
-    expect(screen.getByText(/register|did:paxio|btc\+usdc/i)).toBeTruthy();
+    wrap(<mod.BitcoinSection />);
+    expect(screen.getAllByText(/register|did:paxio|btc\+usdc/i).length).toBeGreaterThan(0);
   });
 });
 
@@ -181,7 +213,7 @@ describe('M-L9 Doors section (06-doors.tsx)', () => {
     const mod = await import('../app/sections/06-doors.js').catch(() => null);
     if (!mod) return;
     wrap(<mod.Doors />);
-    expect(screen.getByText(/Install the SDK/i)).toBeTruthy();
+    expect(screen.getAllByText(/Install the SDK/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Open the Registry/i)).toBeTruthy();
     expect(screen.getByText(/Get Intel access/i)).toBeTruthy();
     expect(screen.getByText(/Talk to us/i)).toBeTruthy();

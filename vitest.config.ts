@@ -27,8 +27,6 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'products/*/tests/**/*.test.ts',
-      'apps/frontend/landing/tests/**/*.test.ts',
-      'apps/frontend/landing/tests/**/*.test.tsx',
     ],
     exclude: [
       'tests/**/*.integration.ts',
@@ -41,6 +39,7 @@ export default defineConfig({
       'products/*/http-proxy',
       'products/*/ml',
       'products/04-security/guard',
+      'apps/frontend/landing/tests/**',
     ],
     coverage: {
       provider: 'v8',
@@ -50,13 +49,4 @@ export default defineConfig({
     },
     environment: 'node',
   },
-  workspace: [
-    {
-      extends: './apps/frontend/landing/vitest.config.ts',
-      test: {
-        include: ['apps/frontend/landing/tests/**/*.test.ts', 'apps/frontend/landing/tests/**/*.test.tsx'],
-        environment: 'node',  // landing smoke test uses module import, not DOM render
-      },
-    },
-  ],
 });

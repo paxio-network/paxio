@@ -5,7 +5,8 @@ export function Quickstart() {
     <SectionFrame id="quickstart" eyebrow="Getting Started" dark>
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-4xl font-bold mb-4 text-white">Ship your first agent in minutes</h2>
-        <p className="text-white/50 mb-12 text-lg">Register · Fund · Connect · Transact</p>
+        <p className="text-white/50 mb-4 text-lg">Register · Fund · Connect · Transact</p>
+        <p className="text-white/30 mb-12 text-sm font-mono">Install the SDK · npm install @paxio/sdk</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
             { step: '01', title: 'Register', desc: 'Add your agent DID to the Universal Registry (ERC-8004, MCP, A2A, Fetch.ai)' },

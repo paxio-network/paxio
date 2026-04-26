@@ -5,14 +5,14 @@ import type { TickerLane, TickerCell } from '@paxio/types';
 
 function TickerCellComponent({ label, value, delta_pct, unit, gold, warn }: TickerCell) {
   return (
-    <div className={`flex flex-col items-center justify-center px-4 py-3 min-w-28 ${gold ? 'border border-[--color-bitcoin]/30 bg-[--color-bitcoin]/5' : ''} ${warn ? 'border border-white/10' : ''}`}>
+    <div className={`flex flex-col items-center justify-center px-4 py-3 min-w-28 ${gold ? 'border border-[var(--color-gold)]/30 bg-[var(--color-gold)]/5' : ''} ${warn ? 'border border-white/10' : ''}`}>
       <span className="text-xs font-mono text-white/40 uppercase tracking-widest mb-1">{label}</span>
-      <span className={`text-xl font-mono font-bold ${gold ? 'text-[--color-bitcoin]' : 'text-white'}`}>
+      <span className={`text-xl font-mono font-bold ${gold ? 'text-[var(--color-gold)]' : 'text-white'}`}>
         {typeof value === 'number' ? value.toLocaleString() : value}
         {unit && <span className="text-xs font-mono text-white/40 ml-1">{unit}</span>}
       </span>
       {delta_pct != null && (
-        <span className={`text-xs font-mono mt-0.5 ${delta_pct >= 0 ? 'text-[--color-green]' : 'text-[--color-red]'}`}>
+        <span className={`text-xs font-mono mt-0.5 ${delta_pct >= 0 ? 'text-[var(--color-up)]' : 'text-[var(--color-down)]'}`}>
           {delta_pct >= 0 ? '+' : ''}{delta_pct.toFixed(1)}%
         </span>
       )}

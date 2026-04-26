@@ -1,4 +1,4 @@
-import { SectionFrame, TerminalWidget } from '@paxio/ui';
+import { SectionFrame } from '@paxio/ui';
 
 const DEMO_LINES = [
   '→ register --did did:paxio:0x7f3a...B9e2',
@@ -32,11 +32,17 @@ export function BitcoinSection() {
               </div>
             ))}
           </div>
-          <TerminalWidget
-            title="paxio --wallet btc"
-            lines={DEMO_LINES}
-            className="h-auto"
-          />
+          <div
+            data-testid="terminal-widget"
+            className="h-auto border border-[var(--color-bitcoin)]/30 rounded-xl bg-black/50 p-5 font-mono text-sm"
+          >
+            <div className="text-[var(--color-bitcoin)] mb-3 font-bold">paxio --wallet btc</div>
+            {DEMO_LINES.map((line, i) => (
+              <div key={i} className={line.startsWith('✓') ? 'text-green-400' : 'text-white/60'}>
+                {line}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </SectionFrame>

@@ -1,7 +1,17 @@
 @import 'tailwindcss';
 
-/* Landing — paxio.network */
+/* Landing — paxio.network — B5 warm dark palette */
 :root {
+  /* B5 design tokens */
+  --color-bg0: #0E0B07;
+  --color-bg1: #171107;
+  --color-ink0: #F4ECDA;
+  --color-ink1: rgba(244, 236, 218, 0.62);
+  --color-gold: #D4A658;
+  --color-up: #7DBE74;
+  --color-down: #E07A6E;
+  --color-rule: rgba(244, 236, 218, 0.18);
+  /* App-layer legacy tokens */
   --color-accent: #0F3460;
   --color-primary: #0F3460;
   --color-dark: #1A1A2E;
@@ -17,13 +27,13 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #ffffff;
-  color: #1A1A2E;
+  background-color: var(--color-bg0);
+  color: var(--color-ink0);
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #0F0F1A;
-    color: #E8E8F0;
+    background-color: var(--color-bg0);
+    color: var(--color-ink0);
   }
 }

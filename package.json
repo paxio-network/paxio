@@ -8,7 +8,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "typecheck": "tsc -p tsconfig.base.json --noEmit",
-    "test": "vitest",
+    "test": "node node_modules/.pnpm/vitest@2.1.9_@types+node@22.19.17_happy-dom@15.11.7_jsdom@29.0.2_@noble+hashes@1.8.0_/node_modules/vitest/vitest.mjs",
     "test:specs": "vitest run --config vitest.specs.config.ts",
     "test:integration": "vitest --config vitest.integration.config.ts",
     "lint": "eslint . && prettier --check \"**/*.{js,cjs,ts,tsx,json,md}\"",
