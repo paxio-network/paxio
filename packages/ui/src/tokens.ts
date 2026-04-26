@@ -2,27 +2,10 @@
  * Paxio design tokens — source of truth for all 8 frontend apps.
  * Each app overrides `--color-accent` in its `app/globals.css`.
  *
- * B5 warm dark palette (Paxio B5 Design, sourced from artefact):
- *   bg0/bg1  — warm dark backgrounds
- *   ink0/ink1 — warm off-white text
- *   gold      — Bitcoin / accent (D4A658)
- *   up/down   — positive/negative deltas
- *   rule      — dashed dividers
- *
- * @see docs/sprints/M-L9-landing-design-port.md §Architecture
+ * @see docs/sprints/M01b-frontend-bootstrap.md §Design tokens
  */
 export const tokens = {
   colors: {
-    // B5 warm dark palette
-    bg0: '#0E0B07',        // page background (warm dark)
-    bg1: '#171107',        // section background
-    ink0: '#F4ECDA',       // primary text (warm off-white)
-    ink1: 'rgba(244, 236, 218, 0.62)', // secondary text
-    gold: '#D4A658',       // Bitcoin / accent
-    up: '#7DBE74',         // positive delta
-    down: '#E07A6E',       // negative delta
-    rule: 'rgba(244, 236, 218, 0.18)', // dashed dividers
-    // App-layer accent (M01b legacy — kept for existing components)
     primary: '#0F3460',
     dark: '#1A1A2E',
     accent: '#533483',

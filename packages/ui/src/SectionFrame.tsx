@@ -12,9 +12,7 @@ export function SectionFrame({ id, label, eyebrow, children, dark = false }: Sec
   return (
     <section
       id={id}
-      className={`relative px-6 py-20 lg:px-16 ${
-        dark ? 'bg-[var(--color-bg1)]' : 'bg-[var(--color-bg0)]'
-      }`}
+      className={`relative px-6 py-20 lg:px-16 ${dark ? 'bg-[--color-dark]' : 'bg-[--color-bg]'}`}
       data-section={label}
     >
       {label && (
