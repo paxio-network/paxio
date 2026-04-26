@@ -70,17 +70,26 @@ describe('M-Q1 quality-gate.sh — 6 mandatory steps', () => {
     expect(content).toMatch(/pnpm\s+exec\s+vitest\s+run/);
   });
 
-  it('step 3: pnpm --filter <pkg> test (per touched app)', () => {
+  it('step 3: pnpm turbo run test --filter=<pkg> (per app, with cache)', () => {
     const content = readScript();
-    // Either literal `@paxio/<app>-app` OR `"$pkg"` where pkg is set to that
-    // pattern. Both forms are valid — assert pkg is constructed AND used.
-    expect(content).toMatch(/@paxio\/\$\{?app\}?-app/); // pkg construction
-    expect(content).toMatch(/pnpm\s+--filter\s+["']?\$\{?pkg\}?["']?\s+test/); // usage
+    // pkg constructed from app name
+    expect(content).toMatch(/@paxio\/\$\{?app\}?-app/);
+    // Turborepo wrapper for cache reuse (NOT `pnpm --filter` direct,
+    // which bypasses cache and forces full Next.js build every run —
+    // ~60s/app even for one-char fixes)
+    expect(content).toMatch(/pnpm\s+turbo\s+run\s+test\s+--filter=["']?\$\{?pkg\}?["']?/);
   });
 
-  it('step 4: pnpm --filter <pkg> build (per touched app)', () => {
+  it('step 4: pnpm turbo run build --filter=<pkg> (per app, with cache)', () => {
     const content = readScript();
-    expect(content).toMatch(/pnpm\s+--filter\s+["']?\$\{?pkg\}?["']?\s+build/);
+    expect(content).toMatch(/pnpm\s+turbo\s+run\s+build\s+--filter=["']?\$\{?pkg\}?["']?/);
+  });
+
+  it('reports turbo cache hits explicitly when they happen', () => {
+    const content = readScript();
+    // grep for cache-hit indicators in turbo output → distinguishes
+    // GREEN-from-cache vs GREEN-from-actual-execution in the report.
+    expect(content).toMatch(/cache hit/i);
   });
 
   it('step 5: cargo test --workspace (conditional on Rust changes)', () => {

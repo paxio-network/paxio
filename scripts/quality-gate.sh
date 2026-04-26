@@ -45,8 +45,12 @@ else
   exit 1
 fi
 
-# 3-4/6 — Per-app test + build for each touched frontend app
-step "3-4/6 per-app test + build for changed frontend apps"
+# 3-4/6 — Per-app test + build for each touched frontend app.
+# Use `pnpm turbo run` (NOT `pnpm --filter` direct) so Turborepo's cache
+# kicks in — instant cache hit when sources unchanged. For one-char fixes
+# in tests/, build step becomes ~0s (cached). Without turbo wrapper,
+# Next.js prod build runs from scratch every time (~60s/app).
+step "3-4/6 per-app test + build for changed frontend apps (Turborepo cache)"
 APPS=$(git diff --name-only origin/dev..HEAD 2>/dev/null \
        | grep -oE '^apps/frontend/[^/]+' \
        | sort -u \
@@ -56,15 +60,25 @@ if [ -z "$APPS" ]; then
 else
   for app in $APPS; do
     pkg="@paxio/${app}-app"
-    if pnpm --filter "$pkg" test > "/tmp/qg-${app}-test.log" 2>&1; then
-      ok "${app} test GREEN"
+    if pnpm turbo run test --filter="$pkg" > "/tmp/qg-${app}-test.log" 2>&1; then
+      cache_hit=$(grep -oE 'cache hit, replaying|FULL TURBO' "/tmp/qg-${app}-test.log" | head -1 || echo "")
+      if [ -n "$cache_hit" ]; then
+        ok "${app} test GREEN (turbo cache hit — no work needed)"
+      else
+        ok "${app} test GREEN"
+      fi
     else
       bad "${app} test RED (full: /tmp/qg-${app}-test.log)"
       tail -20 "/tmp/qg-${app}-test.log" | sed 's,^,    ,'
       exit 1
     fi
-    if pnpm --filter "$pkg" build > "/tmp/qg-${app}-build.log" 2>&1; then
-      ok "${app} build OK"
+    if pnpm turbo run build --filter="$pkg" > "/tmp/qg-${app}-build.log" 2>&1; then
+      cache_hit=$(grep -oE 'cache hit, replaying|FULL TURBO' "/tmp/qg-${app}-build.log" | head -1 || echo "")
+      if [ -n "$cache_hit" ]; then
+        ok "${app} build OK (turbo cache hit)"
+      else
+        ok "${app} build OK"
+      fi
     else
       bad "${app} build FAILED (full: /tmp/qg-${app}-build.log)"
       tail -20 "/tmp/qg-${app}-build.log" | sed 's,^,    ,'
