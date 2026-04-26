@@ -20,6 +20,14 @@ export function Quickstart() {
             </div>
           ))}
         </div>
+        <div className="mt-10 text-center">
+          <a
+            href="https://docs.paxio.network"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-mono text-sm border border-[--color-accent] text-[--color-accent] hover:bg-[--color-accent]/10 transition-colors"
+          >
+            Install the SDK →
+          </a>
+        </div>
       </div>
     </SectionFrame>
   );
