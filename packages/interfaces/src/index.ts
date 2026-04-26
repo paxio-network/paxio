@@ -22,3 +22,5 @@ export type {
 } from './agent-storage.js';
 // Meta-Facilitator rails (FA-02 / M-L4a)
 export type { FapRouter, FapError } from './fap.js';
+// Crawl observability persistence (FA-01 / M-L1-launch)
+export type { CrawlRunsRepo, CrawlRunsError } from './crawl-runs.js';
