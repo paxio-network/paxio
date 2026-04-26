@@ -4,7 +4,7 @@
 # Boots Next.js production build of @paxio/landing-app on :3500, runs
 # structural + textual fidelity checks.  Log suppressed — all output to stdout.
 
-set -uo pipefail
+set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PASS=0
@@ -36,28 +36,41 @@ else
   fi
 fi
 
-step "2. Start Next.js prod server on :3501"
+step "2. Start Next.js prod server (auto-detect free port in 3500..3510)"
+# Auto-detect free port — dev environment may have zombie next-server
+# processes from prior runs (different user, can't kill).
+PORT=""
+for candidate in 3500 3501 3502 3503 3504 3505 3506 3507 3508 3509 3510; do
+  if ! (ss -tln 2>/dev/null | grep -q ":${candidate} ") \
+     && ! (curl -sf "http://127.0.0.1:${candidate}/" -o /dev/null 2>/dev/null); then
+    PORT="$candidate"
+    break
+  fi
+done
+[ -n "$PORT" ] || { bad "No free port in 3500..3510"; exit 1; }
+echo "  Using port :$PORT"
+
 NEXT_PID=""
 {
-  PORT=3501 NEXT_PUBLIC_API_URL=https://api.paxio.network \
-    pnpm --filter @paxio/landing-app start --port 3501 2>&1 &
+  PORT="$PORT" NEXT_PUBLIC_API_URL=https://api.paxio.network \
+    pnpm --filter @paxio/landing-app start --port "$PORT" 2>&1 &
 } &
 NEXT_PID=$!
 echo "  Started Next.js pid=$NEXT_PID"
 
 BOUND=false
 for i in $(seq 1 30); do
-  if curl -sf http://127.0.0.1:3501/ >/dev/null 2>&1; then
+  if curl -sf "http://127.0.0.1:${PORT}/" >/dev/null 2>&1; then
     BOUND=true
-    ok "Next.js listening (after ${i}s)"
+    ok "Next.js listening on :$PORT (after ${i}s)"
     break
   fi
   sleep 1
 done
-[ "$BOUND" = true ] || { bad "Next.js never bound :3501"; exit 1; }
+[ "$BOUND" = true ] || { bad "Next.js never bound :$PORT"; exit 1; }
 
 step "3. Page renders (200 + content-type text/html)"
-HEAD=$(curl -sI http://127.0.0.1:3501/ | head -3)
+HEAD=$(curl -sI http://127.0.0.1:${PORT}/ | head -3)
 echo "  $HEAD" | head -2 | sed 's/^/    /'
 if echo "$HEAD" | head -1 | grep -q "200"; then
   ok "GET / 200"
@@ -66,7 +79,7 @@ else
 fi
 
 step "4. Title matches artefact (Paxio — Financial OS for the agentic economy)"
-PAGE=$(curl -sf http://127.0.0.1:3501/)
+PAGE=$(curl -sf http://127.0.0.1:${PORT}/)
 TITLE=$(echo "$PAGE" | grep -oE "<title>[^<]+</title>" | head -1)
 echo "  rendered: $TITLE"
 if echo "$TITLE" | grep -qE "Paxio.*Financial.*Operating|Paxio.*Financial OS|Paxio.*agent"; then
@@ -131,7 +144,7 @@ else
 fi
 
 step "10. Lighthouse-style smoke (page weight + critical resources)"
-SIZE=$(curl -sf http://127.0.0.1:3501/ | wc -c)
+SIZE=$(curl -sf http://127.0.0.1:${PORT}/ | wc -c)
 echo "  rendered HTML: $SIZE bytes"
 if [ "$SIZE" -gt 100 ] && [ "$SIZE" -lt 2000000 ]; then
   ok "HTML weight in sane range (100B..2MB)"
