@@ -7,6 +7,47 @@ globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.
 
 ПЕРЕД тем как написать хоть одну строчку кода:
 
+Step 0: **Per-session worktree isolation (M-Q3)** — если ты не уверен, что другая
+        сессия НЕ работает в `/home/nous/paxio` прямо сейчас, создай личный
+        worktree и работай в нём:
+
+        ```bash
+        # ОДИН раз в начале сессии:
+        cd /home/nous/paxio
+        git fetch origin
+        git worktree add /tmp/paxio-<your-session-name> -b feature/M-XX-name origin/dev
+        cd /tmp/paxio-<your-session-name>
+        git config user.name <your-agent-name>
+        git config user.email <your-agent-name>@paxio.network
+        pnpm install
+        ```
+
+        **Зачем worktree per session:**
+        - Cross-user chmod EPERM: когда другая сессия (другой OS user, другой
+          agent identity) уже владеет файлами в `node_modules/`, твой
+          `pnpm install` или `node scripts/copy-api-handlers.mjs` падает с
+          `EPERM: operation not permitted, chmod`. Group membership через
+          `devteam` НЕ помогает — chmod требует owner ИЛИ root, а group bit
+          даёт только read/write, не chmod. Per-session worktree решает это —
+          каждая сессия владеет своим `node_modules/`.
+        - Branch race condition: пока ты ждёшь reviewer, другая сессия может
+          checkout'нуть свою feature-ветку в `/home/nous/paxio`, и твой
+          следующий commit уйдёт не в ту ветку. Worktree isolation = stable
+          HEAD на всю сессию.
+        - Untracked WIP leakage: untracked files прошлой сессии не утекают в
+          твой `git status`, потому что worktree клон чистый.
+
+        **Cleanup в конце сессии (после merge или abandon):**
+        ```bash
+        cd /home/nous/paxio
+        git worktree remove /tmp/paxio-<your-session-name>
+        # Если уже удалил каталог руками — git worktree prune
+        ```
+
+        Если сессия одиночная и user явно подтвердил, что других сессий нет —
+        можно работать прямо в `/home/nous/paxio`. По умолчанию используй
+        worktree.
+
 Step 1: Прочитай `CLAUDE.md` и `.claude/rules/scope-guard.md`
 Step 2: Прочитай `docs/tech-debt.md` — есть ли 🔴 OPEN на тебя?
          - Если есть с тестом → СНАЧАЛА закрой долг, ПОТОМ milestone
