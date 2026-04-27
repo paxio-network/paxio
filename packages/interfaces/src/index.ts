@@ -24,3 +24,12 @@ export type {
 export type { FapRouter, FapError } from './fap.js';
 // Crawl observability persistence (FA-01 / M-L1-launch)
 export type { CrawlRunsRepo, CrawlRunsError } from './crawl-runs.js';
+// Cron auto-scheduler for periodic crawler trigger (FA-01 / M-L1-launch T-4)
+export type { CronScheduler, CronSchedulerError } from './cron-scheduler.js';
+// Intelligence — PAEI snapshot + RegistryList + Movers (FA-07 / M-L11)
+export type {
+  IntelligenceSnapshot,
+  RegistryList,
+  Movers,
+  IntelligenceError,
+} from './intelligence.js';
