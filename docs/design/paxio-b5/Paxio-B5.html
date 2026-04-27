@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paxio — Financial OS for the agentic economy</title>
+  <meta name="description" content="Meta-registry and payment router for 2.4M AI agents across ERC-8004, MCP, A2A, Fetch.ai, Virtuals and paxio-native. Install SDK in 60 seconds." />
+  <meta property="og:title" content="Paxio — Financial OS for the agentic economy" />
+  <meta property="og:description" content="One SDK. 2.4M agents, 6 ecosystems, wallet-native, x402 rails, institutional-grade drift watch." />
+  <meta property="og:url" content="https://paxio.network" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Paxio" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Paxio — Financial OS for the agentic economy" />
+  <meta name="twitter:description" content="Meta-registry + payment router for the agentic economy. SDK in 60s." />
+  <link rel="stylesheet" href="styles/paxio.css?v=20260427-dark" />
+  <link rel="stylesheet" href="styles/hero_variants.css?v=b4-20260421" />
+  <link rel="stylesheet" href="styles/landing_scrolls.css?v=20260421-b4" />
+  <link rel="stylesheet" href="styles/paxio_b3_page.css?v=20260421-b4" />
+  <link rel="stylesheet" href="styles/paxio_b5_fixes.css?v=20260426-btcv2e" />
+  <link rel="icon" type="image/svg+xml" href="styles/paxio_mark.svg" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body data-motion="live" data-density="regular" data-accent="classic" data-production="true">
+  <!-- ─── Unified sticky header ─── -->
+  <header id="paxio-header" data-screen-label="00 Header">
+    <div class="hdr-inner">
+      <a href="#registry" class="hdr-brand" aria-label="Paxio home">
+        <svg class="hdr-mark" viewBox="0 0 40 40" width="22" height="22" aria-hidden="true">
+          <!-- Paxio graph mark: 5 nodes, 6 edges, asymmetric. One gold node signals Bitcoin/value. -->
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <line x1="6"  y1="10" x2="22" y2="6"  />
+            <line x1="22" y1="6"  x2="34" y2="18" />
+            <line x1="6"  y1="10" x2="14" y2="26" />
+            <line x1="14" y1="26" x2="22" y2="6"  />
+            <line x1="14" y1="26" x2="28" y2="34" />
+            <line x1="34" y1="18" x2="28" y2="34" />
+          </g>
+          <g fill="currentColor">
+            <circle cx="6"  cy="10" r="2.6" />
+            <circle cx="22" cy="6"  r="2.2" />
+            <circle cx="34" cy="18" r="2.2" />
+            <circle cx="14" cy="26" r="2.2" />
+          </g>
+          <!-- Gold accent node — the economic one -->
+          <circle cx="28" cy="34" r="3.1" fill="var(--gold)" />
+        </svg>
+        <span class="hdr-wordmark">Paxio</span>
+        <span class="hdr-tagline">Financial OS · Agentic Economy</span>
+      </a>
+      <nav class="hdr-links" aria-label="Primary">
+        <a href="#registry">Registry</a>
+        <a href="#radar">Radar</a>
+        <a href="https://docs.paxio.network">Docs</a>
+      </nav>
+      <div class="hdr-actions">
+        <button id="hdr-theme-btn" class="hdr-theme-btn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="hdr-theme-icon-light" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3" y1="3" x2="4.5" y2="4.5"/><line x1="11.5" y1="11.5" x2="13" y2="13"/><line x1="3" y1="13" x2="4.5" y2="11.5"/><line x1="11.5" y1="4.5" x2="13" y2="3"/></g></svg>
+          <svg class="hdr-theme-icon-dark" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M12.5 9.5A5 5 0 0 1 6.5 3.5a5.5 5.5 0 1 0 6 6Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
+        <a href="#quickstart" class="hdr-cta hdr-cta-outline">Install SDK</a>
+        <a href="https://registry.paxio.network" class="hdr-cta hdr-cta-primary">Open Registry →</a>
+        <span class="hdr-live" aria-label="Network status"><span class="pulse-dot"></span><span>live</span></span>
+      </div>
+      <button id="hdr-menu-btn" class="hdr-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="hdr-drawer">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile drawer -->
+  <div id="hdr-drawer" aria-hidden="true">
+    <div class="drw-scrim" data-drawer-close></div>
+    <div class="drw-panel" role="dialog" aria-label="Navigation">
+      <button class="drw-close" aria-label="Close menu" data-drawer-close>×</button>
+      <a href="#registry" data-drawer-close>Registry</a>
+      <a href="#radar" data-drawer-close>Radar</a>
+      <a href="https://docs.paxio.network" data-drawer-close>Docs</a>
+      <a href="#quickstart" data-drawer-close>Install SDK</a>
+      <div class="drw-status"><span class="pulse-dot"></span> live</div>
+    </div>
+  </div>
+
+  <!-- ─── Global "simulated preview" ribbon — honest labeling until launch ─── -->
+  <div id="preview-ribbon" aria-hidden="true">
+    <span>SIMULATED PREVIEW · LAUNCHING Q2 2026 · METRICS ARE PROJECTED · SIMULATED PREVIEW · LAUNCHING Q2 2026 · METRICS ARE PROJECTED · </span>
+    <span>SIMULATED PREVIEW · LAUNCHING Q2 2026 · METRICS ARE PROJECTED · SIMULATED PREVIEW · LAUNCHING Q2 2026 · METRICS ARE PROJECTED · </span>
+  </div>
+
+  <div id="root"></div>
+  <script type="text/babel" src="components/hifi/v_hero_b5.jsx?v=20260421-b5"></script>
+  <script type="text/babel" src="components/hifi/landing_scrolls_b5.jsx?v=20260426-btcv2c"></script>
+  <script type="text/babel">
+    function App() {
+      return (
+        <>
+          <window.HeroVariantB5 />
+          <window.PaxioLandingScrollsB5 />
+          <footer id="page-foot">
+            <div className="foot-inner">
+              <div className="foot-brand">
+                <div className="foot-mark">
+                  <svg viewBox="0 0 40 40" width="20" height="20" aria-hidden="true" style={{ display: "inline-block", verticalAlign: "-3px", marginRight: "8px" }}>
+                    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                      <line x1="6"  y1="10" x2="22" y2="6"  />
+                      <line x1="22" y1="6"  x2="34" y2="18" />
+                      <line x1="6"  y1="10" x2="14" y2="26" />
+                      <line x1="14" y1="26" x2="22" y2="6"  />
+                      <line x1="14" y1="26" x2="28" y2="34" />
+                      <line x1="34" y1="18" x2="28" y2="34" />
+                    </g>
+                    <g fill="currentColor">
+                      <circle cx="6"  cy="10" r="2.6" />
+                      <circle cx="22" cy="6"  r="2.2" />
+                      <circle cx="34" cy="18" r="2.2" />
+                      <circle cx="14" cy="26" r="2.2" />
+                    </g>
+                    <circle cx="28" cy="34" r="3.1" fill="var(--gold)" />
+                  </svg>
+                  Paxio
+                </div>
+                <div className="foot-tagline">Financial OS for the agentic economy.</div>
+              </div>
+              <div className="foot-cols">
+                <div>
+                  <div className="foot-h">Product</div>
+                  <a href="https://registry.paxio.network">Registry</a>
+                  <a href="https://wallet.paxio.network">Wallet</a>
+                  <a href="https://pay.paxio.network">Pay / FAP</a>
+                  <a href="https://radar.paxio.network">Radar</a>
+                </div>
+                <div>
+                  <div className="foot-h">Builders</div>
+                  <a href="https://docs.paxio.network">Docs</a>
+                  <a href="#quickstart">SDK · 60s</a>
+                  <a href="https://github.com/paxio-network">GitHub</a>
+                  <a href="https://status.paxio.network">Status</a>
+                </div>
+                <div>
+                  <div className="foot-h">Company</div>
+                  <a href="/manifesto">Manifesto</a>
+                  <a href="/blog">Blog</a>
+                  <a href="/careers">Careers</a>
+                  <a href="mailto:hi@paxio.network">Contact</a>
+                </div>
+              </div>
+            </div>
+            <div className="foot-legal">
+              <span>© 2026 Paxio GmbH · Berlin</span>
+              <span>This preview displays projected metrics. Real-time data enabled on launch.</span>
+            </div>
+          </footer>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+
+  <script>
+    // ── Mobile drawer ───────────────────────────────────────────────
+    (function () {
+      const btn = document.getElementById("hdr-menu-btn");
+      const drw = document.getElementById("hdr-drawer");
+      if (!btn || !drw) return;
+      function open() { drw.setAttribute("data-open", "true"); btn.setAttribute("aria-expanded", "true"); drw.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; }
+      function close() { drw.removeAttribute("data-open"); btn.setAttribute("aria-expanded", "false"); drw.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
+      btn.addEventListener("click", () => { drw.hasAttribute("data-open") ? close() : open(); });
+      drw.addEventListener("click", (e) => { if (e.target.closest("[data-drawer-close]")) close(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+    })();
+
+    // ── Theme toggle (light / dark) ─────────────────────────────────
+    (function () {
+      const KEY = "paxio-theme";
+      const root = document.documentElement;
+      const saved = (function () { try { return localStorage.getItem(KEY); } catch (e) { return null; } })();
+      const initial = saved || "light";
+      root.setAttribute("data-theme", initial);
+      const btn = document.getElementById("hdr-theme-btn");
+      if (!btn) return;
+      btn.addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem(KEY, next); } catch (e) {}
+      });
+    })();
+  </script>
+</body>
+</html>
