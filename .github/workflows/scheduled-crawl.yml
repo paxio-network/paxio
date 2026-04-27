@@ -1,0 +1,71 @@
+name: Scheduled · Crawl MCP
+
+# M-L1-launch — every 6 hours, fire POST /api/admin/crawl?source=mcp
+# against api.paxio.network so the registry stays fresh and landing
+# numbers reflect current MCP server count.
+#
+# Manual trigger via workflow_dispatch (inputs.source). Default cron
+# uses MCP because it's the only adapter with real impl in M-L1-impl
+# MVP. After M-L1-expansion lands real adapters for erc8004/a2a/
+# fetch-ai/virtuals — duplicate this job per source or expand the
+# matrix here.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 00:00, 06:00, 12:00, 18:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Crawler source (must be in CRAWLER_SOURCES)'
+        required: true
+        default: 'mcp'
+        type: choice
+        options:
+          - mcp
+          - erc8004
+          - a2a
+          - fetch-ai
+          - virtuals
+
+concurrency:
+  # If a previous run is still going (e.g. MCP page response slow),
+  # cancel it — a 6h-old in-flight crawl is no longer useful.
+  group: scheduled-crawl-${{ github.event.inputs.source || 'mcp' }}
+  cancel-in-progress: true
+
+jobs:
+  crawl:
+    name: Trigger crawl on api.paxio.network
+    runs-on: ubuntu-latest
+    timeout-minutes: 45  # MCP Smithery has ~7K records; ~30 min worst case
+    steps:
+      - name: POST /api/admin/crawl
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          SOURCE: ${{ github.event.inputs.source || 'mcp' }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "::error::ADMIN_TOKEN secret not configured"
+            exit 1
+          fi
+
+          echo "Crawling source=$SOURCE on api.paxio.network..."
+          response=$(curl -sfS -X POST \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -w "\nHTTP_CODE=%{http_code}\nTIME=%{time_total}s\n" \
+            --max-time 2700 \
+            "https://api.paxio.network/api/admin/crawl?source=$SOURCE")
+          echo "$response"
+
+          # Extract HTTP code from last line — fail if not 200 or 429.
+          # (429 = rate-limited = previous run still recent; not a CI failure)
+          http_code=$(echo "$response" | grep -oE 'HTTP_CODE=[0-9]+' | tail -1 | cut -d= -f2)
+          if [ "$http_code" = "200" ]; then
+            echo "✅ crawl completed for source=$SOURCE"
+          elif [ "$http_code" = "429" ]; then
+            echo "⚠️  rate-limited — previous run < 5min ago; this is OK"
+            exit 0
+          else
+            echo "::error::unexpected HTTP code $http_code"
+            exit 1
+          fi
