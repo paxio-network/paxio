@@ -1,6 +1,6 @@
 ---
-description: Full development workflow — two task types, verification methods, complete cycle, branch model, CI/CD pipeline. Architect/reviewer reference for orchestration. Dev-agents see workflow summary via CLAUDE.md (Workflow + Branch Model sections) + scope-guard.md (which is broad-glob). This document is heavy because it covers process for ALL roles — narrow to architect-zone where it's actually consumed for planning.
-globs: ["docs/sprints/**/*.md", "docs/feature-areas/**/*.md", "scripts/verify_*.sh"]
+description: Full development workflow — task types, verification, two merge gates, branch model, CI/CD pipeline. Architect / reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Полный цикл разработки — от плана до завершения

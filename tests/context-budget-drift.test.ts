@@ -22,77 +22,93 @@ const readFile = (p: string) => readFileSync(root(p), 'utf8');
 // 1. Heavy rules have narrow globs (not auto-injected on every dev session)
 // ---------------------------------------------------------------------------
 
-describe('M-Q4 — heavy rules narrow globs', () => {
-  it('engineering-principles.md globs are NOT broad **/*', () => {
-    const content = readFile('.claude/rules/engineering-principles.md');
-    // Extract the globs line from frontmatter
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    const globs = m![1];
-    // Must not contain catch-all "**/*" or "**/*.{ts,tsx,js,cjs,rs}"
-    expect(globs).not.toMatch(/"\*\*\/\*"/);
-    expect(globs).not.toMatch(/"\*\*\/\*\.{ts,tsx,js,cjs,rs}"/);
-    // Should target architect-zone (packages/{types,…} OR docs/sprints,feature-areas)
-    expect(globs).toMatch(/packages\/{types|docs\/sprints|docs\/feature-areas/);
-  });
+describe('heavy rules — manual-load only (globs: [])', () => {
+  // Heavy reference rules (>10 KB) are manual-load only. globs: [] forces
+  // architect / reviewer to Read explicitly via instructions in their agent
+  // definition. Devs never see these — they have domain-specific replacements
+  // (backend-code-style, frontend-rules, rust-*) auto-loading on narrow globs.
+  //
+  // Earlier narrow-to-architect-zone attempts ALSO included docs/sprints/ and
+  // docs/feature-areas/, which devs read on startup → still triggered 114 KB
+  // auto-load → compaction loop. globs: [] is the only correct answer.
 
-  it('coding-standards-checklist.md globs are NOT **/*', () => {
-    const content = readFile('.claude/rules/coding-standards-checklist.md');
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    expect(m![1]).not.toMatch(/"\*\*\/\*"/);
-  });
+  const heavyRules = [
+    'engineering-principles.md',
+    'coding-standards-checklist.md',
+    'architect-protocol.md',
+    'architecture.md',
+    'workflow.md',
+    'code-style.md',
+  ];
 
-  it('architect-protocol.md globs target architect-zone files only', () => {
-    const content = readFile('.claude/rules/architect-protocol.md');
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    const globs = m![1];
-    // Must not match all .md files (used to be "docs/**/*.md")
-    expect(globs).not.toMatch(/"docs\/\*\*\/\*\.md"/);
-    // Must target sprints/feature-areas specifically
-    expect(globs).toMatch(/docs\/sprints\/\*\*\/\*\.md|docs\/feature-areas/);
-  });
+  for (const rule of heavyRules) {
+    it(`${rule} has empty globs (manual-load only)`, () => {
+      const content = readFile(`.claude/rules/${rule}`);
+      const m = content.match(/^globs:\s*(\[.*?\])/m);
+      expect(m).not.toBeNull();
+      // Must be empty array — no patterns at all
+      expect(m![1].replace(/\s/g, '')).toBe('[]');
+    });
+  }
+});
 
-  // M-Q5 follow-up: 3 more heavy rules narrowed to architect-zone.
-  // Symptom: backend-dev was still hitting compaction loop after M-Q4 because
-  // architecture.md (14 KB) + workflow.md (12 KB) + code-style.md (11 KB) had
-  // broad globs (apps/**/*, products/**/*, packages/**/*) and auto-injected
-  // 37 KB on EVERY backend-dev open of any TS/CJS file.
-  // Fix: narrow these 3 to architect-zone (packages/{types,...}/, docs/sprints/,
-  // docs/feature-areas/). Devs use domain-specific replacements which already
-  // cover the relevant subset (backend-architecture.md, backend-code-style.md,
-  // frontend-rules.md, rust-*.md).
+describe('heavy rules — agent definitions Read them explicitly', () => {
+  const heavyRules = [
+    'architect-protocol.md',
+    'coding-standards-checklist.md',
+    'engineering-principles.md',
+    'architecture.md',
+    'workflow.md',
+    'code-style.md',
+  ];
 
-  it('architecture.md globs are NOT broad apps/**/products/**', () => {
-    const content = readFile('.claude/rules/architecture.md');
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    const globs = m![1];
-    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
-    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
-    expect(globs).toMatch(/packages\/{types|docs\/sprints|docs\/feature-areas/);
-  });
+  for (const rule of heavyRules) {
+    it(`architect.md instructs Read ${rule}`, () => {
+      const content = readFile('.claude/agents/architect.md');
+      expect(content).toMatch(new RegExp(`Read \\.claude/rules/${rule.replace('.', '\\.')}`));
+    });
 
-  it('workflow.md globs are NOT broad apps/**/products/**', () => {
-    const content = readFile('.claude/rules/workflow.md');
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    const globs = m![1];
-    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
-    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
-    expect(globs).toMatch(/docs\/sprints|docs\/feature-areas|scripts\/verify_/);
-  });
+    it(`reviewer.md instructs Read ${rule}`, () => {
+      const content = readFile('.claude/agents/reviewer.md');
+      expect(content).toMatch(new RegExp(`Read \\.claude/rules/${rule.replace('.', '\\.')}`));
+    });
+  }
+});
 
-  it('code-style.md globs are NOT broad apps/**/products/**', () => {
-    const content = readFile('.claude/rules/code-style.md');
-    const m = content.match(/^globs:\s*(\[.*?\])/m);
-    expect(m).not.toBeNull();
-    const globs = m![1];
-    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
-    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
-    expect(globs).toMatch(/packages\/{types|docs\/sprints|docs\/feature-areas/);
-  });
+describe('heavy rules — devs do NOT auto-load them', () => {
+  // Regression-guard: if anyone re-adds globs to heavy rules, dev sessions
+  // hit compaction loop. This test asserts neither sprint docs nor feature
+  // areas nor any dev-zone path is in heavy rule globs.
+  const devReadPaths = [
+    'docs/sprints',
+    'docs/feature-areas',
+    'apps/',
+    'products/',
+    'packages/',
+    'platform/',
+    'tests/',
+    'scripts/',
+  ];
+  const heavyRules = [
+    'engineering-principles.md',
+    'coding-standards-checklist.md',
+    'architect-protocol.md',
+    'architecture.md',
+    'workflow.md',
+    'code-style.md',
+  ];
+
+  for (const rule of heavyRules) {
+    it(`${rule} globs do not include any dev-read path`, () => {
+      const content = readFile(`.claude/rules/${rule}`);
+      const m = content.match(/^globs:\s*(\[.*?\])/m);
+      expect(m).not.toBeNull();
+      const globs = m![1];
+      for (const path of devReadPaths) {
+        expect(globs).not.toContain(path);
+      }
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
