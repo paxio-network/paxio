@@ -12,13 +12,15 @@ import { describe, it, expect, vi } from 'vitest';
 import type { CrawlerSummary } from '@paxio/types';
 
 // ---------------------------------------------------------------------------
-// Sandbox-eval helper: handler файлы используют последнее-выражение IIFE
-// pattern (см. apps/back/server/src/loader.cjs). Тесты эмулируют loader
-// через `new Function` + return last expression.
+// Sandbox-eval helper: mirrors apps/back/server/src/loader.cjs exactly.
+// Uses vm.Script + block wrapping ('use strict';\n{\n${src}\n}) — the same
+// pattern the real server uses.  The old new.Function + 'return (${src})'
+// pattern fails on IIFE handlers in Node.js strict mode (SyntaxError ';').
 // ---------------------------------------------------------------------------
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import vm from 'node:vm';
 
 const HANDLER_PATH = resolve(
   __dirname,
@@ -45,13 +47,14 @@ const loadHandler = async (sandbox: Record<string, unknown>): Promise<Handler | 
   } catch {
     return null;
   }
-  const fnArgs = Object.keys(sandbox);
-  const fnVals = Object.values(sandbox);
-  // The handler module is a parenthesised expression at the end —
-  // wrap in a function that returns it.
-  const wrapped = `'use strict';\nreturn (${src});`;
-  const fn = new Function(...fnArgs, wrapped);
-  return fn(...fnVals) as Handler;
+  // Mirror loader.cjs exactly: block-wrapped IIFE, vm.Script, runInContext.
+  // The handler's last expression IS the return value.
+  const code = `'use strict';\n{\n${src}\n}`;
+  const script = new vm.Script(code, { displayErrors: false });
+  const sandboxWithSlot = { ...sandbox, __paxio_module: undefined };
+  const context = vm.createContext(sandboxWithSlot);
+  const result = script.runInContext(context, { displayErrors: false });
+  return (result ?? sandboxWithSlot.__paxio_module) as Handler;
 };
 
 // ---------------------------------------------------------------------------
@@ -85,7 +88,10 @@ const makeSandbox = (overrides: Partial<{
   }));
   const clockNow = overrides.clockNow ?? 1714145000000;
 
-  return {
+  // Expose the wired domain tree the loader produces.
+  // The handler reads top-level sandbox vars directly, so these must
+  // live at the sandbox root — not nested inside domain['01-registry'].
+  const sandbox = {
     config: { admin: { token: adminToken } },
     errors: {
       AuthError: class AuthError extends Error {
@@ -98,20 +104,65 @@ const makeSandbox = (overrides: Partial<{
         constructor(msg?: string) { super(msg); this.name = 'InternalError'; }
       },
     },
-    domain: {
-      crawler: { runCrawler: vi.fn(runCrawlerImpl) },
-      crawlRuns: {
-        recordRun: vi.fn(recordRunImpl),
-        lastRunForSource: vi.fn(lastRunImpl),
+    domain: Object.freeze({
+      '01-registry': Object.freeze({
+        // The wired registry domain slots the handler reads directly
+        crawlRuns: Object.freeze({
+          recordRun: vi.fn(recordRunImpl),
+          lastRunForSource: vi.fn(lastRunImpl),
+        }),
+        crawlerAdapters: Object.freeze({
+          mcp: {
+            sourceName: 'mcp' as const,
+            fetchAgents: async function* () {},
+            toCanonical: () => ({ ok: false as const, error: { code: 'parse_error' as const, message: '', raw: null } }),
+          },
+        }),
+        // agentStorage is null-safe (wiring returns noop when DB absent)
+        agentStorage: Object.freeze({
+          upsert: vi.fn(),
+          resolve: vi.fn(),
+          find: vi.fn(),
+          count: vi.fn(),
+          countBySource: vi.fn(),
+        }),
+        CRAWLER_SOURCES: Object.freeze(['native','erc8004','a2a','mcp','fetch-ai','virtuals']),
+        clock: () => clockNow,
+        // The actual runCrawler from the bundled domain crawler module
+        runCrawler: vi.fn(runCrawlerImpl),
+      }),
+    }),
+    // Top-level runCrawler: same as domain['01-registry'].runCrawler
+    // (handler references it directly, not through domain.*)
+    runCrawler: vi.fn(runCrawlerImpl),
+    // Top-level crawlRuns shortcut for tests that need to verify calls
+    crawlRuns: Object.freeze({
+      recordRun: vi.fn(recordRunImpl),
+      lastRunForSource: vi.fn(lastRunImpl),
+    }),
+    // Top-level crawlerAdapters shortcut
+    crawlerAdapters: Object.freeze({
+      mcp: {
+        sourceName: 'mcp' as const,
+        fetchAgents: async function* () {},
+        toCanonical: () => ({ ok: false as const, error: { code: 'parse_error' as const, message: '', raw: null } }),
       },
-      crawlerAdapters: {
-        mcp: { sourceName: 'mcp' as const, fetchAgents: async function* () {}, toCanonical: () => ({ ok: false as const, error: { code: 'parse_error' as const, message: '', raw: null } }) },
-      },
-      agentStorage: { upsert: vi.fn(), resolve: vi.fn(), find: vi.fn(), count: vi.fn(), countBySource: vi.fn() },
-    },
+    }),
+    // Top-level agentStorage shortcut
+    agentStorage: Object.freeze({
+      upsert: vi.fn(),
+      resolve: vi.fn(),
+      find: vi.fn(),
+      count: vi.fn(),
+      countBySource: vi.fn(),
+    }),
+    // Top-level clock shortcut
     clock: () => clockNow,
-    CRAWLER_SOURCES: ['native','erc8004','a2a','mcp','fetch-ai','virtuals'] as const,
+    // Top-level CRAWLER_SOURCES shortcut
+    CRAWLER_SOURCES: Object.freeze(['native','erc8004','a2a','mcp','fetch-ai','virtuals']),
   };
+
+  return sandbox;
 };
 
 // ---------------------------------------------------------------------------
@@ -191,8 +242,8 @@ describe('M-L1-launch POST /api/admin/crawl — happy path', () => {
       headers: { authorization: 'Bearer test-admin-token' },
     });
 
-    expect(sb.domain.crawler.runCrawler).toHaveBeenCalledTimes(1);
-    const callArgs = sb.domain.crawler.runCrawler.mock.calls[0][0];
+    expect(sb.domain['01-registry'].runCrawler).toHaveBeenCalledTimes(1);
+    const callArgs = sb.domain['01-registry'].runCrawler.mock.calls[0][0];
     expect(callArgs.adapter.sourceName).toBe('mcp');
   });
 
@@ -206,8 +257,8 @@ describe('M-L1-launch POST /api/admin/crawl — happy path', () => {
       headers: { authorization: 'Bearer test-admin-token' },
     });
 
-    expect(sb.domain.crawlRuns.recordRun).toHaveBeenCalledTimes(1);
-    const recordArgs = sb.domain.crawlRuns.recordRun.mock.calls[0][0];
+    expect(sb.domain['01-registry'].crawlRuns.recordRun).toHaveBeenCalledTimes(1);
+    const recordArgs = sb.domain['01-registry'].crawlRuns.recordRun.mock.calls[0][0];
     expect(recordArgs.source).toBe('mcp');
     expect(recordArgs.triggeredBy).toBe('manual');
     expect(recordArgs.summary.source).toBe('mcp');
@@ -265,6 +316,6 @@ describe('M-L1-launch POST /api/admin/crawl — rate limit', () => {
     expect(result._statusCode).toBe(429);
     expect(result.data?.error).toBe('rate_limited');
     // Did NOT actually call runCrawler
-    expect(sb.domain.crawler.runCrawler).not.toHaveBeenCalled();
+    expect(sb.domain['01-registry'].runCrawler).not.toHaveBeenCalled();
   });
 });

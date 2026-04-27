@@ -75,6 +75,9 @@ const pinoLogger = pino(loggerConfig);
       heartbeatInterval: 30_000,
       staleTimeout: 60_000,
     },
+    admin: {
+      token: process.env.ADMIN_TOKEN || '',
+    },
   };
 
   // createDbClient: initialises pg pool + createsPostgresStorage agentStorage.
@@ -125,7 +128,11 @@ const pinoLogger = pino(loggerConfig);
         agentStorage,
       },
       {
-        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage }),
+        wireProducts: (rawDomain) => wireProducts(rawDomain, {
+          agentStorage,
+          pgPool: dbClient && !dbClient._isNoop ? dbClient.pool : null,
+          clock: () => Date.now(),
+        }),
       },
     );
   } catch (err) {
