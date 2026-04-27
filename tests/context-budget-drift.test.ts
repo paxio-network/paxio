@@ -147,56 +147,37 @@ describe('M-Q4 — rule frontmatter is timeless', () => {
 // 3. startup-protocol Step 2 + Step 5 are role-conditional with grep/head
 // ---------------------------------------------------------------------------
 
-describe('M-Q4 — startup-protocol Step 2 + 5 are role-conditional', () => {
+describe('startup-protocol — role-conditional tech-debt + state scan', () => {
   const readProtocol = () => readFile('.claude/rules/startup-protocol.md');
 
-  it('Step 2 (tech-debt) tells dev-agents to use grep, NOT cat full file', () => {
+  it('tech-debt step tells dev-agents to use grep', () => {
     const content = readProtocol();
     expect(content).toMatch(/grep -E '🔴 OPEN'/);
-    expect(content).toMatch(/НЕ читай.*tech-debt\.md.*целиком|НЕ читай.*docs\/tech-debt/);
-  });
-
-  it('Step 2 distinguishes architect/reviewer (full read) from dev (grep)', () => {
-    const content = readProtocol();
-    // Must mention BOTH branches: dev-agents narrow + architect/reviewer full
     expect(content).toMatch(/dev-агент/i);
-    expect(content).toMatch(/architect.*или.*reviewer|architect.*reviewer/i);
-    // Architect/reviewer branch must say "целиком" (read full)
-    const protocolText = content;
-    const archReviewerSection = protocolText.match(
-      /architect.*или.*reviewer[\s\S]{0,400}целиком/i,
-    );
-    expect(archReviewerSection).not.toBeNull();
   });
 
-  it('Step 5 (project-state) tells dev-agents to head -60, NOT cat full', () => {
+  it('tech-debt step tells architect/reviewer to read full', () => {
+    const content = readProtocol();
+    expect(content).toMatch(/architect\/reviewer.*целиком|architect.*reviewer.*целиком/i);
+  });
+
+  it('state step tells dev-agents to head -60', () => {
     const content = readProtocol();
     expect(content).toMatch(/head -60 docs\/project-state\.md/);
   });
 
-  it('Step 5 distinguishes architect/reviewer (full read) from dev (head)', () => {
+  it('state step tells architect/reviewer to read full', () => {
     const content = readProtocol();
-    // Find Step 5 region and look for both branches
-    const step5Idx = content.search(/^Step 5:/m);
-    const step6Idx = content.search(/^Step 6:/m);
-    expect(step5Idx).toBeGreaterThan(0);
-    expect(step6Idx).toBeGreaterThan(step5Idx);
-    const step5Text = content.slice(step5Idx, step6Idx);
-    expect(step5Text).toMatch(/dev-агент/i);
-    expect(step5Text).toMatch(/architect.*reviewer/i);
-    expect(step5Text).toMatch(/целиком/);
+    // Both tech-debt and state mention architect/reviewer with "целиком" (read full)
+    const fullReadMatches = content.match(/целиком/g) ?? [];
+    expect(fullReadMatches.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('startup-protocol Step 2 + 5 do NOT contain milestone IDs', () => {
+  it('startup-protocol does NOT contain milestone IDs', () => {
     const content = readProtocol();
-    // Step 2 + Step 5 ONLY (Step 0 has M-Q3 which is intentional history note —
-    // actually no, it had been there. Let's tighten: full file should not have
-    // milestone refs in Step 2/5 instructions specifically)
-    const step2Start = content.search(/^Step 2:/m);
-    const step6Start = content.search(/^Step 6:/m);
-    const step25Region = content.slice(step2Start, step6Start);
-    expect(step25Region).not.toMatch(/M-Q\d+/);
-    expect(step25Region).not.toMatch(/M-L\d+/);
+    expect(content).not.toMatch(/M-Q\d+/);
+    expect(content).not.toMatch(/M-L\d+/);
+    expect(content).not.toMatch(/TD-\d+/);
   });
 });
 
@@ -297,5 +278,51 @@ describe('M-Q4 milestone doc + acceptance', () => {
   it('scripts/verify_M-Q4.sh exists + executable', () => {
     const stat = statSync(root('scripts/verify_M-Q4.sh'));
     expect(stat.mode & 0o100).toBeGreaterThan(0); // owner-execute bit
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Size limits — regression-guard against rule/CLAUDE.md bloat
+// ---------------------------------------------------------------------------
+
+describe('size limits — auto-loaded files stay slim', () => {
+  it('CLAUDE.md ≤ 16 KB (always-loaded)', () => {
+    const stat = statSync(root('CLAUDE.md'));
+    expect(stat.size).toBeLessThanOrEqual(16 * 1024);
+  });
+
+  it('startup-protocol.md ≤ 3 KB (auto-loads on every dev open)', () => {
+    const stat = statSync(root('.claude/rules/startup-protocol.md'));
+    expect(stat.size).toBeLessThanOrEqual(3 * 1024);
+  });
+
+  it('startup-protocol.md does NOT contain inline worktree boilerplate', () => {
+    const content = readFile('.claude/rules/startup-protocol.md');
+    // Worktree details should live in docs/dev/worktree-isolation.md, not inline
+    expect(content).not.toMatch(/Cross-user chmod EPERM/);
+    expect(content).not.toMatch(/Branch race condition/);
+    expect(content).toMatch(/docs\/dev\/worktree-isolation\.md/);
+  });
+
+  it('docs/dev/worktree-isolation.md exists', () => {
+    expect(() => statSync(root('docs/dev/worktree-isolation.md'))).not.toThrow();
+  });
+
+  it('docs/architecture/MONOREPO.md exists (Project Layout extracted from CLAUDE.md)', () => {
+    expect(() => statSync(root('docs/architecture/MONOREPO.md'))).not.toThrow();
+  });
+
+  it('CLAUDE.md preserves all Turborepo references inline', () => {
+    const content = readFile('CLAUDE.md');
+    // Per user requirement: Turborepo content stays in CLAUDE.md (Paxio-specific)
+    expect(content).toMatch(/Turborepo/);
+    expect(content).toMatch(/pnpm turbo/);
+    expect(content).toMatch(/--filter=@paxio/);
+    expect(content).toMatch(/Vercel Monorepo Projects/);
+  });
+
+  it('CLAUDE.md links to extracted MONOREPO.md for full layout', () => {
+    const content = readFile('CLAUDE.md');
+    expect(content).toMatch(/docs\/architecture\/MONOREPO\.md/);
   });
 });

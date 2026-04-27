@@ -29,31 +29,37 @@ const readAgent = (name: string): string => readFileSync(agentPath(name), 'utf8'
 // T-1: Per-session worktree convention
 // ---------------------------------------------------------------------------
 
-describe('M-Q3 T-1 startup-protocol.md — per-session worktree convention', () => {
-  it('file exists', () => {
-    expect(() => statSync(rulePath('startup-protocol.md'))).not.toThrow();
+describe('per-session worktree convention — extracted to docs/dev/', () => {
+  // M-Q7 moved verbose worktree boilerplate from startup-protocol.md (5.8 KB)
+  // to docs/dev/worktree-isolation.md to slim auto-loaded context. Tests now
+  // check the new location.
+  const worktreeDoc = (): string =>
+    readFileSync(resolve(__dirname, '..', 'docs', 'dev', 'worktree-isolation.md'), 'utf8');
+
+  it('docs/dev/worktree-isolation.md exists', () => {
+    expect(() =>
+      statSync(resolve(__dirname, '..', 'docs', 'dev', 'worktree-isolation.md')),
+    ).not.toThrow();
   });
 
   it('mentions git worktree as the per-session isolation primitive', () => {
-    const content = readRule('startup-protocol.md');
-    expect(content).toMatch(/git worktree/);
+    expect(worktreeDoc()).toMatch(/git worktree/);
   });
 
   it('shows the canonical worktree creation command', () => {
-    const content = readRule('startup-protocol.md');
-    // Allow either /tmp/paxio-<name> or any absolute path — but the command itself
-    // must be present in copy-pasteable form.
-    expect(content).toMatch(/git worktree add\s+\/tmp\/paxio-/);
+    expect(worktreeDoc()).toMatch(/git worktree add\s+\/tmp\/paxio-/);
   });
 
   it('mentions the cross-user chmod / EPERM problem worktree solves', () => {
-    const content = readRule('startup-protocol.md');
-    expect(content).toMatch(/EPERM|cross-user|chmod/i);
+    expect(worktreeDoc()).toMatch(/EPERM|cross-user|chmod/i);
   });
 
   it('explains worktree cleanup (git worktree remove)', () => {
-    const content = readRule('startup-protocol.md');
-    expect(content).toMatch(/git worktree remove|worktree prune/);
+    expect(worktreeDoc()).toMatch(/git worktree remove|worktree prune/);
+  });
+
+  it('startup-protocol.md links to the extracted worktree doc', () => {
+    expect(readRule('startup-protocol.md')).toMatch(/docs\/dev\/worktree-isolation\.md/);
   });
 });
 
