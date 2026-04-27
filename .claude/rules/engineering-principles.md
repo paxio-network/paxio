@@ -1,6 +1,6 @@
 ---
-description: Architect-level software engineering principles — type systems, polymorphism, composition, dispatch, abstraction, metaprogramming, concurrency, DSL, and more
-globs: ["**/*.{ts,tsx,js,cjs,rs}", "docs/**/*.md"]
+description: Architect-level software engineering principles — type systems, polymorphism, composition, dispatch, abstraction, metaprogramming, concurrency, DSL, and more. Reference document for architect (RED spec design) + reviewer (Phase 0 walks). Auto-loads only on architect-zone files; dev-agents load manually if a specific principle is referenced from their milestone.
+globs: ["packages/{types,interfaces,errors,contracts}/**/*.ts", "docs/sprints/**/*.md", "docs/feature-areas/**/*.md"]
 ---
 
 # Engineering Principles — Paxio Architect Reference
