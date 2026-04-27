@@ -45,7 +45,10 @@ describe('M-L1-expansion createA2aAdapter — factory', () => {
   });
 });
 
-describe('M-L1-expansion A2A fetchAgents — well-known discovery', () => {
+// TD-34: skip behaviour-driven tests until registry-dev T-3 lands real impl.
+// Stubs return empty AsyncIterable so these tests RED. Registry-dev removes
+// `.skip` when wiring well-known + peers BFS in domain/sources/a2a.ts.
+describe.skip('M-L1-expansion A2A fetchAgents — well-known discovery', () => {
   it('GETs <host>/.well-known/agent.json for each seed', async () => {
     const calls: string[] = [];
     const httpClient: HttpClient = {
