@@ -10,6 +10,7 @@
 
 const { wireFacilitatorDomain } = require('./02-facilitator.cjs');
 const { wireIntelligenceDomain } = require('./07-intelligence.cjs');
+const { wireRegistryDomain } = require('./01-registry.cjs');
 
 // rawDomain is double-frozen by the VM loader:
 //   sandbox.domain = Object.freeze(domain);                     ← outer frozen
@@ -37,6 +38,14 @@ const wireProducts = (rawDomain, deps) => {
     wired['07-intelligence'] = Object.freeze({
       ...rawDomain['07-intelligence'],
       ...wireIntelligenceDomain(rawDomain['07-intelligence'], deps),
+    });
+  }
+
+  // FA-01 — Registry (crawler)
+  if (rawDomain['01-registry']) {
+    wired['01-registry'] = Object.freeze({
+      ...rawDomain['01-registry'],
+      ...wireRegistryDomain(rawDomain, deps),
     });
   }
 
