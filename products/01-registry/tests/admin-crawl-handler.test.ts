@@ -14,11 +14,12 @@ import type { CrawlerSummary } from '@paxio/types';
 // ---------------------------------------------------------------------------
 // Sandbox-eval helper: handler файлы используют последнее-выражение IIFE
 // pattern (см. apps/back/server/src/loader.cjs). Тесты эмулируют loader
-// через `new Function` + return last expression.
+// через `vm.Script` с block-wrapping (точная копия server/loader.cjs).
 // ---------------------------------------------------------------------------
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import vm from 'node:vm';
 
 const HANDLER_PATH = resolve(
   __dirname,
@@ -45,13 +46,14 @@ const loadHandler = async (sandbox: Record<string, unknown>): Promise<Handler | 
   } catch {
     return null;
   }
-  const fnArgs = Object.keys(sandbox);
-  const fnVals = Object.values(sandbox);
-  // The handler module is a parenthesised expression at the end —
-  // wrap in a function that returns it.
-  const wrapped = `'use strict';\nreturn (${src});`;
-  const fn = new Function(...fnArgs, wrapped);
-  return fn(...fnVals) as Handler;
+  // Block-wrapping IIFE pattern — mirrors apps/back/server/src/loader.cjs.
+  // vm.Script with block wrapping correctly handles `});` at end of handler IIFE.
+  const code = `'use strict';\n{\n${src}\n}`;
+  const script = new vm.Script(code, { displayErrors: false });
+  const sandboxWithSlot = { ...sandbox, __paxio_module: undefined };
+  const context = vm.createContext(sandboxWithSlot);
+  const result = script.runInContext(context, { displayErrors: false });
+  return (result ?? sandboxWithSlot.__paxio_module) as Handler;
 };
 
 // ---------------------------------------------------------------------------
