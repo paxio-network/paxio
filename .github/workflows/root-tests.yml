@@ -68,7 +68,9 @@ jobs:
         run: |
           if [ -f scripts/quality-gate.sh ]; then
             test -x scripts/quality-gate.sh
-            head -10 scripts/quality-gate.sh | grep -q 'set -euo pipefail'
+            # Unconstrained grep — `set -euo pipefail` lives on line 15 after
+            # the file's header comment (TD-33 fix: head -10 was a self-defeat).
+            grep -q 'set -euo pipefail' scripts/quality-gate.sh
             echo "✅ quality-gate.sh OK"
           else
             echo "::warning::scripts/quality-gate.sh not present yet (M-Q1 not landed)"
