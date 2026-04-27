@@ -10,6 +10,66 @@ globs: ["docs/**/*.md", "tests/**/*.test.ts", "products/*/tests/**/*.test.ts", "
 
 ---
 
+## ФАЗА 0: SETUP (per-session worktree isolation)
+
+### 0.1 — Создай личный worktree ПЕРЕД любой работой
+
+`/home/nous/paxio` — общая репа, в которой одновременно могут работать
+несколько агент-сессий (architect + dev в параллели, два architect'а в
+параллельных feature ветках, etc). Работа в shared working tree приводит к
+трём классам багов:
+
+1. **Cross-user chmod EPERM** — `pnpm install`, `node scripts/copy-api-handlers.mjs`
+   и `pnpm test:specs` модифицируют `node_modules/` через `chmod`. Если файлы
+   принадлежат другому OS user'у (другая сессия запускала install), chmod
+   падает с `EPERM: operation not permitted`. Group `devteam` НЕ помогает —
+   chmod требует owner или root, group bit даёт только rw, не chmod.
+
+2. **Branch race condition** — пока твой reviewer гонит проверку, другая
+   сессия checkout'ит свою feature-ветку в `/home/nous/paxio` → твой
+   следующий commit уходит в чужую ветку. Случалось у registry-dev session
+   2026-04-27.
+
+3. **Untracked WIP leakage** — untracked файлы прошлой сессии видны в твоём
+   `git status`, и можно случайно их закоммитить (registry-dev attempt-1 →
+   5 файлов scope violations).
+
+Worktree даёт **separate HEAD per session**, **isolated branch**, **own node_modules/**.
+
+### 0.2 — Команда setup
+
+```bash
+cd /home/nous/paxio
+git fetch origin
+git worktree add /tmp/paxio-<milestone-name> -b feature/M-XX-name origin/dev
+cd /tmp/paxio-<milestone-name>
+git config user.name architect
+git config user.email architect@paxio.network
+pnpm install                     # fresh node_modules в worktree, no chmod conflicts
+```
+
+Worktree даёт **separate HEAD per session** — твоя ветка изолирована от
+любых checkout'ов в `/home/nous/paxio`.
+
+Где `<milestone-name>` — короткое уникальное имя сессии (например `mq3`,
+`m-l1-launch`, `td35-fix`). НЕ переиспользуй существующие имена `/tmp/paxio-*`
+от других сессий — `git worktree list` покажет занятые.
+
+### 0.3 — Cleanup после merge
+
+```bash
+cd /home/nous/paxio                       # вернуться в main checkout
+git worktree remove /tmp/paxio-<name>     # удалит каталог + запись
+git worktree prune                        # если каталог удалён руками
+```
+
+### 0.4 — Когда worktree можно НЕ создавать
+
+Только если user явно сказал «работай в /home/nous/paxio» и подтвердил, что
+других активных сессий нет. По умолчанию — worktree.
+
+---
+
 ## ФАЗА 1: SCAN (понять текущее состояние)
 
 ### 1.1 — Tech-debt ПЕРВЫМ ДЕЛОМ

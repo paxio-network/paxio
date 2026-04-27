@@ -164,6 +164,37 @@ If unclear — default to Phase N (existing flow). Phase 0 is opt-in via explici
 6. Check no test modifications: `git diff --name-only <base>..HEAD -- 'tests/*.test.ts' 'products/*/tests/**' 'platform/**/tests/**' 'scripts/verify_*.sh'`
    - If dev modified test files → flag as BLOCKER violation
 
+### Phase 1.6: Working tree hygiene (M-Q3 T-2)
+
+**ПЕРЕД любым commit'ом в `docs/project-state.md` или `docs/tech-debt.md`:**
+
+```bash
+git status --porcelain
+```
+
+Output ДОЛЖЕН быть пустой (или содержать ТОЛЬКО ожидаемые правки в этих
+двух доках). Если видишь любой untracked / modified файл, который ты не
+ждал — **STOP и не коммить**.
+
+**Зачем:** untracked WIP может «утечь» из чужой агент-сессии работающей в
+том же `/home/nous/paxio` working tree (cross-session leakage). Foreign
+WIP может быть scope violation (чужая зона) или незаконченный код, и
+случайный `git add -A` его подхватит. Reviewer — последняя линия защиты
+перед merge.
+
+**Если untracked файлы найдены:**
+1. Проверь `git log --all --pretty=oneline -- <file>` — есть ли в истории?
+2. Если нет — это foreign WIP. Сообщи user'у; **не удаляй сам** (может
+   быть чья-то работа). Свой commit делай через явный whitelist:
+   `git add docs/project-state.md docs/tech-debt.md` + `git commit`.
+3. Если файл есть в истории и просто отстал — `git restore <file>`.
+
+**Source of bug:** 2026-04-27 у registry-dev session attempt-1 в `/home/nous/paxio`
+оставались 5 untracked файлов scope violations; следующий agent в shared
+tree мог их закоммитить без явного intent. Per-session worktree
+(scope-guard.md::Per-session worktree isolation) — primary defense;
+этот checkpoint — secondary.
+
 ### Phase 2: Multi-Tenancy (CRITICAL — БЛОКЕР при нарушении)
 
 Multi-tenancy leak = data visible between agents/organizations. This is a **P0 security incident**.

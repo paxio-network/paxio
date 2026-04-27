@@ -14,6 +14,7 @@ Rust canister logic.
 Метод верификации: **unit test RED → GREEN**
 
 ### Architect:
+0. **Setup per-session worktree** (M-Q3): `git worktree add /tmp/paxio-<name> -b feature/M-XX-name origin/dev` → cd → `git config user.email architect@paxio.network` → `pnpm install`. См. `architect-protocol.md::ФАЗА 0`.
 1. Выполнить scan протокол
 2. Создать milestone в `docs/sprints/M0X-*.md`
 3. Написать RED тесты в `tests/*.test.ts`, `products/*/tests/**/*.test.ts`, Rust tests
@@ -21,6 +22,7 @@ Rust canister logic.
 5. Указать в milestone: "Метод верификации: unit test"
 
 ### Dev-агент:
+0. **Setup per-session worktree** (M-Q3): `git worktree add /tmp/paxio-<dev>-<milestone> origin/feature/M-XX-name` → cd → `git config user.email <agent>@paxio.network` → `pnpm install`. Если architect уже создал worktree и передал путь — checkout того же пути в свой подкаталог через `git worktree add`. См. `startup-protocol.md::Step 0`.
 1. Выполнить startup protocol
 2. Прочитать ТЕСТЫ — это спецификация
 3. Реализовать код → тест GREEN
