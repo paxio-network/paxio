@@ -118,9 +118,13 @@ mod tests {
 
 ### Тип 2: Acceptance scripts
 
-- `scripts/verify_*.sh` — infra + integration
-- Run: `bash scripts/verify_*.sh`
-- Для: DB migrations, API health check, Docker compose, ICP replica + canister deploy, frontend build
+**Naming convention** (M-Q1):
+- `scripts/verify_<MILESTONE-ID>.sh` — canonical (e.g. `verify_M-L9.sh`, `verify_M-Q1.sh`, `verify_TD-29.sh`)
+- Header line 2: `# <MILESTONE-ID> acceptance — <descriptive name>` — для quality-gate.sh fallback discovery
+- Legacy descriptive names (`verify_landing_design_port.sh`) работают через fallback пока header содержит milestone tag
+- Run direct: `bash scripts/verify_<milestone>.sh`
+- Run via gate: `bash scripts/quality-gate.sh <milestone-id>` (auto-discovery + 5 предыдущих gates)
+- Для: DB migrations, API health check, Docker compose, ICP replica + canister deploy, frontend build, E2E flows
 
 ### Кто что проверяет
 
@@ -128,7 +132,7 @@ mod tests {
 |---|---|---|
 | **architect** | Пишет RED тесты | Пишет FAIL scripts |
 | **dev** | Реализует → GREEN | Реализует → PASS |
-| **test-runner** | `pnpm test -- --run` + `cargo test --workspace` → GREEN? | `bash scripts/verify_*.sh` → PASS? |
+| **test-runner** | `bash scripts/quality-gate.sh <milestone>` (одна команда покрывает оба) | (как Тип 1 — quality-gate.sh step 6) |
 | **reviewer** | Тесты не изменены? | Script не изменён? |
 
 ## TEST-FIRST workflow per task type
@@ -139,9 +143,10 @@ mod tests {
 - Dev NEVER changes the test
 
 **Type 2 (integration):** acceptance script FAIL → PASS
-- Architect writes FAIL script in `scripts/verify_*.sh`
+- Architect writes FAIL script in `scripts/verify_<milestone-id>.sh` (canonical) с header `# <ID> acceptance — ...`
 - Dev implements to make PASS
 - Must have E2E environment set up
+- Test-runner gate: `bash scripts/quality-gate.sh <milestone-id>` — runs ALL 6 quality gates including this acceptance script
 
 ## НЕТ СПЕЦИФИКАЦИИ = НЕТ РАБОТЫ
 
