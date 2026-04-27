@@ -11,11 +11,11 @@ import { ZodCrawlRun } from '@paxio/types';
 import type {
   CrawlRun,
   CrawlRunSummary,
-  CrawlRunsError,
   CrawlRunTrigger,
   CrawlerSource,
   Result,
 } from '@paxio/types';
+import type { CrawlRunsError } from '@paxio/interfaces';
 
 export interface PgPool {
   query: (text: string, values?: unknown[]) => Promise<{ rows: unknown[] }>;
