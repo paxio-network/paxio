@@ -1,6 +1,6 @@
 ---
-description: Naming conventions, error handling, data externalization for TypeScript + Rust
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "docs/**/*.md"]
+description: Cross-language code style reference — naming, error handling, data externalization, V8 optimization rules, FP discipline (R29-R75). Architect-zone reference for spec design. Dev-agents use domain-specific replacements which already cover relevant subsets — backend-code-style.md (TS/V8, factory pattern, no class in app/), frontend-rules.md (TS strict, no any, real-data invariant), rust-*.md (Rust style + lints + async patterns).
+globs: ["packages/{types,interfaces,errors,contracts}/**/*.ts", "docs/sprints/**/*.md", "docs/feature-areas/**/*.md"]
 ---
 
 # Code Style Rules

@@ -1,6 +1,6 @@
 ---
-description: Architecture enforcement — apps/back server/app split, layer separation, dependency rules, data externalization
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "docs/**/*.md", "scripts/**"]
+description: Architecture enforcement — server/app split, layer separation, dependency rules, data externalization, CQS / domain events / idempotency. Architect-zone reference for spec design. Dev-agents see domain-specific versions instead — backend-architecture.md for apps/back/ + products/*/app/, frontend-rules.md for apps/frontend/, rust-*.md for canisters. Pattern from this file referenced from a specific milestone? Dev reads manually.
+globs: ["packages/{types,interfaces,errors,contracts}/**/*.ts", "docs/sprints/**/*.md", "docs/feature-areas/**/*.md"]
 ---
 
 # Architecture Rules

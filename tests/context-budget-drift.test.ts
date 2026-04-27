@@ -53,6 +53,46 @@ describe('M-Q4 — heavy rules narrow globs', () => {
     // Must target sprints/feature-areas specifically
     expect(globs).toMatch(/docs\/sprints\/\*\*\/\*\.md|docs\/feature-areas/);
   });
+
+  // M-Q5 follow-up: 3 more heavy rules narrowed to architect-zone.
+  // Symptom: backend-dev was still hitting compaction loop after M-Q4 because
+  // architecture.md (14 KB) + workflow.md (12 KB) + code-style.md (11 KB) had
+  // broad globs (apps/**/*, products/**/*, packages/**/*) and auto-injected
+  // 37 KB on EVERY backend-dev open of any TS/CJS file.
+  // Fix: narrow these 3 to architect-zone (packages/{types,...}/, docs/sprints/,
+  // docs/feature-areas/). Devs use domain-specific replacements which already
+  // cover the relevant subset (backend-architecture.md, backend-code-style.md,
+  // frontend-rules.md, rust-*.md).
+
+  it('architecture.md globs are NOT broad apps/**/products/**', () => {
+    const content = readFile('.claude/rules/architecture.md');
+    const m = content.match(/^globs:\s*(\[.*?\])/m);
+    expect(m).not.toBeNull();
+    const globs = m![1];
+    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
+    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
+    expect(globs).toMatch(/packages\/{types|docs\/sprints|docs\/feature-areas/);
+  });
+
+  it('workflow.md globs are NOT broad apps/**/products/**', () => {
+    const content = readFile('.claude/rules/workflow.md');
+    const m = content.match(/^globs:\s*(\[.*?\])/m);
+    expect(m).not.toBeNull();
+    const globs = m![1];
+    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
+    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
+    expect(globs).toMatch(/docs\/sprints|docs\/feature-areas|scripts\/verify_/);
+  });
+
+  it('code-style.md globs are NOT broad apps/**/products/**', () => {
+    const content = readFile('.claude/rules/code-style.md');
+    const m = content.match(/^globs:\s*(\[.*?\])/m);
+    expect(m).not.toBeNull();
+    const globs = m![1];
+    expect(globs).not.toMatch(/"apps\/\*\*\/\*\.{ts,tsx,cjs,js}"/);
+    expect(globs).not.toMatch(/"products\/\*\*\/\*\.{ts,js,rs}"/);
+    expect(globs).toMatch(/packages\/{types|docs\/sprints|docs\/feature-areas/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -64,6 +104,10 @@ describe('M-Q4 — rule frontmatter is timeless', () => {
     'engineering-principles.md',
     'coding-standards-checklist.md',
     'architect-protocol.md',
+    // M-Q5 — additional rules narrowed to architect-zone
+    'architecture.md',
+    'workflow.md',
+    'code-style.md',
   ];
 
   for (const rule of heavyRules) {
