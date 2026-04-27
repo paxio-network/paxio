@@ -85,22 +85,41 @@ ICP canister deploy, Bitcoin testnet flow, Vercel deploy pipeline.
 
 ---
 
-## Full Cycle
+## Full Cycle (M-Q2 expanded — adds Phase 0 spec-pass)
 
 ```
-1. Dev: реализует код → тест GREEN → КОММИТИТ в feature-ветку
+0. Architect: написал spec (RED tests + contracts + acceptance) → COMMIT + push
+   → создал PR с label `spec-ready`
+   → spec-review.yml fast-CI runs (~90s: frozen-lockfile + typecheck + root vitest)
+   ↓
+1. Architect: SELF-CALL reviewer Phase 0 (sub-agent через Agent({ subagent_type: "reviewer" }))
+   → reviewer walks coding-standards-checklist.md (P0 → P1 → P2)
+   → output: SPEC APPROVED / SPEC REJECTED + must-fix list
+   → REJECTED: architect фикшит → re-invoke (max 3 rounds → escalate to user)
+   → APPROVED: gh pr edit --add-label dev-ready → handoff user'у
+   ↓
+2. Dev: реализует код → тест GREEN → КОММИТИТ в feature-ветку
    ↳ pre-commit hook (.husky/pre-commit) проверяет identity + scope
      перед каждым commit'ом. mismatch / scope violation → commit blocked
-2. Dev: все задачи done → говорит "готово"
-3. User: запускает test-runner → "Проверь"
-4. test-runner: `bash scripts/quality-gate.sh <milestone>` (одна команда)
+   ↳ Architect-only: pre-commit catches lockfile drift (M-Q2 T-3)
+3. Dev: все задачи done → говорит "готово"
+4. User: запускает test-runner → "Проверь"
+5. test-runner: `bash scripts/quality-gate.sh <milestone>` (одна команда)
    → копирует stdout в report → STATUS = exit code
-5. User: запускает reviewer → "Review от [agent]"
-6. Reviewer: scope, тесты не изменены, quality →
+6. User: запускает reviewer Phase N → "Review от [agent]"
+7. Reviewer Phase N: scope, тесты не изменены, quality →
    APPROVED: коммитит обновлённый project-state.md + tech-debt.md
-7. Architect (если APPROVED, all must-fix done, CI green): `gh pr merge N --merge` → feature/* мержится в dev САМОСТОЯТЕЛЬНО, без явного OK от user
-8. User: решает когда `dev → main` (релиз). После явного OK от user (с PR номером) → architect выполняет `gh pr merge M --merge` для PR `dev → main`
+8. Architect (если APPROVED, all must-fix done, CI green):
+   `gh pr merge N --merge` → feature/* мержится в dev САМОСТОЯТЕЛЬНО, без явного OK от user
+9. User: решает когда `dev → main` (релиз). После явного OK от user
+   (с PR номером) → architect выполняет `gh pr merge M --merge` для PR `dev → main`
 ```
+
+**Phase 0 = NEW gate (M-Q2)** между «architect committed» и «dev starts». Catches spec
+bugs ДО того как dev burned 2-4 hours. Closes class of TD-30 (architect modifies own
+tests under pressure) — once Phase 0 APPROVED, тесты frozen externally.
+
+**Phase N = existing gate** (after dev impl) — preserved without changes.
 
 ## Quality Gate (M-Q1) — одна команда для test-runner
 

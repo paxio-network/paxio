@@ -394,9 +394,97 @@ bash scripts/quality-gate.sh <milestone>  # dry-run — должен fail на �
                                           # step (RED expected before dev impl)
 ```
 
-### 6.5 — Скажи user'у кого запускать
-"Запускай [agent-name]. Milestone: M0X. Branch: feature/M0X-name. Тесты закоммичены.
- Quality gate: bash scripts/quality-gate.sh M0X (test-runner запускает после impl)."
+### 6.5 — Self-call reviewer Phase 0 BEFORE user handoff (M-Q2)
+
+После commit + push spec, ДО handoff'а user'у — самовызови reviewer как sub-agent
+для Phase 0 spec review. Это catches spec bugs ДО того как dev burned time на bad
+spec.
+
+**Сначала push + create PR + add label:**
+```bash
+git push -u origin feature/M0X-name
+gh pr create --title "M0X: <description>" --body "<spec details>"
+gh pr edit <N> --add-label spec-ready  # триггерит spec-review.yml fast-CI
+```
+
+**Затем sub-agent invocation:**
+```typescript
+// Pseudo-code (real call uses Agent tool с subagent_type: "reviewer")
+const verdict = await Agent({
+  subagent_type: "reviewer",
+  description: "M0X spec-pass review",
+  prompt: `
+Phase 0 spec-review for M0X. NOT impl review — code не написан yet.
+
+Branch: feature/M0X-name
+PR: #N (label: spec-ready)
+Milestone doc: docs/sprints/M0X-name.md
+
+Architect-authored artifacts:
+  - tests/*.test.ts: [explicit list]
+  - products/*/tests/*.test.ts: [list]
+  - packages/types/src/*.ts: [list]
+  - packages/interfaces/src/*.ts: [list]
+  - packages/errors/src/*.ts: [list — if changes]
+  - scripts/verify_M0X.sh
+  - docs/sprints/M0X-name.md
+
+Run Phase 0 checklist (.claude/agents/reviewer.md::Phase 0):
+  - Coverage (тесты vs Готово когда) — counts match?
+  - Vacuous-skip correctness
+  - Architectural enforcement tests presence (factory frozen, determinism, agentDid filter, ...)
+  - Coding standards adherence (.claude/rules/coding-standards-checklist.md walk top-down)
+  - Tests RED for right reason (run vitest, verify failure messages)
+  - Contracts quality (ADT, Zod paired, no any)
+  - Infrastructure: pnpm install --frozen-lockfile + typecheck + vitest run + acceptance PASS
+
+Report under 500 words: SPEC APPROVED | SPEC REJECTED + must-fix list (if REJECTED).
+
+DO NOT update tech-debt.md / project-state.md в Phase 0.
+This is pre-impl gate; impl review (Phase N) happens later после dev impl.
+  `,
+});
+```
+
+**Parse verdict + branch:**
+
+```
+verdict.includes("SPEC APPROVED")
+  → gh pr edit <N> --add-label dev-ready
+  → handoff user'у с verdict note
+  → переходи к 6.6 (handoff)
+
+verdict.includes("SPEC REJECTED")
+  → fix must-fix items (items упорядочены по C-N priority)
+  → re-commit + push
+  → re-invoke Agent({ subagent_type: "reviewer", ... }) с обновлённым spec
+  → loop max 3 rounds
+```
+
+**Escalation rule (3-rounds-then-user):** Если reviewer rejects 3 раза подряд — это
+сигнал архитектурного gap'а который требует обсуждения с user'ом, не очередной фикс.
+Architect останавливается, summary'ит must-fix items + рассуждения почему они persist'ят,
+ждёт user input.
+
+**Failure modes:**
+- Reviewer не отвечает / падает sub-agent call → fallback к user-invoked reviewer (existing flow). Не блокировать handoff если sub-agent infrastructure unavailable.
+- Reviewer перебдил (P2 violations rejecting спек) → architect appeal'ит через PR comment с rationale, либо просит user override
+- Reviewer недобдил (let через bug) → ловится Phase N (impl review)
+
+**Cost:** ~30s sub-agent invocation + 60s vitest+typecheck = ~90s per Phase 0 round.
+Acceptable overhead для catching spec bugs ДО dev'ом potentially burning 2-4 hours
+implementing buggy spec.
+
+### 6.6 — Скажи user'у кого запускать (после Phase 0 APPROVED)
+
+"Phase 0 APPROVED reviewer'ом. Запускай [agent-name]. Milestone: M0X.
+ Branch: feature/M0X-name. PR #N (label: dev-ready).
+ Тесты закоммичены. Quality gate: `bash scripts/quality-gate.sh M0X`
+ (test-runner запускает после impl)."
+
+**Если Phase 0 был skipped** (sub-agent infrastructure unavailable, or first run before
+M-Q2 fully landed): включи в handoff message warning — «Phase 0 skipped, manual review
+needed».
 
 ---
 
