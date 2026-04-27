@@ -27,8 +27,11 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'products/*/tests/**/*.test.ts',
-      'apps/frontend/landing/tests/**/*.test.ts',
-      'apps/frontend/landing/tests/**/*.test.tsx',
+      // Landing tests are NOT included here — they need jsdom environment
+      // (React render via @testing-library/react), but root environment is
+      // 'node'. Workspace entry below picks them up via per-app config
+      // (apps/frontend/landing/vitest.config.ts) which sets jsdom + react
+      // plugin. Single source of truth: per-app config.
     ],
     exclude: [
       'tests/**/*.integration.ts',
@@ -55,7 +58,11 @@ export default defineConfig({
       extends: './apps/frontend/landing/vitest.config.ts',
       test: {
         include: ['apps/frontend/landing/tests/**/*.test.ts', 'apps/frontend/landing/tests/**/*.test.tsx'],
-        environment: 'node',  // landing smoke test uses module import, not DOM render
+        // Inherit environment: 'jsdom' from per-app config above.
+        // M-L9 sections.test.tsx renders React components via @testing-library/react
+        // — needs `document` global, which jsdom provides and 'node' does not.
+        // Earlier override forced 'node' for landing smoke (.test.ts uses module
+        // import, not DOM render); jsdom is a superset and works for both.
       },
     },
   ],

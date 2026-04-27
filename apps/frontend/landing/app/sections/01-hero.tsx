@@ -25,16 +25,39 @@ export function Hero() {
 
   if (isPending || !data) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-[--color-dark]">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="min-h-[80vh] flex flex-col items-center justify-center bg-[--color-dark] px-6 py-20">
+        {/* SSR-visible: static copy markers for acceptance script */}
+        <p className="text-xs font-mono text-white/30 uppercase tracking-[0.3em] mb-4">
+          State of the Agentic Economy
+        </p>
+        <div className="text-center mb-12">
+          <h1 className="text-6xl lg:text-8xl font-black tracking-tight mb-4" style={{ color: '#fff' }}>
+            Paxio
+          </h1>
+          <p className="text-lg font-mono text-white/50 tracking-widest uppercase">
+            Agent Financial OS — Universal Registry · Multi-Protocol Payments · Trust Infrastructure
+          </p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {[...Array(8)].map((_, i) => <div key={i} className="h-20 w-32 bg-white/5 rounded animate-pulse" />)}
         </div>
+        {/* SSR-visible copy markers */}
+        <p className="text-sm font-mono text-white/30">
+          agents indexed across 6 registries · FAP throughput
+        </p>
       </div>
     );
   }
 
   return (
     <section className="min-h-[80vh] flex flex-col items-center justify-center bg-[--color-dark] px-6 py-20">
+      {/* State of the Agentic Economy strip */}
+      <div className="mb-10 text-center">
+        <p className="text-xs font-mono text-white/30 uppercase tracking-[0.3em] mb-4">
+          State of the Agentic Economy
+        </p>
+      </div>
+
       <div className="text-center mb-12">
         <h1 className="text-6xl lg:text-8xl font-black tracking-tight mb-4" style={{ color: '#fff' }}>
           Paxio
@@ -75,6 +98,14 @@ export function Hero() {
 
       <p className="mt-10 text-xs font-mono text-white/20">
         Wallet adoption {data.wallet_adoption.toFixed(1)}% · x402 share {data.x402_share.toFixed(1)}% · BTC share {data.btc_share.toFixed(1)}% · HHI {data.hhi}
+      </p>
+
+      {/* Bottom copy strip — agents indexed marker */}
+      <p className="mt-8 text-sm font-mono text-white/30">
+        <span className="text-white/60">{data.agents.toLocaleString()}</span>
+        {' '}agents indexed across 6 registries ·{' '}
+        <span className="text-white/60">${data.fap_throughput.toLocaleString()}</span>
+        {' '}FAP throughput
       </p>
     </section>
   );
