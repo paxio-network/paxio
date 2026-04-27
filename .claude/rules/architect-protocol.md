@@ -1,6 +1,6 @@
 ---
-description: Architect scan protocol, milestone creation rules, architecture enforcement via tests
-globs: ["docs/**/*.md", "tests/**/*.test.ts", "products/*/tests/**/*.test.ts", "packages/{types,interfaces,errors,contracts}/**/*.ts", "scripts/**/*.sh"]
+description: Architect scan protocol, milestone creation rules, architecture enforcement via tests. Architect-only auto-load — globs target architect-zone files (sprint docs, feature areas, contracts, tests, verify scripts). Dev-agents reading these files for reference do NOT need this protocol.
+globs: ["docs/sprints/**/*.md", "docs/feature-areas/**/*.md", "docs/fa-registry.md", "docs/NOUS_*.md", "packages/{types,interfaces,errors,contracts}/**/*.ts", "tests/**/*.test.ts", "products/*/tests/**/*.test.ts", "scripts/verify_*.sh"]
 ---
 
 # Architect Protocol — ОБЯЗАТЕЛЬНЫЙ при каждом планировании
