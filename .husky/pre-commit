@@ -108,4 +108,50 @@ check_scope '^\.claude/|^CLAUDE\.md$' \
   "architect@paxio.network reviewer@paxio.network"
 # Above protects: .claude/, CLAUDE.md
 
+# ---------------------------------------------------------------------------
+# 3. Architect-specific: lockfile drift catcher (M-Q2 T-3)
+# ---------------------------------------------------------------------------
+#
+# Closes class of TD-35 (architect adds devDep to package.json без regenerating
+# pnpm-lock.yaml → CI's `pnpm install --frozen-lockfile` falls → all 8 Vercel
+# deploys fail). This is exactly the bug architect just made on PR #38, round-3.
+#
+# Logic: если architect commit'ит `package.json` но НЕ commit'ит `pnpm-lock.yaml`
+# → exit 1. Это catches lockfile drift локально, до push'а в CI.
+#
+# Override: marker `!!! LOCKFILE OK !!!` в commit message. Use cases:
+#   - clean removal of dep (lockfile auto-rebuilds в нормальный flow)
+#   - intentional package.json metadata change (license, scripts) без deps touch
+#   - emergency hotfix где lockfile regen медленнее чем критично
+
+if [ "$EMAIL" = "architect@paxio.network" ]; then
+  if echo "$DIFF" | grep -q '^package\.json$'; then
+    if ! echo "$DIFF" | grep -q '^pnpm-lock\.yaml$'; then
+      # package.json staged без pnpm-lock.yaml — потенциальный CI fail
+      MSG_FILE=".git/COMMIT_EDITMSG"
+      OVERRIDE_OK=0
+      if [ -f "$MSG_FILE" ]; then
+        if grep -q '!!! LOCKFILE OK !!!' "$MSG_FILE" 2>/dev/null; then
+          OVERRIDE_OK=1
+        fi
+      fi
+      if [ "$OVERRIDE_OK" -eq 0 ]; then
+        echo "⚠️  package.json staged but pnpm-lock.yaml not staged (architect)."
+        echo ""
+        echo "   This will likely break CI's pnpm install --frozen-lockfile."
+        echo "   That's exactly the class of bug TD-35 (M-Q1 round-3 must-fix)."
+        echo ""
+        echo "   Fix:"
+        echo "     pnpm install --lockfile-only"
+        echo "     git add pnpm-lock.yaml"
+        echo "     # then re-run commit"
+        echo ""
+        echo "   Override (intentional, e.g. clean removal of dep, metadata-only change):"
+        echo "     Add '!!! LOCKFILE OK !!!' marker to commit message."
+        exit 1
+      fi
+    fi
+  fi
+fi
+
 echo "✅ pre-commit OK (identity=$NAME, scope clean)"

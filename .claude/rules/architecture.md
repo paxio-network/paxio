@@ -163,3 +163,114 @@ Paxio взаимодействует с Guard через HTTP:
 - Бизнес-логика: `app/domain/guard/` (когда звать, fallback при timeout)
 
 Разработка Guard ML-сервиса ведётся в отдельном репо `/home/openclaw/guard/`.
+
+## Architectural Patterns (M-Q2 T-5 — ported from /PROJECT donor)
+
+### R43 [C77]: CQS — Command Query Separation
+
+**Severity: P2** (architecture principle, prevents bugs from mixed responsibilities).
+
+Каждая функция либо:
+- **Command** — изменяет state, не возвращает business data (return `void` или `id` for
+  newly created entity)
+- **Query** — читает state, не мутирует, возвращает data
+
+```typescript
+// ✅ Command — mutates, returns only id (для allowing client to reference new entity)
+async function createAgent(data: AgentInput, agentDid: Did): Promise<{ id: string }> {
+  const id = await db.agents.insert({ ...data, owner: agentDid });
+  return { id };  // ← only what's needed for client
+}
+
+// ✅ Query — reads, no mutation, returns full data
+async function getAgent(id: string, agentDid: Did): Promise<AgentCard | null> {
+  return db.agents.findOne({ id, owner: agentDid });
+}
+
+// ❌ Mixed — command returns business data + mutates
+async function createAndReturnAgent(data: AgentInput): Promise<AgentCard> {
+  const id = await db.agents.insert(data);
+  return await db.agents.findOne({ id });  // extra read
+}
+```
+
+**Исключение для CQS:** `create → return { id }` для allowing client to reference newly
+created entity без round-trip. Это **practical relaxation**, оригинальная Bertrand Meyer
+CQS строже (commands return void).
+
+### R44 [C78]: Domain events — anemic objects, serializable
+
+**Severity: P2** (audit trail, event sourcing, eventual consistency).
+
+Domain events = plain objects с обязательными fields:
+- `type` (string, discriminator)
+- `timestamp` (ISO 8601 или unix epoch ms)
+- `aggregateId` (что именно изменилось)
+- `payload` (event-specific data)
+
+```typescript
+// ✅ serializable, immutable, audit-friendly
+type AgentRegisteredEvent = {
+  type: 'agent.registered';
+  timestamp: number;          // unix ms
+  aggregateId: string;        // agent DID
+  payload: {
+    did: string;
+    capabilities: string[];
+    source: 'erc8004' | 'a2a' | 'native';
+  };
+};
+
+// emit
+telemetry.broadcast('registry', {
+  type: 'agent.registered',
+  timestamp: Date.now(),
+  aggregateId: agent.did,
+  payload: { ... },
+});
+
+// ❌ class with methods — not serializable to JSON, can't be stored in audit log
+class AgentRegisteredEvent {
+  constructor(public did: string) {}
+  apply(state: State) { state.agents.add(this.did); }  // ← method couples event с handler
+}
+```
+
+Events stored в:
+- **Audit log** (immutable canister) — для compliance/forensics
+- **WebSocket broadcast** (`telemetry.broadcast`) — для frontend live updates
+- **Event sourcing replay** — для state reconstruction (если используется)
+
+### R46 [C79]: Idempotency через GUID для job queue / retry-prone operations
+
+**Severity: P1** (correctness в distributed systems).
+
+Operations, which могут retry (network failures, queue redelivery), must be idempotent:
+
+```typescript
+// ✅ idempotent payment endpoint
+async function processPayment(req: PaymentRequest): Promise<PaymentResult> {
+  const idempotencyKey = req.idempotencyKey || req.headers['idempotency-key'];
+  if (!idempotencyKey) {
+    throw new ValidationError('Missing Idempotency-Key header');
+  }
+  
+  // First call — process; subsequent calls — return cached result
+  const cached = await redis.get(`idempotency:${idempotencyKey}`);
+  if (cached) return JSON.parse(cached);
+  
+  const result = await charge(req.amount, req.from, req.to);
+  await redis.setex(`idempotency:${idempotencyKey}`, 86400, JSON.stringify(result));
+  return result;
+}
+```
+
+**Patterns:**
+- **POST endpoints accepting retries** — accept `Idempotency-Key` header, dedupe by it
+- **Payment / financial operations** — ALWAYS idempotent (double-charge = catastrophic)
+- **Job queue handlers** — check `if (job.guid in processedSet) return;` at start
+- **Database upserts** — `INSERT ... ON CONFLICT DO UPDATE` с stable PK
+- **Inter-canister calls** — design messages с `idempotency_key` field, canister state
+  tracks processed keys
+
+См. также `engineering-principles.md` §15 «Idempotent operations» для теории.

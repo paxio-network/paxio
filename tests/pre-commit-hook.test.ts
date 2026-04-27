@@ -147,3 +147,47 @@ describe('M-Q1 .husky/pre-commit — happy path semantics', () => {
     expect(content).toMatch(/✅.*pre-commit OK/);
   });
 });
+
+describe('M-Q2 T-3 .husky/pre-commit — architect lockfile-drift catcher', () => {
+  it('has architect-specific block guarded by EMAIL check', () => {
+    const content = readHook();
+    expect(content).toMatch(/EMAIL.*=.*architect@paxio\.network/);
+  });
+
+  it('detects package.json staged без pnpm-lock.yaml', () => {
+    const content = readHook();
+    // Hook must check both: package.json IN diff, pnpm-lock.yaml NOT in diff
+    expect(content).toMatch(/grep.*-q.*'?\^package\\?\.json/);
+    expect(content).toMatch(/grep.*-q.*'?\^pnpm-lock\\?\.yaml/);
+  });
+
+  it('supports override marker for intentional cases', () => {
+    const content = readHook();
+    expect(content).toMatch(/!!! LOCKFILE OK !!!/);
+  });
+
+  it('reads override marker from .git/COMMIT_EDITMSG', () => {
+    const content = readHook();
+    expect(content).toMatch(/COMMIT_EDITMSG/);
+  });
+
+  it('prints fix instructions: pnpm install --lockfile-only', () => {
+    const content = readHook();
+    expect(content).toMatch(/pnpm install --lockfile-only/);
+  });
+
+  it('mentions TD-35 reference (closes class of bug)', () => {
+    const content = readHook();
+    expect(content).toMatch(/TD-35/);
+  });
+
+  it('does not block non-architect committers', () => {
+    const content = readHook();
+    // The architect block must be inside `if [ "$EMAIL" = "architect@paxio.network" ]`
+    // — other identities pass through without lockfile check.
+    const architectBlock = content.match(
+      /if \[ "\$EMAIL" = "architect@paxio\.network" \][\s\S]*?fi\s*\nfi/,
+    );
+    expect(architectBlock).not.toBeNull();
+  });
+});
