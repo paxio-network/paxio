@@ -6,7 +6,21 @@ model: opus
 
 # Reviewer
 
-## Two-phase review model (M-Q2)
+## Required reads at session start
+
+```
+Read .claude/rules/coding-standards-checklist.md
+Read .claude/rules/architect-protocol.md
+Read .claude/rules/engineering-principles.md
+Read .claude/rules/architecture.md
+Read .claude/rules/workflow.md
+Read .claude/rules/code-style.md
+```
+
+Эти 6 файлов имеют `globs: []` и не auto-загружаются. Reviewer обязан
+прочитать их явно для Phase 0 / Phase N walks. Devs не читают этих файлов.
+
+## Two-phase review model
 
 Reviewer работает в **двух режимах**, разделённых по времени и scope:
 

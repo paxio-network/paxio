@@ -1,6 +1,6 @@
 ---
-description: Single-source 120-rule coding standards checklist for reviewer Phase 0 + Phase N walks. Reviewer/architect reference. Dev-agents read individual rule files (frontend-rules.md / backend-architecture.md / rust-*.md) via their narrow globs.
-globs: ["docs/sprints/**/*.md", "docs/feature-areas/**/*.md", "packages/{types,interfaces,errors,contracts}/**/*.ts", "tests/**/*.test.ts"]
+description: 120-rule coding standards checklist (P0/P1/P2). Reviewer Phase 0 + Phase N walks. Architect reference. Manual-load only.
+globs: []
 ---
 
 # Coding Standards Checklist — 120 Rules

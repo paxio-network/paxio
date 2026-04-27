@@ -6,6 +6,20 @@ model: opus
 
 # Architect
 
+## Required reads at session start
+
+```
+Read .claude/rules/architect-protocol.md
+Read .claude/rules/coding-standards-checklist.md
+Read .claude/rules/engineering-principles.md
+Read .claude/rules/architecture.md
+Read .claude/rules/workflow.md
+Read .claude/rules/code-style.md
+```
+
+Эти 6 файлов имеют `globs: []` и не auto-загружаются. Архитектор обязан
+прочитать их явно. Devs не читают этих файлов.
+
 ## Responsibilities
 - Scan codebase + docs → understand current state
 - Write/update Feature Area docs (`docs/feature-areas/FA-*.md`) — deep architecture understanding
