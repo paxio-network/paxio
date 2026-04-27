@@ -213,9 +213,11 @@ Stdout уже structured — копируй в report как есть, не ин
 | # | Кто | Что | Где | Verification | Architecture Requirements |
 |---|-----|-----|-----|---|---|
 | T-1 | architect | Milestone doc + scripts/quality-gate.sh + RED drift-guard тест | этот файл, `scripts/quality-gate.sh`, `tests/quality-gate.test.ts`, `scripts/verify_quality_gates.sh` | this PR | bash strict mode, exit propagation, single source of truth |
-| T-2 | backend-dev | `.husky/pre-commit` + `package.json::scripts.prepare` + bash hook implementation | `.husky/pre-commit`, `package.json` | `tests/pre-commit-hook.test.ts` GREEN + manual violation test | mechanical, no LLM dependency, fail-closed |
+| T-2 | architect | `.husky/pre-commit` + `package.json::{scripts.prepare,devDependencies.husky}` + drift-guard test | `.husky/pre-commit`, `package.json`, `tests/pre-commit-hook.test.ts` | `tests/pre-commit-hook.test.ts` GREEN + manual violation smoke (identity mismatch + scope violation + happy path) | mechanical, no LLM dependency, fail-closed, Bash 3.2 compatible (no associative arrays — uses `case`) |
 | T-3 | architect | Update 8× ci-frontend-*.yml + ci-backend.yml + .claude/agents/test-runner.md | `.github/workflows/`, `.claude/agents/test-runner.md` | acceptance включает CI lint pass | path-filter preserved, root vitest before per-app |
 | T-4 | architect | Update `.claude/rules/scope-guard.md` — добавить ссылку на mechanical hook | `.claude/rules/scope-guard.md` | manual review | docs reflect new enforcement layer |
+
+> **T-2 reassignment note (2026-04-26):** Originally assigned to `backend-dev`. backend-dev correctly identified that `.husky/` is outside their file-ownership table (CLAUDE.md::File Ownership) — `.husky/` is meta-tooling enforcing scope-guard rules, not backend feature code. backend-dev stopped after `package.json` edit and emitted a `!!! SCOPE VIOLATION REQUEST !!!` for the hook itself. Architect (this commit) takes ownership: hook is conceptually adjacent to `scripts/verify_*.sh` + `.claude/rules/` which architect already owns.
 
 ## Предусловия среды
 

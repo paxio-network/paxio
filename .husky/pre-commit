@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# M-Q1 T-2 — Mechanical scope + identity enforcement.
+#
+# Runs before every `git commit`. Refuses commits when:
+#   1. git config user.name does not match user.email per the role mapping table
+#   2. files staged for commit fall outside the committer's allowed scope
+#
+# Hook is the backstop for `.claude/rules/scope-guard.md` rules — works even
+# when the LLM agent forgets the rules under context compaction. Hook stays
+# in repo root .husky/ and is wired by `pnpm install` via the root
+# package.json `prepare: husky` script.
+#
+# Bypass with --no-verify is forbidden by policy (see CLAUDE.md::Git Safety).
+# CI mirrors these checks (`.github/workflows/root-tests.yml` drift-guard
+# job runs `tests/pre-commit-hook.test.ts` to lock hook semantics).
+
+# Husky v9 dispatcher invokes hooks via `sh -e <file>` which IGNORES the
+# shebang. Re-exec under bash so `set -euo pipefail` and other bashisms work.
+# This guard is POSIX-sh compatible (works in dash/sh as well as bash).
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
+set -euo pipefail
+
+NAME=$(git config user.name 2>/dev/null || echo "")
+EMAIL=$(git config user.email 2>/dev/null || echo "")
+DIFF=$(git diff --cached --name-only)
+
+# ---------------------------------------------------------------------------
+# 1. Identity check — name MUST match email per the role mapping
+# ---------------------------------------------------------------------------
+
+# Bash 3.2 compatible — no associative arrays. Use case-statement.
+expected_email_for_name() {
+  case "$1" in
+    architect)    echo "architect@paxio.network" ;;
+    reviewer)     echo "reviewer@paxio.network" ;;
+    backend-dev)  echo "backend-dev@paxio.network" ;;
+    frontend-dev) echo "frontend-dev@paxio.network" ;;
+    icp-dev)      echo "icp-dev@paxio.network" ;;
+    registry-dev) echo "registry-dev@paxio.network" ;;
+    test-runner)  echo "test-runner@paxio.network" ;;
+    *)            echo "" ;;
+  esac
+}
+
+EXPECTED=$(expected_email_for_name "$NAME")
+if [ -n "$EXPECTED" ] && [ "$EMAIL" != "$EXPECTED" ]; then
+  echo "❌ identity mismatch:"
+  echo "   git config user.name  = $NAME"
+  echo "   git config user.email = $EMAIL"
+  echo "   expected email for '$NAME' = $EXPECTED"
+  echo ""
+  echo "   Fix one of:"
+  echo "     git config user.email $EXPECTED"
+  echo "   OR change name to match a different role, OR"
+  echo "     git config user.name <one of: architect|reviewer|backend-dev|frontend-dev|icp-dev|registry-dev|test-runner>"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 2. Scope check — file pattern → allowed identities (by email)
+# ---------------------------------------------------------------------------
+
+# Returns 0 (silent OK) if all files matching `pattern` are in the allowed
+# identity set; exits 1 with diagnostic otherwise.
+check_scope() {
+  local pattern="$1"
+  shift
+  local allowed_emails="$*"
+  local matches
+  matches=$(echo "$DIFF" | grep -E "$pattern" || true)
+  if [ -n "$matches" ]; then
+    if ! echo " $allowed_emails " | grep -q " $EMAIL "; then
+      echo "❌ scope violation:"
+      echo "   committer email = $EMAIL"
+      echo "   files matching $pattern:"
+      echo "$matches" | sed 's,^,     ,'
+      echo "   allowed emails: $allowed_emails"
+      echo ""
+      echo "   This is a hard scope guard from .claude/rules/scope-guard.md."
+      echo "   If you genuinely need to modify files outside your zone, write"
+      echo "   '!!! SCOPE VIOLATION REQUEST !!!' marker in commit message and"
+      echo "   ask user/architect for exception in PR review."
+      exit 1
+    fi
+  fi
+}
+
+# Tests are spec — only architect writes/modifies them.
+check_scope '^(tests/|products/[^/]+/tests/|apps/frontend/[^/]+/tests/)' \
+  "architect@paxio.network"
+# Above protects: tests/, products/<fa>/tests/, apps/frontend/<app>/tests/
+
+# Architect-only docs.
+check_scope '^docs/(sprints|feature-areas)/|^docs/fa-registry\.md$|^docs/NOUS_' \
+  "architect@paxio.network"
+# Above protects: docs/sprints/, docs/feature-areas/, docs/fa-registry.md, docs/NOUS_*
+
+# Reviewer-only docs.
+check_scope '^docs/(tech-debt|project-state)\.md$' \
+  "reviewer@paxio.network"
+# Above protects: docs/tech-debt.md, docs/project-state.md
+
+# .claude/ rules + agent definitions — architect or reviewer only.
+check_scope '^\.claude/|^CLAUDE\.md$' \
+  "architect@paxio.network reviewer@paxio.network"
+# Above protects: .claude/, CLAUDE.md
+
+echo "✅ pre-commit OK (identity=$NAME, scope clean)"
