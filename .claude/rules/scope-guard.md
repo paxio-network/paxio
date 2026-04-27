@@ -147,8 +147,10 @@ pnpm install                              # owns its own node_modules/
 git config user.email <agent>@paxio.network
 ```
 
-После merge: `git worktree remove /tmp/paxio-<session>` или `git worktree prune`.
-Подробности в `architect-protocol.md::ФАЗА 0` + `startup-protocol.md::Step 0`.
+После merge: `git worktree remove --force /tmp/paxio-<session>` или
+`git worktree prune`. `--force` обязателен из-за git submodule в
+`products/04-security/guard/`. Подробности в `architect-protocol.md::ФАЗА 0`
++ `startup-protocol.md::Step 0`.
 
 Reviewer Phase N enforce'ит чистоту через `git status --porcelain` checkpoint
 перед коммитом доков (см. `.claude/agents/reviewer.md::Phase 1.6`) — ловит

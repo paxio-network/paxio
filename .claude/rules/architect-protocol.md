@@ -58,10 +58,16 @@ Worktree даёт **separate HEAD per session** — твоя ветка изол
 ### 0.3 — Cleanup после merge
 
 ```bash
-cd /home/nous/paxio                       # вернуться в main checkout
-git worktree remove /tmp/paxio-<name>     # удалит каталог + запись
-git worktree prune                        # если каталог удалён руками
+cd /home/nous/paxio                              # вернуться в main checkout
+git worktree remove --force /tmp/paxio-<name>    # удалит каталог + запись
+git worktree prune                               # если каталог удалён руками
 ```
+
+`--force` обязателен потому что Paxio имеет initialized git submodule в
+`products/04-security/guard/`. Без `--force` git отказывает с
+`fatal: working trees containing submodules cannot be moved or removed`.
+Это безопасно — `--force` удаляет только worktree directory, не
+оригинальный submodule в main checkout.
 
 ### 0.4 — Когда worktree можно НЕ создавать
 

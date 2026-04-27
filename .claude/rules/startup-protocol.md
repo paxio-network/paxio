@@ -40,8 +40,11 @@ Step 0: **Per-session worktree isolation (M-Q3)** — если ты не уве�
         **Cleanup в конце сессии (после merge или abandon):**
         ```bash
         cd /home/nous/paxio
-        git worktree remove /tmp/paxio-<your-session-name>
-        # Если уже удалил каталог руками — git worktree prune
+        git worktree remove --force /tmp/paxio-<your-session-name>
+        # --force нужен потому что products/04-security/guard — git
+        # submodule, а git без --force отказывается удалять worktree
+        # с initialized submodules. Если уже удалил каталог руками —
+        # git worktree prune
         ```
 
         Если сессия одиночная и user явно подтвердил, что других сессий нет —
