@@ -1,6 +1,6 @@
 ---
-description: Safety rules — input validation, no secrets, async/concurrency safety
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "docs/**/*.md"]
+description: Safety reference — Zod validation, no secrets, async/concurrency, rate limiting, ICP canister safety, cross-user EPERM. Architect/reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Safety Rules

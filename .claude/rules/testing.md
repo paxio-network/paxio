@@ -1,6 +1,6 @@
 ---
-description: TEST-FIRST mandatory workflow — vitest for TS, cargo test for Rust
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "scripts/**"]
+description: TEST-FIRST workflow reference — vitest for TS, cargo test for Rust, coverage thresholds, naming conventions. Architect/reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Testing Rules

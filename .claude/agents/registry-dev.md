@@ -49,11 +49,11 @@ FA-01 Universal Registry — основа Paxio OS (Identity Layer).
 ## Startup Protocol (ОБЯЗАТЕЛЬНЫЙ)
 
 1. `CLAUDE.md` + `.claude/rules/scope-guard.md`
-2. `docs/tech-debt.md` — 🔴 OPEN на registry-dev?
+2. `grep '🔴 OPEN.*registry-dev' docs/tech-debt.md` — есть ли долг? (targeted, дёшево)
 3. Контракты: `packages/types/src/agent-card.ts`, `packages/types/src/did.ts`, `packages/types/src/capability.ts`, `packages/interfaces/src/registry.ts` (если есть)
 4. Тесты: `tests/registry*.test.ts` + `products/01-registry/tests/` + `products/01-registry/canister/tests.rs`
-5. `docs/project-state.md` + актуальный `docs/sprints/M*.md`
-6. Feature Area: `docs/feature-areas/FA-01-registry-architecture.md` (ЧТО именно TS vs Rust)
+5. Milestone: `docs/sprints/M-XX-<name>.md` (architect укажет ID). Project state: `head -30 docs/project-state.md` для ориентира
+6. Feature Area по необходимости: `grep -nE '^##' docs/feature-areas/FA-01-registry-architecture.md` для TOC, потом `Read offset/limit` секции про TS vs Rust
 7. Текущий код: `products/01-registry/app/{api,domain}/` + `products/01-registry/canister/`
 8. **ВЫВЕДИ ОТЧЁТ** (startup-protocol.md формат — укажи какой stack трогаешь: TS / Rust / оба)
 9. Прогон: `pnpm vitest run` + `cargo test -p reputation`
