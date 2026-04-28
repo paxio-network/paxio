@@ -620,6 +620,27 @@ Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запуск
 4. **3 verify команды max** на финальной проверке. Полный quality-gate запускает test-runner отдельно ПОСЛЕ.
 5. **NO «прочитать docs/sprints/M0X.md»** в required reads. Spec в test файле + reference в mcp.ts достаточно для импла одного адаптера.
 6. **Commit message в spec'е** — short conventional, без многоэтажных explanation в body.
+7. **Skills allowlist в spec'е (CRITICAL после M-Q11 + PR #68 revert).** Dev-агенты больше не auto-load'ят skills из frontmatter (overflow на MiniMax-M2.7). Architect ОБЯЗАН включить в spec строку:
+
+   ```
+   Skills доступны on-demand (вызвать через Skill tool если нужны):
+     - <skill-1> (что покрывает)
+     - <skill-2> (что покрывает)
+     - <skill-3> (что покрывает)
+   ```
+
+   Dev знает какие skills существуют + когда invoke'ить. Без этой строки dev не догадается что Skill tool ему доступен (skills больше не упоминаются в его system prompt).
+
+   Per-task mapping (типичный набор для TS/Fastify/registry impl):
+   - All TS impl: `typescript-patterns`, `error-handling`, `zod-validation`
+   - HTTP adapter / crawler: + `registry-patterns` (если применимо)
+   - Postgres / SQL: + `sql-best-practices`
+   - Cache / Redis: + `redis-cache`
+   - Fastify route / handler: + `fastify-best-practices`
+   - Frontend React component: `typescript-patterns`, `react-patterns`, `nextjs-15` (если App Router)
+   - Rust canister: `icp-rust`, `rust-canister`, `rust-error-handling`, + per-domain (`bitcoin-icp`, `chain-fusion`, `icp-threshold-ecdsa`)
+
+   Architect picks 3-5 skills MAX per task (не дамп всего списка — это overflow vector).
 
 #### Если task большой (>1 file impl):
 
