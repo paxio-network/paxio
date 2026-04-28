@@ -48,3 +48,48 @@ describe('Architect no-spawn rule — drift-guard across 3 governance files', ()
     expect(content).toMatch(/test-runner/);
   });
 });
+
+/**
+ * Drift-guard: compact.threshold in .claude/settings.json must NOT regress below 0.85.
+ *
+ * 2026-04-28 incident: explicit `compact.threshold: 0.5` overrode env var
+ * `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90`, causing test-runner agent (Haiku 4.5) to
+ * autocompact 3 times in 3 turns during a single test verification task. The explicit
+ * setting wins over env override — the 0.5 value was leftover from a debug session.
+ *
+ * Floor of 0.85 keeps a safety margin without being so strict (1.0) that legitimate
+ * compaction needs are blocked.
+ */
+describe('settings.json compact.threshold drift-guard', () => {
+  it('.claude/settings.json::compact.threshold >= 0.85', () => {
+    const raw = readFile('.claude/settings.json');
+    const settings = JSON.parse(raw) as { compact?: { threshold?: number } };
+    expect(settings.compact).toBeDefined();
+    expect(typeof settings.compact?.threshold).toBe('number');
+    expect(settings.compact?.threshold ?? 0).toBeGreaterThanOrEqual(0.85);
+  });
+});
+
+/**
+ * Drift-guard: dev-startup.md globs must NOT match test files.
+ *
+ * 2026-04-28 incident: a broad products/(double-star) glob matched
+ * products/01-registry/tests/a2a-adapter.test.ts, causing test-runner agent to
+ * auto-load dev impl rules during test verification → context overflow.
+ *
+ * Narrowed globs target impl directories explicitly: app/, canister-N/src/, etc.
+ * Test directories (tests/) MUST NOT match.
+ */
+describe('dev-startup.md glob narrowness drift-guard', () => {
+  it('dev-startup globs do not match products/*/tests/ paths', () => {
+    const content = readFile('.claude/rules/dev-startup.md');
+    const globsMatch = content.match(/globs:\s*\[([^\]]+)\]/);
+    expect(globsMatch).not.toBeNull();
+    const globs = globsMatch![1];
+    // Must NOT contain the broad "products/**" pattern that matched test files
+    expect(globs).not.toMatch(/"products\/\*\*\/\*\.\{ts,js,rs\}"/);
+    // Must contain the narrow impl-only patterns
+    expect(globs).toMatch(/products\/\*\/app/);
+    expect(globs).toMatch(/products\/\*\/canister\*\/src/);
+  });
+});
