@@ -64,3 +64,4 @@ opensrc/repos/*
 
 # Next.js auto-generated type file (each app regenerates on dev)
 apps/frontend/*/next-env.d.ts
+/opensrc/repos
