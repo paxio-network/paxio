@@ -1,6 +1,6 @@
 ---
-description: HARD scope boundaries — every agent may ONLY touch files in its ownership zone
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "docs/**/*.md", "scripts/**"]
+description: HARD scope boundaries reference — file ownership, GIT & MERGE rules, branch model, three hard rules, scope violation template, mechanical pre-commit hook description. Architect/reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Scope Guard — MANDATORY for every agent
