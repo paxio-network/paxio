@@ -29,6 +29,19 @@ globs: []
 - `products/04-security/guard/` (submodule) — **external team a3ka**. Paxio агенты **только читают**. Contributions → PR в upstream `github.com/a3ka/guard`.
 - `products/07-intelligence/ml/` — external ML team. Paxio агенты не трогают.
 
+## AGENT INVOCATION — кто кого spawn'ит через `Agent` tool
+
+| Кто invoke'ит | Кого | Когда | Источник правды |
+|---|---|---|---|
+| **user** | dev agents (backend-dev / frontend-dev / icp-dev / registry-dev) | architect выдал task spec → user копирует в нужную session | `architect.md::Boundaries`, `workflow.md::User → reviewer/test-runner` |
+| **user** | reviewer Phase N (post-impl review) | architect сказал «ready for review» с PR link | `workflow.md` step 6 «User: запускает reviewer Phase N» |
+| **user** | test-runner | architect сказал «ready for testing» | `workflow.md` step 4 «User: запускает test-runner» |
+| **architect** | reviewer Phase 0 (pre-impl spec review) | ДО handoff'а user'у — единственное исключение для self-call | `architect-protocol.md::§6.5` (ONLY Phase 0, NEVER Phase N) |
+
+**Architect не запускает devs/test-runner/reviewer-Phase-N через `Agent` tool под никаким предлогом.** Если кажется что нужен — это знак что протокол сломан, или задача декомпозирована неправильно. Output discipline: дай task spec, передай user'у, **stop**.
+
+**Нарушение этого правила** = повтор паттерна типа TD-30 (architect-as-X), требует governance запись в `tech-debt.md`.
+
 ## УСТАВНЫЕ ДОКУМЕНТЫ — АБСОЛЮТНЫЙ ЗАПРЕТ для ВСЕХ dev-агентов
 
 Следующие файлы НЕ МОЖЕТ модифицировать НИКАКОЙ dev-агент.
