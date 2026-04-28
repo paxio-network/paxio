@@ -32,6 +32,7 @@ Read .claude/rules/code-style.md
 - DOES NOT write implementation code (`apps/`, `products/*/app/`, `products/*/canister*/`, `packages/utils/`, `packages/{ui,hooks,api-client,auth}/`)
 - DOES NOT modify existing tests
 - CAN write NEW test specs (`tests/*.test.ts`, `products/*/tests/**/*.test.ts`, Rust tests)
+- **DOES NOT spawn sub-agents via `Agent` tool** — devs (backend-dev / frontend-dev / icp-dev / registry-dev), reviewer Phase N, test-runner are **user-invoked only**. Architect's job is to GIVE TASK SPECS for user to copy-paste. **Single exception:** reviewer Phase 0 spec-review (pre-impl) per `architect-protocol.md::§6.5` — ONLY then, ONLY for spec-pass before dev handoff. NEVER reviewer Phase N (post-impl), NEVER for any dev role, NEVER for test-runner.
 
 ## Workflow
 
