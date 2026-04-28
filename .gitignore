@@ -61,6 +61,18 @@ opensrc/repos/*
 # Claude Code runtime artifacts
 .claude/scheduled_tasks.lock
 .claude/*.lock
+.claude/extensions/
+.claude/worktrees/
+.claude/wrappers/
+
+# Pi (alt agent harness) runtime state
+.pi/
+
+# M-Q17: literal $HOME directory — defence against unexpanded TMPDIR var.
+# .claude/settings.json must NOT set env.TMPDIR (use per-user ~/.claude/settings.json
+# with absolute path instead). See tests/m-tmpdir-no-literal-home.test.ts.
+$HOME/
 
 # Next.js auto-generated type file (each app regenerates on dev)
 apps/frontend/*/next-env.d.ts
+/opensrc/repos

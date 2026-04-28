@@ -1,6 +1,6 @@
 ---
-description: Architect-level software engineering principles — type systems, polymorphism, composition, dispatch, abstraction, metaprogramming, concurrency, DSL, and more
-globs: ["**/*.{ts,tsx,js,cjs,rs}", "docs/**/*.md"]
+description: Software engineering principles — type systems, polymorphism, composition, dispatch, abstraction, purity, ADT, concurrency, SOLID. Architect / reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Engineering Principles — Paxio Architect Reference

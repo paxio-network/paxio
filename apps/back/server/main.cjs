@@ -19,6 +19,7 @@ const {
   registerSandboxRoutes,
 } = require('./src/http.cjs');
 const { initWs, createBroadcaster } = require('./src/ws.cjs');
+const { wireProducts } = require('./wiring/index.cjs'); // agentStorage → wiring
 
 const errors = require('./lib/errors.cjs');
 
@@ -98,24 +99,38 @@ const pinoLogger = pino(loggerConfig);
         countBySource: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
         listRecent: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
       }),
+      crawlRunsRepo: null,
       shutdown: async () => {},
     });
   }
 
-  // Resolve agentStorage from dbClient — passed to VM sandbox via loadApplication.
-  // agentStorage = null when DB not configured (production-safe zero fallback).
+  // Resolve agentStorage + crawlRunsRepo from dbClient — passed to VM sandbox
+  // via loadApplication and to wireProducts for FA-01 registry wiring.
+  // Both are null when DB not configured (production-safe zero fallback).
   const agentStorage = dbClient && !dbClient._isNoop ? dbClient.agentStorage : null;
+  const crawlRunsRepo = dbClient && !dbClient._isNoop ? dbClient.crawlRunsRepo : null;
 
-  // Load application code (app/lib, app/domain, app/api) into VM sandbox
+  // Load application code (app/lib, app/domain, app/api) into VM sandbox.
+  //
+  // Composition root (wireProducts) is passed as a callback so loader can
+  // run it AFTER raw domain modules are loaded but BEFORE the outer
+  // domain object is frozen and BEFORE api handlers are loaded — that
+  // ordering is what makes the wired service tree visible to handlers.
   let appSandbox;
   try {
-    appSandbox = await loadApplication(APPLICATION_PATH, {
-      console: logger,
-      config,
-      errors,
-      telemetry: broadcaster,
-      agentStorage,
-    });
+    appSandbox = await loadApplication(
+      APPLICATION_PATH,
+      {
+        console: logger,
+        config,
+        errors,
+        telemetry: broadcaster,
+        agentStorage,
+      },
+      {
+        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage, crawlRunsRepo }),
+      },
+    );
   } catch (err) {
     pinoLogger.warn(
       { err: err.message },

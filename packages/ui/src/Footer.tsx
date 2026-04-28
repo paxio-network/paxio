@@ -1,13 +1,14 @@
 interface FooterProps {
   dark?: boolean;
+  year: number;
 }
 
-export function Footer({ dark = false }: FooterProps) {
+export function Footer({ dark = false, year }: FooterProps) {
   return (
     <footer className={`px-6 py-10 lg:px-16 border-t border-white/10 ${dark ? 'bg-[--color-dark]' : 'bg-[--color-dark]'}`}>
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="font-mono text-sm text-white/50">
-          <span className="text-[--color-primary] font-bold">Paxio</span> · Agent Financial OS · {new Date().getFullYear()}
+          <span className="text-[--color-primary] font-bold">Paxio</span> · Agent Financial OS · © {year}
         </div>
         <nav className="flex gap-6 text-sm text-white/40" aria-label="Footer navigation">
           {['Docs', 'Registry', 'Pay', 'Radar', 'Intel', 'Wallet'].map(link => (

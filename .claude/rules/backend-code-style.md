@@ -1,7 +1,17 @@
 ---
-description: Backend code style — FP-first, naming, purity, immutability for VM-sandbox app/ + server/ infrastructure
-globs: ["apps/back/**/*.{cjs,js,ts}", "products/**/app/**/*.{js,ts}", "packages/utils/**/*.ts"]
+description: "[ARCHIVED M-Q13] Backend code style — FP-first, naming, purity, immutability for VM-sandbox app/ + server/ infrastructure — moved to skill `typescript-patterns`. Kept for git history; no longer auto-loads."
+globs: []
 ---
+
+> **ARCHIVED in M-Q13** — content ported to skill `.claude/skills/typescript-patterns/SKILL.md`.
+> Auto-load disabled (`globs: []`) to free dev context budget. File kept as historical
+> reference; do NOT edit here, edit the skill instead.
+>
+> Why: claude-code auto-loaded ~22-31 KB of rule content per turn for dev agents,
+> overflowing MiniMax-M2.7 context before first impl line. Moving content to skills
+> (which are description-matched on-demand) keeps the same knowledge available without
+> the per-turn budget tax.
+
 
 # Backend Code Style — Paxio
 

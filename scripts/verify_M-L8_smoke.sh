@@ -69,23 +69,18 @@ else
   bad "missing/unknown status — body: $BODY"
 fi
 
-step "6. checks.database — currently SOFT (TD-27 open)"
-# TD-27 = infrastructure CJS layer (apps/back/server/infrastructure/db.cjs)
-# requires postgres-storage.js which has top-level `import { ... } from
-# '@paxio/types'`. Native Node CJS cannot resolve that ESM workspace
-# package, so db.cjs catches the error and returns checks.database='skipped'.
-# Postgres IS reachable from the backend container (paxio + paxio-postgres
-# share a docker network), but the wiring is broken at the import layer.
-# Tracked as TD-27 (separate hot-fix milestone, M-L8.4).
+step "6. checks.database='ok' (TD-27 closed — strict)"
+# TD-27 was: postgres-storage.js had top-level `import { ... } from
+# '@paxio/types'` and the production Docker image couldn't resolve the
+# workspace symlink → db.cjs caught and returned 'skipped'. Closed by
+# 91c27ad's esbuild Pass 2 (inlines @paxio/* into postgres-storage.js).
 #
-# Until TD-27 closes, accept BOTH 'ok' and 'skipped' — anything else fails.
-# When TD-27 closes, flip back to strict 'ok' assertion.
+# Now strict: must be 'ok'. Anything else (skipped / error / missing)
+# is a regression and should fail the smoke.
 if echo "$BODY" | grep -q '"database":"ok"'; then
-  ok "checks.database=ok (TD-27 fixed — flip to strict)"
-elif echo "$BODY" | grep -q '"database":"skipped"'; then
-  ok "checks.database=skipped (TD-27 OPEN — soft accepted)"
+  ok "checks.database=ok"
 else
-  bad "checks.database is neither 'ok' nor 'skipped' — anomaly; body: $BODY"
+  bad "checks.database != 'ok' — body: $BODY"
 fi
 
 echo

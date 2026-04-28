@@ -1,6 +1,6 @@
 ---
-description: Safety rules — input validation, no secrets, async/concurrency safety
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs", "tests/**/*.{ts,tsx}", "docs/**/*.md"]
+description: Safety reference — Zod validation, no secrets, async/concurrency, rate limiting, ICP canister safety, cross-user EPERM. Architect/reviewer reference. Manual-load only.
+globs: []
 ---
 
 # Safety Rules
@@ -115,3 +115,65 @@ pub fn new(api_key: String) -> Result<Self, ConfigError> {
 - Log all financial transactions (amount, parties, timestamp, outcome)
 - Never log: passwords, API keys, full credit card numbers
 - PII handling — see Guard Agent (PII detection + redaction)
+
+## Cross-user file ownership / chmod EPERM (M-Q3 T-5)
+
+`/home/nous/paxio` — общий рабочий каталог, в котором могут запускаться
+агент-сессии под разными OS-юзерами (`nous`, `minimax`, и т.д.) и под
+разными git identity (`architect@`, `backend-dev@`, `registry-dev@`).
+Это создаёт класс багов где `pnpm install`, `node scripts/copy-api-handlers.mjs`,
+`pnpm build` падают с:
+
+```
+EPERM: operation not permitted, chmod '/home/nous/paxio/node_modules/.pnpm/...'
+```
+
+### Почему это происходит
+
+POSIX rule: **chmod requires owner OR root**. Group membership
+(включая `devteam` group в которую входят все наши OS-юзеры) даёт права
+на read и write по group bit'ам (`g+rw`), но **group does not grant chmod**.
+Это архитектурное ограничение POSIX, а не баг настройки.
+
+Когда сессия А (user `minimax`) запустила `pnpm install`, файлы в
+`node_modules/.pnpm/<hash>/` принадлежат `minimax:devteam`. Сессия Б
+(user `nous`) не может их chmod'ить, даже состоя в группе `devteam`.
+`pnpm install`, `node scripts/copy-api-handlers.mjs` (вызывает `chmod` на
+скопированных handler'ах), `pnpm build` (turbo cache cleanup) — все
+ломаются.
+
+### Workaround: per-session worktree
+
+Каждая агент-сессия создаёт свой worktree с собственным `node_modules/`,
+владелец которого = сама сессия. Подробности — `architect-protocol.md::ФАЗА 0`,
+`startup-protocol.md::Step 0`, `scope-guard.md::Per-session worktree isolation`.
+
+```bash
+cd /home/nous/paxio
+git worktree add /tmp/paxio-<session> -b feature/M-XX-name origin/dev
+cd /tmp/paxio-<session>
+pnpm install                  # owns its own node_modules/
+```
+
+### Когда это уже не помогает
+
+Если worktree уже создан, но `node_modules/` всё равно содержит файлы от
+другой identity (наследовали от base checkout, хардлинки на pnpm-store),
+fallback:
+
+```bash
+rm -rf node_modules            # пересоздать с твоим owner
+pnpm install
+```
+
+`rm` работает потому что владельцем каталога-родителя обычно является ты
+сам (worktree был создан тобой).
+
+### Что НЕ работает (даже не пробуй)
+
+- `chmod -R g+w /home/nous/paxio` — chmod снова требует ownership
+- `sudo chown -R $USER:devteam node_modules/` — нужен sudo, не везде есть
+- `umask 002` в .bashrc — влияет только на новые файлы, не на существующие
+- Перевод всех агентов под одного OS-юзера — конфликтует с git identity audit
+
+Per-session worktree — единственное durable решение.

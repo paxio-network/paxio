@@ -15,7 +15,7 @@ const DEMO_LINES = [
 
 export function BitcoinSection() {
   return (
-    <SectionFrame id="bitcoin" eyebrow="Trust Layer" dark>
+    <SectionFrame id="bitcoin-native" eyebrow="Trust Layer" dark>
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-4xl font-bold mb-3 text-white">Bitcoin-Native Agent Payments</h2>

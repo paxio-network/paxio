@@ -1,12 +1,78 @@
 ---
-description: Architect scan protocol, milestone creation rules, architecture enforcement via tests
-globs: ["docs/**/*.md", "tests/**/*.test.ts", "products/*/tests/**/*.test.ts", "packages/{types,interfaces,errors,contracts}/**/*.ts", "scripts/**/*.sh"]
+description: Architect scan protocol (7 phases), milestone creation rules, architecture enforcement via tests. Architect-only. Manual-load only.
+globs: []
 ---
 
 # Architect Protocol — ОБЯЗАТЕЛЬНЫЙ при каждом планировании
 
 Этот файл существует чтобы критические знания architect'а не терялись
 при компакции контекста. Rules перезагружаются по glob — agent.md нет.
+
+---
+
+## ФАЗА 0: SETUP (per-session worktree isolation)
+
+### 0.1 — Создай личный worktree ПЕРЕД любой работой
+
+`/home/nous/paxio` — общая репа, в которой одновременно могут работать
+несколько агент-сессий (architect + dev в параллели, два architect'а в
+параллельных feature ветках, etc). Работа в shared working tree приводит к
+трём классам багов:
+
+1. **Cross-user chmod EPERM** — `pnpm install`, `node scripts/copy-api-handlers.mjs`
+   и `pnpm test:specs` модифицируют `node_modules/` через `chmod`. Если файлы
+   принадлежат другому OS user'у (другая сессия запускала install), chmod
+   падает с `EPERM: operation not permitted`. Group `devteam` НЕ помогает —
+   chmod требует owner или root, group bit даёт только rw, не chmod.
+
+2. **Branch race condition** — пока твой reviewer гонит проверку, другая
+   сессия checkout'ит свою feature-ветку в `/home/nous/paxio` → твой
+   следующий commit уходит в чужую ветку. Случалось у registry-dev session
+   2026-04-27.
+
+3. **Untracked WIP leakage** — untracked файлы прошлой сессии видны в твоём
+   `git status`, и можно случайно их закоммитить (registry-dev attempt-1 →
+   5 файлов scope violations).
+
+Worktree даёт **separate HEAD per session**, **isolated branch**, **own node_modules/**.
+
+### 0.2 — Команда setup
+
+```bash
+cd /home/nous/paxio
+git fetch origin
+git worktree add /tmp/paxio-<milestone-name> -b feature/M-XX-name origin/dev
+cd /tmp/paxio-<milestone-name>
+git config user.name architect
+git config user.email architect@paxio.network
+pnpm install                     # fresh node_modules в worktree, no chmod conflicts
+```
+
+Worktree даёт **separate HEAD per session** — твоя ветка изолирована от
+любых checkout'ов в `/home/nous/paxio`.
+
+Где `<milestone-name>` — короткое уникальное имя сессии (например `mq3`,
+`m-l1-launch`, `td35-fix`). НЕ переиспользуй существующие имена `/tmp/paxio-*`
+от других сессий — `git worktree list` покажет занятые.
+
+### 0.3 — Cleanup после merge
+
+```bash
+cd /home/nous/paxio                              # вернуться в main checkout
+git worktree remove --force /tmp/paxio-<name>    # удалит каталог + запись
+git worktree prune                               # если каталог удалён руками
+```
+
+`--force` обязателен потому что Paxio имеет initialized git submodule в
+`products/04-security/guard/`. Без `--force` git отказывает с
+`fatal: working trees containing submodules cannot be moved or removed`.
+Это безопасно — `--force` удаляет только worktree directory, не
+оригинальный submodule в main checkout.
+
+### 0.4 — Когда worktree можно НЕ создавать
+
+Только если user явно сказал «работай в /home/nous/paxio» и подтвердил, что
+других активных сессий нет. По умолчанию — worktree.
 
 ---
 
@@ -176,8 +242,38 @@ fn test_classify_biometric_high_risk() {
 ```
 
 ### 4.2 — Acceptance scripts (Тип 2)
-- `scripts/verify_*.sh` — bash скрипты
-- Должны запускаться и FAIL (без реализации)
+
+**Naming convention** (M-Q1):
+- Canonical: `scripts/verify_<MILESTONE-ID>.sh` (e.g. `verify_M-L9.sh`, `verify_M-Q1.sh`, `verify_TD-29.sh`)
+- Header line 2: `# <MILESTONE-ID> acceptance — <descriptive name>` — это позволяет `quality-gate.sh` найти script через fallback header-tag matching
+- `set -euo pipefail` обязательно
+- PASS=N FAIL=M counter + `[ $FAIL -eq 0 ] || exit 1` в конце
+
+Пример skeleton:
+```bash
+#!/usr/bin/env bash
+# M-XX acceptance — descriptive name
+set -euo pipefail
+cd "$(dirname "$0")/.."
+PASS=0; FAIL=0
+ok()  { echo "  ✅ $1"; PASS=$((PASS+1)); }
+bad() { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
+step(){ echo; echo "▶ $1"; }
+
+step "1. Что-то проверяется"
+if [ ... ]; then ok "..."; else bad "..."; fi
+
+# ... остальные шаги ...
+
+echo "M-XX ACCEPTANCE — PASS=$PASS FAIL=$FAIL"
+[ $FAIL -eq 0 ] || exit 1
+```
+
+Этот script запускается:
+- direct: `bash scripts/verify_M-XX.sh` (для local dev verification)
+- через quality-gate: `bash scripts/quality-gate.sh M-XX` step 6/6 (test-runner использует только это)
+
+Scripts должны запускаться и FAIL (без реализации) — это часть RED спеки для milestone типа 2.
 
 ### 4.3 — Архитектурные проверки в тестах (ОБЯЗАТЕЛЬНО)
 
@@ -278,10 +374,19 @@ fn test_storable_bound_is_bounded() {
 ```bash
 pnpm install
 pnpm typecheck 2>&1 | tail -5
-pnpm test -- --run 2>&1 | tail -5
+pnpm exec vitest run 2>&1 | tail -5     # ROOT (M-Q1: catches workspace drift)
 pnpm lint 2>&1 | tail -3
 cargo build --workspace 2>&1 | tail -5
 cargo test --workspace 2>&1 | tail -5
+```
+
+### 5.1b — Quality gate dry-run (ПЕРЕД коммитом RED)
+```bash
+# Проверь что quality-gate.sh сможет найти твой acceptance script:
+bash scripts/quality-gate.sh <milestone-id>
+# Должен дойти до step 6 и сказать «no acceptance script» — это OK
+# для RED state. После создания verify_<milestone>.sh — должен fail
+# на step 6 (acceptance script ожидаемо красный).
 ```
 
 ### 5.2 — ICP среда (если milestone касается canister'ов)
@@ -324,27 +429,223 @@ git checkout dev && git pull origin dev
 git checkout -b feature/M0X-name
 ```
 
-### 6.2 — Коммить ВСЁ
+### 6.2 — Identity check ПЕРЕД commit'ом (M-Q1)
+```bash
+# .husky/pre-commit hook сам проверит, но architect должен убедиться заранее:
+git config user.name      # должно быть: architect
+git config user.email     # должно быть: architect@paxio.network
+# Mismatch = hook откажет commit. Если нужно поменять для конкретной ветки:
+# git config user.email architect@paxio.network
+```
+
+### 6.3 — Коммить ВСЁ
 ```bash
 git add packages/types/ packages/interfaces/ packages/errors/  # контракты
 git add tests/*.test.ts products/*/tests/**/*.test.ts          # RED тесты
 git add platform/canister-shared/                               # если менялся
-git add scripts/verify_*.sh                                     # acceptance
+git add scripts/verify_<milestone-id>.sh                        # acceptance (canonical name!)
 git add docs/sprints/M*.md                                      # milestone
 git add docs/feature-areas/FA-*.md                              # FA если обновлялись
-git commit -m "feat(M0X): contracts, RED tests, acceptance scripts, milestone"
+git commit -m "feat(M0X): contracts, RED tests, acceptance script, milestone"
+# ↳ pre-commit hook проверит identity + scope. Pass или reject.
 ```
 
-### 6.3 — Проверь после коммита
+### 6.4 — Проверь после коммита
 ```bash
-pnpm typecheck 2>&1 | tail -5    # build errors — НЕТ
-pnpm test -- --run 2>&1 | tail -5 # RED тесты — ок
+pnpm typecheck 2>&1 | tail -5             # build errors — НЕТ
+pnpm exec vitest run 2>&1 | tail -5       # ROOT — RED тесты ожидаемо fail
 cargo build --workspace 2>&1 | tail -5
 pnpm lint 2>&1 | tail -3
+bash scripts/quality-gate.sh <milestone>  # dry-run — должен fail на конкретном
+                                          # step (RED expected before dev impl)
 ```
 
-### 6.4 — Скажи user'у кого запускать
-"Запускай [agent-name]. Milestone: M0X. Branch: feature/M0X-name. Тесты закоммичены."
+### 6.5 — Self-call reviewer Phase 0 BEFORE user handoff (M-Q2)
+
+> **🚨 SCOPE BOUNDARY — READ FIRST:** Эта секция описывает **ЕДИНСТВЕННЫЙ** случай
+> когда architect может сам вызвать sub-agent через `Agent` tool: **reviewer Phase 0
+> spec-review (pre-impl), ДО передачи user'у.**
+>
+> **NEVER** в этих случаях:
+> - reviewer Phase N (post-impl review) — user invokes
+> - dev agents любые (backend-dev / frontend-dev / icp-dev / registry-dev) — user invokes
+> - test-runner — user invokes
+> - повторный reviewer вызов после dev impl — user invokes
+>
+> Architect's job вне Phase 0: give task spec → user copy-paste'ит в нужную session.
+> Phase 0 self-call оптимизация для ловли spec bugs ДО того как dev burned time —
+> НЕ generic «architect может spawn кого хочет».
+
+После commit + push spec, ДО handoff'а user'у — самовызови reviewer как sub-agent
+для Phase 0 spec review. Это catches spec bugs ДО того как dev burned time на bad
+spec.
+
+**Сначала push + create PR + add label:**
+```bash
+git push -u origin feature/M0X-name
+gh pr create --title "M0X: <description>" --body "<spec details>"
+gh pr edit <N> --add-label spec-ready  # триггерит spec-review.yml fast-CI
+```
+
+**Затем sub-agent invocation:**
+```typescript
+// Pseudo-code (real call uses Agent tool с subagent_type: "reviewer")
+const verdict = await Agent({
+  subagent_type: "reviewer",
+  description: "M0X spec-pass review",
+  prompt: `
+Phase 0 spec-review for M0X. NOT impl review — code не написан yet.
+
+Branch: feature/M0X-name
+PR: #N (label: spec-ready)
+Milestone doc: docs/sprints/M0X-name.md
+
+Architect-authored artifacts:
+  - tests/*.test.ts: [explicit list]
+  - products/*/tests/*.test.ts: [list]
+  - packages/types/src/*.ts: [list]
+  - packages/interfaces/src/*.ts: [list]
+  - packages/errors/src/*.ts: [list — if changes]
+  - scripts/verify_M0X.sh
+  - docs/sprints/M0X-name.md
+
+Run Phase 0 checklist (.claude/agents/reviewer.md::Phase 0):
+  - Coverage (тесты vs Готово когда) — counts match?
+  - Vacuous-skip correctness
+  - Architectural enforcement tests presence (factory frozen, determinism, agentDid filter, ...)
+  - Coding standards adherence (.claude/rules/coding-standards-checklist.md walk top-down)
+  - Tests RED for right reason (run vitest, verify failure messages)
+  - Contracts quality (ADT, Zod paired, no any)
+  - Infrastructure: pnpm install --frozen-lockfile + typecheck + vitest run + acceptance PASS
+
+Report under 500 words: SPEC APPROVED | SPEC REJECTED + must-fix list (if REJECTED).
+
+DO NOT update tech-debt.md / project-state.md в Phase 0.
+This is pre-impl gate; impl review (Phase N) happens later после dev impl.
+  `,
+});
+```
+
+**Parse verdict + branch:**
+
+```
+verdict.includes("SPEC APPROVED")
+  → gh pr edit <N> --add-label dev-ready
+  → handoff user'у с verdict note
+  → переходи к 6.6 (handoff)
+
+verdict.includes("SPEC REJECTED")
+  → fix must-fix items (items упорядочены по C-N priority)
+  → re-commit + push
+  → re-invoke Agent({ subagent_type: "reviewer", ... }) с обновлённым spec
+  → loop max 3 rounds
+```
+
+**Escalation rule (3-rounds-then-user):** Если reviewer rejects 3 раза подряд — это
+сигнал архитектурного gap'а который требует обсуждения с user'ом, не очередной фикс.
+Architect останавливается, summary'ит must-fix items + рассуждения почему они persist'ят,
+ждёт user input.
+
+**Failure modes:**
+- Reviewer не отвечает / падает sub-agent call → fallback к user-invoked reviewer (existing flow). Не блокировать handoff если sub-agent infrastructure unavailable.
+- Reviewer перебдил (P2 violations rejecting спек) → architect appeal'ит через PR comment с rationale, либо просит user override
+- Reviewer недобдил (let через bug) → ловится Phase N (impl review)
+
+**Cost:** ~30s sub-agent invocation + 60s vitest+typecheck = ~90s per Phase 0 round.
+Acceptable overhead для catching spec bugs ДО dev'ом potentially burning 2-4 hours
+implementing buggy spec.
+
+### 6.6 — Скажи user'у кого запускать (после Phase 0 APPROVED)
+
+"Phase 0 APPROVED reviewer'ом. Запускай [agent-name]. Milestone: M0X.
+ Branch: feature/M0X-name. PR #N (label: dev-ready).
+ Тесты закоммичены. Quality gate: `bash scripts/quality-gate.sh M0X`
+ (test-runner запускает после impl)."
+
+**Если Phase 0 был skipped** (sub-agent infrastructure unavailable, or first run before
+M-Q2 fully landed): включи в handoff message warning — «Phase 0 skipped, manual review
+needed».
+
+### 6.7 — SLIM task spec для MiniMax-M2.7 dev sessions (CRITICAL)
+
+Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запускаются на
+**MiniMax-M2.7** который имеет жёстко ограниченный context window. Per M-Q11
+(PR #59) + verified again 2026-04-28 (registry-dev autocompact during setup):
+**dev session не может прочитать >3 файлов на старте без overflow.**
+
+#### Что НЕ работает (вызывает autocompact на setup phase):
+
+```
+❌ FAT spec (наблюдалось 2026-04-28):
+  - 8 файлов на read (spec + 4 source + 4 test + reference)
+  - 9 verify команд
+  - 80+ строк instructions
+  - 4 task'а сразу (T-2..T-5 batched)
+
+  Результат: context overflow ДО первой строки impl → петля autocompact'ов.
+```
+
+#### Что работает (slim spec):
+
+```
+✅ ОДИН task за раз. ОДНОГО файла на read. <2 KB spec.
+
+  Setup (4 строки):
+    cd /home/nous/paxio
+    git worktree add /tmp/paxio-<dev>-<task> -B feature/<task> origin/dev
+    cd /tmp/paxio-<dev>-<task>
+    git config user.email <dev>@paxio.network && pnpm install
+
+  Read ONLY (1-2 файла):
+    products/01-registry/tests/erc8004-adapter.test.ts  (the spec)
+    products/01-registry/app/domain/sources/mcp.ts       (reference pattern)
+    [НЕ давай читать 4 теста сразу — давай T-2 first, потом T-3 separately]
+
+  Implement ONE adapter:
+    products/01-registry/app/domain/sources/erc8004.ts
+
+  Verify (3 команды):
+    pnpm typecheck
+    pnpm exec vitest run products/01-registry/tests/erc8004-adapter.test.ts
+    git status
+
+  Commit local + report.
+```
+
+#### Правила slim spec:
+
+1. **One task per session.** T-2 = одна session. T-3 = новая session. НЕ batch'ить.
+2. **Max 2 файла на startup read.** Один — спецификация (test файл), один — pattern reference.
+3. **<2 KB total spec.** Если больше — удали instructions, дай dev'у прочитать docs/sprints/M0X.md только если он сам решит что нужно (это его выбор, не required reading).
+4. **3 verify команды max** на финальной проверке. Полный quality-gate запускает test-runner отдельно ПОСЛЕ.
+5. **NO «прочитать docs/sprints/M0X.md»** в required reads. Spec в test файле + reference в mcp.ts достаточно для импла одного адаптера.
+6. **Commit message в spec'е** — short conventional, без многоэтажных explanation в body.
+7. **Skills allowlist в spec'е (CRITICAL после M-Q11 + PR #68 revert).** Dev-агенты больше не auto-load'ят skills из frontmatter (overflow на MiniMax-M2.7). Architect ОБЯЗАН включить в spec строку:
+
+   ```
+   Skills доступны on-demand (вызвать через Skill tool если нужны):
+     - <skill-1> (что покрывает)
+     - <skill-2> (что покрывает)
+     - <skill-3> (что покрывает)
+   ```
+
+   Dev знает какие skills существуют + когда invoke'ить. Без этой строки dev не догадается что Skill tool ему доступен (skills больше не упоминаются в его system prompt).
+
+   Per-task mapping (типичный набор для TS/Fastify/registry impl):
+   - All TS impl: `typescript-patterns`, `error-handling`, `zod-validation`
+   - HTTP adapter / crawler: + `registry-patterns` (если применимо)
+   - Postgres / SQL: + `sql-best-practices`
+   - Cache / Redis: + `redis-cache`
+   - Fastify route / handler: + `fastify-best-practices`
+   - Frontend React component: `typescript-patterns`, `react-patterns`, `nextjs-15` (если App Router)
+   - Rust canister: `icp-rust`, `rust-canister`, `rust-error-handling`, + per-domain (`bitcoin-icp`, `chain-fusion`, `icp-threshold-ecdsa`)
+
+   Architect picks 3-5 skills MAX per task (не дамп всего списка — это overflow vector).
+
+#### Если task большой (>1 file impl):
+
+Декомпозируй на N подзадач (T-2.1, T-2.2, ...). Каждая = новая dev session с slim spec'ом.
+Дороже round-trip'ов с user, но единственный путь который реально завершается на MiniMax.
 
 ---
 

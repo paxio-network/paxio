@@ -1,6 +1,6 @@
 {
   "name": "paxio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
@@ -19,6 +19,7 @@
     "turbo:build": "turbo run build",
     "turbo:test": "turbo run test",
     "turbo:typecheck": "turbo run typecheck",
+    "prepare": "husky",
     "postinstall": "git submodule update --init --recursive 2>/dev/null || true"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@types/react-dom": "^18.3.1",
     "esbuild": "^0.21.5",
     "eslint": "^9.0.0",
+    "husky": "^9.1.7",
     "metaskills": "^1.0.4",
     "pino-pretty": "^11.0.0",
     "prettier": "^3.0.0",

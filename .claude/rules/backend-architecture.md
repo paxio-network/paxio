@@ -1,7 +1,17 @@
 ---
-description: Backend architecture — apps/back server/app separation, VM sandbox, layered loading
-globs: ["apps/back/**/*.{cjs,js,ts}", "products/**/app/**/*.{js,ts}"]
+description: "[ARCHIVED M-Q13] Backend architecture — apps/back server/app separation, VM sandbox, layered loading — moved to skill `paxio-backend-architecture`. Kept for git history; no longer auto-loads."
+globs: []
 ---
+
+> **ARCHIVED in M-Q13** — content ported to skill `.claude/skills/paxio-backend-architecture/SKILL.md`.
+> Auto-load disabled (`globs: []`) to free dev context budget. File kept as historical
+> reference; do NOT edit here, edit the skill instead.
+>
+> Why: claude-code auto-loaded ~22-31 KB of rule content per turn for dev agents,
+> overflowing MiniMax-M2.7 context before first impl line. Moving content to skills
+> (which are description-matched on-demand) keeps the same knowledge available without
+> the per-turn budget tax.
+
 
 # Backend Architecture — server/ vs app/
 
