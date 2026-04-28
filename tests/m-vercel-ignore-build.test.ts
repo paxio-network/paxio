@@ -182,3 +182,62 @@ describe('M-INFRA-VERCEL-IGNORE — script behavioural contract via env-var simu
     expect(code, 'first deploy (empty prevSha) → script should exit 1 (build)').toBe(1);
   });
 });
+
+/**
+ * Regression for reviewer round 1 P0: script broke when invoked from
+ * cwd != repo root because pathspecs were relative. Vercel runs ignoreCommand
+ * from inside the app's Root Directory (`apps/frontend/<app>/`), so without
+ * `cd "$(git rev-parse --show-toplevel)"` the `git diff -- "apps/frontend/$APP/"`
+ * pathspec resolved to a non-existent path → no diff → exit 0 (skip) → bug:
+ * deploy never triggers even when sources changed.
+ *
+ * Two complementary pins:
+ *   1. Static — script source contains the cd line (catches removal even if
+ *      behavioural test environment goes weird).
+ *   2. Behavioural — script gives identical exit code from cwd=ROOT and from
+ *      cwd=apps/frontend/<app>/. If pathspecs are cwd-relative again, the two
+ *      invocations diverge and this test fails.
+ */
+describe('M-INFRA-VERCEL-IGNORE — cwd-agnostic invariant (regression for reviewer round 1 P0)', () => {
+  function runScriptFromCwd(app: string, prevSha: string, cwd: string): number {
+    try {
+      execFileSync(SCRIPT_ABS, [app], {
+        env: { ...process.env, VERCEL_GIT_PREVIOUS_SHA: prevSha },
+        stdio: 'pipe',
+        cwd,
+      });
+      return 0;
+    } catch (e) {
+      return (e as { status?: number }).status ?? 1;
+    }
+  }
+
+  it('script source contains `cd "$(git rev-parse --show-toplevel)"` (static pin)', () => {
+    if (!existsSync(SCRIPT_ABS)) return;
+    const content = readFileSync(SCRIPT_ABS, 'utf8');
+    expect(content, 'script must cd to repo root for cwd-agnostic pathspecs').toMatch(
+      /cd\s+["']?\$\(\s*git rev-parse --show-toplevel\s*\)/,
+    );
+  });
+
+  it('exit code from cwd=apps/frontend/landing matches exit code from cwd=ROOT (no-changes case)', () => {
+    if (!existsSync(SCRIPT_ABS)) return;
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT }).toString().trim();
+    const fromRoot = runScriptFromCwd('landing', head, ROOT);
+    const fromAppDir = runScriptFromCwd('landing', head, resolve(ROOT, 'apps/frontend/landing'));
+    expect(fromAppDir, `from apps/frontend/landing/ (${fromAppDir}) must match from ROOT (${fromRoot})`).toBe(
+      fromRoot,
+    );
+    // Both should be 0 (skip) since prev_sha=HEAD = no changes
+    expect(fromRoot).toBe(0);
+  });
+
+  it('exit code from cwd=apps/frontend/landing matches exit code from cwd=ROOT (first-deploy case)', () => {
+    if (!existsSync(SCRIPT_ABS)) return;
+    const fromRoot = runScriptFromCwd('landing', '', ROOT);
+    const fromAppDir = runScriptFromCwd('landing', '', resolve(ROOT, 'apps/frontend/landing'));
+    expect(fromAppDir).toBe(fromRoot);
+    // Both should be 1 (build) since empty prev_sha = first deploy
+    expect(fromRoot).toBe(1);
+  });
+});
