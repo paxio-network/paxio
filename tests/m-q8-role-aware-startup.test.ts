@@ -37,9 +37,11 @@ describe('M-Q8 — Dev startup protocol', () => {
       expect(content.length).toBeGreaterThan(100);
     });
 
-    it('size ≤ 1500 bytes (terse, no rationale dump)', () => {
+    it('size ≤ 2500 chars (terse — 5 steps + Three Hard Rules + escalation template, no rationale dump)', () => {
+      // Bumped from 1500 in M-Q10: dev-startup.md absorbs Three Hard Rules + escalation
+      // template now that scope-guard.md is manual-load only. Devs need both at impl time.
       const content = readRule('dev-startup.md');
-      expect(content.length).toBeLessThanOrEqual(1500);
+      expect(content.length).toBeLessThanOrEqual(2500);
     });
 
     it('frontmatter globs match dev paths (apps/**, products/**, packages/**, platform/**)', () => {

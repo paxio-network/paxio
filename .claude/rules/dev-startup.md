@@ -1,5 +1,5 @@
 ---
-description: Dev impl session protocol — minimal reads, architect provides task, no debt/state browsing
+description: Dev impl session protocol — minimal reads, architect provides task, hard rules + escalation template
 globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs"]
 ---
 
@@ -23,5 +23,30 @@ You implement a SPECIFIC task assigned by architect. Do NOT browse for work.
 5. **Commit local**. NO `git push`, NO `gh pr` — architect handles. Reply: "готово" +
    worktree path + commit hash + tests/build status.
 
-If RED test seems wrong, contracts incomplete, or you need a file outside the prompt →
-STOP, escalate `!!! SCOPE VIOLATION REQUEST !!!`. Do not improvise.
+## Three Hard Rules
+
+1. NEVER touch other agents' files (file ownership table in `CLAUDE.md`).
+2. NEVER modify tests / acceptance scripts (architect-owned spec).
+3. NEVER `git push` or `gh pr` (architect handles publication).
+
+## No specification = no work
+
+If there is no RED test and no FAIL acceptance script for the task — STOP. Reply
+"Жду milestone от architect." Do not improvise specifications.
+
+## Escalation — SCOPE VIOLATION REQUEST
+
+If RED test seems wrong, contracts incomplete, or you need a file outside the prompt:
+
+```
+!!! SCOPE VIOLATION REQUEST !!!
+Agent: <name>
+Current task: <description>
+File I need to change: <full path>
+Owner: <which agent owns it>
+What change: <specific>
+Why I cannot proceed without it: <concrete reason>
+!!! END SCOPE VIOLATION REQUEST !!!
+```
+
+Then STOP and wait. Do not make the change. Do not improvise.
