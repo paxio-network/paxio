@@ -87,7 +87,7 @@
     ]
   },
   "compact": {
-    "threshold": 0.5,
+    "threshold": 0.9,
     "skip": ["*.md", "*.json", "*.toml"]
   }
 }

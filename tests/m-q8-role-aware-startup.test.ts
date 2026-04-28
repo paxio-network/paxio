@@ -44,14 +44,17 @@ describe('M-Q8 — Dev startup protocol', () => {
       expect(content.length).toBeLessThanOrEqual(2500);
     });
 
-    it('frontmatter globs match dev paths (apps/**, products/**, packages/**, platform/**)', () => {
+    it('frontmatter globs cover all 4 dev path categories (apps/, products/, packages/, platform/) — narrow patterns OK', () => {
+      // PR #70 narrowed broad globs to impl-dir-only patterns to prevent auto-load
+      // bloat (was overflowing test-runner under MiniMax-M2.7). Each category must
+      // still be represented — narrow regex per category instead of broad /apps\/\*\*/.
       const content = readRule('dev-startup.md');
       const globs = getFrontmatterField(content, 'globs');
       expect(globs).not.toBeNull();
-      expect(globs).toMatch(/apps\/\*\*/);
-      expect(globs).toMatch(/products\/\*\*/);
-      expect(globs).toMatch(/packages\/\*\*/);
-      expect(globs).toMatch(/platform\/\*\*/);
+      expect(globs).toMatch(/apps\/(back|frontend)/);
+      expect(globs).toMatch(/products\/\*\/(app|canister|cli|http-proxy)/);
+      expect(globs).toMatch(/packages\/\{/);
+      expect(globs).toMatch(/platform\/canister-shared/);
     });
 
     it('frontmatter globs do NOT include docs/** (so opening a sprint does NOT auto-load this)', () => {

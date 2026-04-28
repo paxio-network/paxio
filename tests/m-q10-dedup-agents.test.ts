@@ -63,13 +63,15 @@ describe('M-Q10 — scope-guard.md manual-load + dev-startup.md absorbs hard rul
     }
   });
 
-  it('dev-startup.md auto-loads on impl paths (globs cover apps/ + products/ + packages/ + platform/)', () => {
+  it('dev-startup.md auto-loads on impl paths (globs cover apps/ + products/ + packages/ + platform/, narrow patterns)', () => {
+    // PR #70 narrowed globs to impl dirs only (prevents auto-load of test-files etc).
+    // Each category still represented but via specific subdir, not broad /apps\/\*\*/.
     const content = readFile('.claude/rules/dev-startup.md');
     const globs = getFrontmatterField(content, 'globs') ?? '';
-    expect(globs).toMatch(/apps\/\*\*/);
-    expect(globs).toMatch(/products\/\*\*/);
-    expect(globs).toMatch(/packages\/\*\*/);
-    expect(globs).toMatch(/platform\/\*\*/);
+    expect(globs).toMatch(/apps\/(back|frontend)/);
+    expect(globs).toMatch(/products\/\*\/(app|canister|cli|http-proxy)/);
+    expect(globs).toMatch(/packages\/\{/);
+    expect(globs).toMatch(/platform\/canister-shared/);
   });
 
   it('dev-startup.md contains Three Hard Rules block (devs need it at impl time, scope-guard.md no longer auto-loads)', () => {

@@ -1,6 +1,6 @@
 ---
 description: Dev impl session protocol — minimal reads, architect provides task, hard rules + escalation template
-globs: ["apps/**/*.{ts,tsx,cjs,js}", "products/**/*.{ts,js,rs}", "packages/**/*.{ts,tsx}", "platform/**/*.rs"]
+globs: ["apps/back/server/**/*.cjs", "apps/back/app/**/*.{ts,js}", "apps/frontend/*/app/**/*.{ts,tsx}", "products/*/app/**/*.{ts,js}", "products/*/canister*/src/**/*.rs", "products/*/cli/src/**/*.rs", "products/*/http-proxy/src/**/*.rs", "platform/canister-shared/src/**/*.rs", "packages/{ui,hooks,api-client,auth,utils}/**/*.{ts,tsx}"]
 ---
 
 # Dev startup — 5 steps
