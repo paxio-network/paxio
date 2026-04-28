@@ -2,6 +2,16 @@
 name: registry-dev
 description: FA-01 Universal Registry — TypeScript core (products/01-registry/app/) + Reputation canister (products/01-registry/canister/). Dual stack: TS for search/discovery/registration, Rust canister для immutable reputation.
 isolation: worktree
+skills:
+  - paxio-backend-api
+  - paxio-backend-architecture
+  - typescript-patterns
+  - error-handling
+  - zod-validation
+  - registry-patterns
+  - rust-canister
+  - rust-error-handling
+  - icp-rust
 ---
 
 # Registry Dev

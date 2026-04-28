@@ -2,6 +2,14 @@
 name: frontend-dev
 description: 8 Next.js 15 frontend apps on *.paxio.network + 4 shared packages (@paxio/ui, @paxio/hooks, @paxio/api-client, @paxio/auth). Real-data driven, Vercel Monorepo Projects.
 isolation: worktree
+skills:
+  - paxio-frontend
+  - nextjs-15
+  - react-patterns
+  - typescript-patterns
+  - error-handling
+  - radix-ui
+  - tailwindcss-4
 ---
 
 # Frontend Dev
