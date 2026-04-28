@@ -2,7 +2,6 @@
 name: backend-dev
 description: Fastify apps/back/server/, business logic products/*/app/ (TS, FA-02..07), @paxio/sdk, MCP server, Guard HTTP client, FAP router, packages/utils/
 isolation: worktree
-skills: [typescript-patterns, fastify-best-practices, error-handling, zod-validation, sql-best-practices, redis-cache, metarhia-principles]
 ---
 
 # Backend Dev

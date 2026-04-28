@@ -566,6 +566,66 @@ implementing buggy spec.
 M-Q2 fully landed): включи в handoff message warning — «Phase 0 skipped, manual review
 needed».
 
+### 6.7 — SLIM task spec для MiniMax-M2.7 dev sessions (CRITICAL)
+
+Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запускаются на
+**MiniMax-M2.7** который имеет жёстко ограниченный context window. Per M-Q11
+(PR #59) + verified again 2026-04-28 (registry-dev autocompact during setup):
+**dev session не может прочитать >3 файлов на старте без overflow.**
+
+#### Что НЕ работает (вызывает autocompact на setup phase):
+
+```
+❌ FAT spec (наблюдалось 2026-04-28):
+  - 8 файлов на read (spec + 4 source + 4 test + reference)
+  - 9 verify команд
+  - 80+ строк instructions
+  - 4 task'а сразу (T-2..T-5 batched)
+
+  Результат: context overflow ДО первой строки impl → петля autocompact'ов.
+```
+
+#### Что работает (slim spec):
+
+```
+✅ ОДИН task за раз. ОДНОГО файла на read. <2 KB spec.
+
+  Setup (4 строки):
+    cd /home/nous/paxio
+    git worktree add /tmp/paxio-<dev>-<task> -B feature/<task> origin/dev
+    cd /tmp/paxio-<dev>-<task>
+    git config user.email <dev>@paxio.network && pnpm install
+
+  Read ONLY (1-2 файла):
+    products/01-registry/tests/erc8004-adapter.test.ts  (the spec)
+    products/01-registry/app/domain/sources/mcp.ts       (reference pattern)
+    [НЕ давай читать 4 теста сразу — давай T-2 first, потом T-3 separately]
+
+  Implement ONE adapter:
+    products/01-registry/app/domain/sources/erc8004.ts
+
+  Verify (3 команды):
+    pnpm typecheck
+    pnpm exec vitest run products/01-registry/tests/erc8004-adapter.test.ts
+    git status
+
+  Commit local + report.
+```
+
+#### Правила slim spec:
+
+1. **One task per session.** T-2 = одна session. T-3 = новая session. НЕ batch'ить.
+2. **Max 2 файла на startup read.** Один — спецификация (test файл), один — pattern reference.
+3. **<2 KB total spec.** Если больше — удали instructions, дай dev'у прочитать docs/sprints/M0X.md только если он сам решит что нужно (это его выбор, не required reading).
+4. **3 verify команды max** на финальной проверке. Полный quality-gate запускает test-runner отдельно ПОСЛЕ.
+5. **NO «прочитать docs/sprints/M0X.md»** в required reads. Spec в test файле + reference в mcp.ts достаточно для импла одного адаптера.
+6. **Commit message в spec'е** — short conventional, без многоэтажных explanation в body.
+
+#### Если task большой (>1 file impl):
+
+Декомпозируй на N подзадач (T-2.1, T-2.2, ...). Каждая = новая dev session с slim spec'ом.
+Дороже round-trip'ов с user, но единственный путь который реально завершается на MiniMax.
+
 ---
 
 ## ФАЗА 7: POST-MILESTONE
