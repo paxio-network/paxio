@@ -181,15 +181,13 @@ describe('M-Q10 — dedup invariant: each topic lives in ONE auto-loaded source'
     expect(scopeGuard).toMatch(/!!! SCOPE VIOLATION REQUEST !!!/);
 
     // Agent files may MENTION the marker (saying "use SCOPE VIOLATION REQUEST"),
-    // but should NOT carry the full 7-line template block (deduped).
+    // but should NOT carry the full 7-line template block (deduped). The full
+    // template always closes with `!!! END SCOPE VIOLATION REQUEST !!!` — its
+    // absence alone is sufficient evidence the template is not inlined.
     const agentFiles = ['backend-dev', 'frontend-dev', 'icp-dev', 'registry-dev'];
     for (const a of agentFiles) {
       const content = readFile(`.claude/agents/${a}.md`);
-      // Full template would have BOTH start AND end markers
-      const hasStart = /!!! SCOPE VIOLATION REQUEST !!!/.test(content);
-      const hasEnd = /!!! END SCOPE VIOLATION REQUEST !!!/.test(content);
-      // Either both absent (deduped) or only mention without END marker
-      expect(hasEnd).toBe(false);
+      expect(content).not.toMatch(/!!! END SCOPE VIOLATION REQUEST !!!/);
     }
   });
 });
