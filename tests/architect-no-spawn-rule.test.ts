@@ -29,8 +29,9 @@ describe('Architect no-spawn rule — drift-guard across 3 governance files', ()
   it('.claude/rules/architect-protocol.md::§6.5 has SCOPE BOUNDARY guard', () => {
     const content = readFile('.claude/rules/architect-protocol.md');
     expect(content).toMatch(/SCOPE BOUNDARY/);
-    expect(content).toMatch(/NEVER.*Phase N/);
-    expect(content).toMatch(/NEVER.*dev agents/);
+    // NEVER callout list: across newlines, requires multi-line dotall
+    expect(content).toMatch(/NEVER[\s\S]*?Phase N/);
+    expect(content).toMatch(/NEVER[\s\S]*?dev agents/);
   });
 
   it('.claude/rules/scope-guard.md has AGENT INVOCATION section', () => {
