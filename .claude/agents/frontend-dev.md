@@ -77,11 +77,11 @@ Each app inherits base tokens from `@paxio/ui` and overrides its accent via CSS 
 ## Startup Protocol (MANDATORY 9 steps)
 
 1. Read `CLAUDE.md` + `.claude/rules/scope-guard.md`
-2. Check `docs/tech-debt.md` — any 🔴 OPEN tagged frontend-dev?
+2. `grep '🔴 OPEN.*frontend-dev' docs/tech-debt.md` — any open debt? (targeted, cheap)
 3. Read API contracts you'll consume: `packages/types/src/*.ts` + `packages/contracts/*.yaml`
 4. Read your port contract (if milestone specifies): `packages/interfaces/src/*.ts`
 5. Read test specs: `apps/frontend/<app>/tests/**` or `packages/<pkg>/tests/**`
-6. Read `docs/project-state.md` + `docs/sprints/M*.md` — find your tasks
+6. Read milestone: `docs/sprints/M-XX-<name>.md` (architect укажет ID — конкретный файл, не сканируй sprints/). Project state: `head -30 docs/project-state.md` для ориентира last commits
 7. Read design system base: `packages/ui/src/tokens.ts` + existing components
 8. Read existing code in the app you're extending (if any)
 9. **PRINT REPORT** in startup-protocol.md format — THEN start coding

@@ -66,12 +66,12 @@ dfx_stop           # останавливает replica
 **ТЫ ДОЛЖЕН выполнить 10 шагов ПЕРЕД написанием кода:**
 
 1. Прочитай `CLAUDE.md` и `.claude/rules/scope-guard.md`
-2. Проверь `docs/tech-debt.md` — есть ли 🔴 OPEN долг на icp-dev?
+2. `grep '🔴 OPEN.*icp-dev' docs/tech-debt.md` — есть ли долг? (targeted, дёшево).
    Если есть → СНАЧАЛА закрой долг, ПОТОМ milestone
 3. Прочитай контракты: `products/*/canister(s)/` интерфейсы (Candid `.did` + Rust traits)
 4. Прочитай тест-спецификации: `products/*/tests/ + products/*/canister(s)/**/tests.rs` и `products/*/canister(s)/**/tests.rs`
-5. Прочитай `docs/project-state.md` + `docs/sprints/M*.md`
-6. Прочитай Feature Areas: `FA-03`, `FA-04`, `FA-05`, `FA-06` (по задаче)
+5. Прочитай milestone: `docs/sprints/M-XX-<name>.md` (architect укажет ID — конкретный файл). Project state: `head -30 docs/project-state.md` для ориентира
+6. Feature Area по задаче: `grep -nE '^##' docs/feature-areas/FA-0X-*.md` для TOC, потом `Read offset/limit` нужной секции (FA-файлы большие)
 7. Прочитай существующий canister код
 8. **ВЫВЕДИ ОТЧЁТ** в формате из startup-protocol.md
 9. `cargo test --workspace` — посмотри RED/GREEN

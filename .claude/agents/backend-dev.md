@@ -117,11 +117,11 @@ Guard — **внешний Python/FastAPI/vLLM сервис** на `guard.paxio.
 См. `.claude/rules/startup-protocol.md` (auto-loaded). Краткая последовательность:
 
 1. Read `CLAUDE.md` + `scope-guard.md` (auto)
-2. Read `tech-debt.md` — есть ли 🔴 OPEN на backend-dev?
+2. `grep '🔴 OPEN.*backend-dev' docs/tech-debt.md` — есть ли долг? (targeted, дёшево)
 3. Read контракты: `packages/types/src/<fa>.ts`, `packages/interfaces/src/<fa>.ts`, `packages/errors/`
 4. Read RED тесты: `tests/<fa>-*.test.ts` + `products/<fa>/tests/**/*.test.ts`
-5. Read milestone: `docs/sprints/M0X-*.md` (свою секцию + Architecture Requirements колонка)
-6. Read Feature Area: `docs/feature-areas/FA-0X-*.md`
+5. Read milestone: `docs/sprints/M0X-<name>.md` (architect укажет ID — конкретный файл, свою секцию + Architecture Requirements колонка)
+6. Feature Area: `grep -nE '^##' docs/feature-areas/FA-0X-*.md` для TOC, потом `Read offset/limit` нужной секции (FA-файлы большие)
 7. Run `pnpm test -- --run` → see RED/GREEN
 8. **PRINT REPORT** (формат в startup-protocol.md)
 9. ONLY THEN start coding → make GREEN → commit
