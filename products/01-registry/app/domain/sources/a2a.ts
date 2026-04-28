@@ -43,7 +43,12 @@ export interface HttpResponse {
 }
 
 export interface HttpClient {
-  get(url: string): Promise<HttpResponse>;
+  fetch(req: {
+    url: string;
+    method: 'GET' | 'POST';
+    body?: unknown;
+    headers?: Record<string, string>;
+  }): Promise<HttpResponse>;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,14 +172,14 @@ export const createA2aAdapter = (
       visited.add(url);
 
       // Skip if we've exceeded maxHosts.
-      if (visited.size > maxHosts) return;
+      if (visited.size >= maxHosts) continue;
 
       // Skip if we've exceeded maxDepth.
       if (depth > maxDepth) continue;
 
       let response: HttpResponse;
       try {
-        response = await deps.httpClient.get(url);
+        response = await deps.httpClient.fetch({ url, method: 'GET' });
       } catch {
         // Network-level failure — abort iteration silently.
         return;
