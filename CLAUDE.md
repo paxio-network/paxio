@@ -32,6 +32,20 @@ pnpm --filter @paxio/landing-app dev               # one of 8 Vercel Monorepo Pr
 
 Per-FA filter pattern: `--filter=@paxio/<fa-name>` (backend) or `--filter=@paxio/<app>-app` (frontend).
 
+## Per-OS-user setup — required (do once)
+
+`/home/nous/paxio` is shared across OS users (`nous`, `minimax`, etc). Each must set their own per-user `TMPDIR` in `~/.claude/settings.json` to isolate gh-cli + node compile cache and avoid cross-user `EPERM` chmod collisions:
+
+```json
+{
+  "env": {
+    "TMPDIR": "/home/<your-user>/.cache/paxio-tmp"
+  }
+}
+```
+
+**Project-level `.claude/settings.json` does NOT set `TMPDIR`** — Claude Code passes env values literally without expanding `$HOME`, so a project-level `"TMPDIR": "$HOME/..."` would create a literal `./$HOME/` directory in the repo root (M-Q17 incident, fixed). Per-user setup with absolute path is mandatory.
+
 ## Workflow
 
 ```
