@@ -259,28 +259,27 @@ async function main() {
     console.log('[bundle-vm-modules] no domain files found in dist/');
   }
 
-  // Pass 2 — infra ESM bundle (TD-27: postgres-storage.js)
-  // db.cjs uses dynamic import() so this file must be valid ESM.
+  // Pass 2 — infra ESM bundles (TD-27)
+  // db.cjs uses dynamic import() so these files must be valid ESM.
   // Workspace imports (@paxio/*) are inlined; pg stays external.
-  const postgresStorageFile = join(
-    REPO_ROOT,
-    'dist',
-    'products',
-    '01-registry',
-    'app',
-    'infra',
-    'postgres-storage.js',
-  );
-  try {
-    const { stat: statAsync } = await import('node:fs/promises');
-    await statAsync(postgresStorageFile);
-    await bundleInfraFile(postgresStorageFile, alias);
-    console.log('[bundle-vm-modules] bundled postgres-storage.js (ESM)');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      console.log('[bundle-vm-modules] postgres-storage.js not found — skipping TD-27 pass');
-    } else {
-      throw err;
+  const infraFiles = [
+    join(REPO_ROOT, 'dist', 'products', '01-registry', 'app', 'infra', 'postgres-storage.js'),
+    join(REPO_ROOT, 'dist', 'products', '01-registry', 'app', 'infra', 'crawl-runs-repo.js'),
+  ];
+  for (const infraFile of infraFiles) {
+    try {
+      const { stat: statAsync } = await import('node:fs/promises');
+      await statAsync(infraFile);
+      await bundleInfraFile(infraFile, alias);
+      const name = infraFile.split('/').pop();
+      console.log(`[bundle-vm-modules] bundled ${name} (ESM)`);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        const name = infraFile.split('/').pop();
+        console.log(`[bundle-vm-modules] ${name} not found — skipping`);
+      } else {
+        throw err;
+      }
     }
   }
 }

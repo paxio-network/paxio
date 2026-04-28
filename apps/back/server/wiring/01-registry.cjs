@@ -1,0 +1,93 @@
+'use strict';
+
+// Wiring for FA-01 (Registry) crawler domain.
+//
+// Combines:
+//   - crawlRuns: pg-backed CrawlRunsRepo (recordRun, lastRunForSource)
+//                — built by infrastructure/db.cjs and passed via deps
+//   - crawlerAdapters: { mcp, erc8004, a2a, fetch-ai, virtuals } from
+//                rawDomain['01-registry'].sources.<name>
+//   - agentStorage: from deps (PostgresStorage agentStorage from db.cjs)
+//
+// Handler (admin-crawl.js) needs: domain.crawlRuns.*, domain.crawlerAdapters[source],
+// domain.agentStorage, domain.CRAWLER_SOURCES, domain.clock.
+//
+// The loader nests domain modules by file stem:
+//   products/01-registry/app/domain/sources/mcp.ts → rawDomain['01-registry'].sources.mcp
+//
+// IMPORTANT: this file MUST NOT `require()` anything from `app/` or
+// `products/*/app/` paths. Those compile to ESM in `dist/`, which
+// `vm.Script` can load but `require()` cannot. All ESM-compiled infra
+// (postgres-storage, crawl-runs-repo, …) is built once in
+// `infrastructure/db.cjs` via dynamic `import()` and forwarded here as
+// part of `deps`. See M-L1-launch T-3 fix for why (raw require on
+// `crawl-runs-repo.js` resolved to a non-existent .js next to .ts source
+// → server crash on boot).
+
+const NOOP_CRAWL_RUNS = Object.freeze({
+  recordRun: async () => ({
+    ok: false,
+    error: { code: 'db_unavailable', message: 'DB not configured' },
+  }),
+  lastRunForSource: async () => ({ ok: true, value: null }),
+});
+
+const NOOP_AGENT_STORAGE = Object.freeze({
+  upsert: async () => ({
+    ok: false,
+    error: { code: 'db_unavailable', message: 'DB not configured' },
+  }),
+});
+
+const CRAWLER_SOURCES = ['native', 'erc8004', 'a2a', 'mcp', 'fetch-ai', 'virtuals'];
+
+const wireRegistryDomain = (rawDomain, deps) => {
+  // Build crawlerAdapters map from raw sources (mcp, erc8004, a2a, fetch-ai, virtuals).
+  // Each source module exports a `create<Source>Adapter` factory.
+  const crawlerAdapters = {};
+  const src = rawDomain['01-registry']?.sources ?? {};
+  for (const source of CRAWLER_SOURCES) {
+    let createAdapter = null;
+    if (source === 'mcp' && src.mcp) {
+      createAdapter = src.mcp.createMcpSmitheryAdapter;
+    } else if (source === 'erc8004' && src.erc8004) {
+      createAdapter = src.erc8004.createErc8004Adapter;
+    } else if (source === 'a2a' && src.a2a) {
+      createAdapter = src.a2a.createA2AAdapter;
+    } else if (source === 'fetch-ai' && src['fetch-ai']) {
+      createAdapter = src['fetch-ai'].createFetchAiAdapter;
+    } else if (source === 'virtuals' && src.virtuals) {
+      createAdapter = src.virtuals.createVirtualsAdapter;
+    }
+    if (createAdapter) {
+      // Stubs use fetch (global), MCP uses injected httpClient.
+      // Pass a minimal dep object; real adapters extend as needed.
+      const adapterDeps = source === 'mcp'
+        ? { httpClient: { get: (url) => fetch(url).then((r) => r.json()) } }
+        : {};
+      crawlerAdapters[source] = createAdapter(adapterDeps);
+    }
+  }
+
+  // crawlRuns repo: comes from deps (built in infrastructure/db.cjs via
+  // dynamic ESM import). null when DB not configured → fall back to noop
+  // so handler still serves a deterministic response.
+  const crawlRuns = deps.crawlRunsRepo ?? NOOP_CRAWL_RUNS;
+
+  // agentStorage: forwarded from deps (PostgresStorage). null when DB
+  // not configured → minimal noop preserves shape for handlers.
+  const agentStorage = deps.agentStorage ?? NOOP_AGENT_STORAGE;
+
+  // clock: delegate to injected clock or fall back to Date.now().
+  const clock = deps.clock ?? (() => Date.now());
+
+  return Object.freeze({
+    crawlRuns,
+    crawlerAdapters: Object.freeze(crawlerAdapters),
+    agentStorage,
+    CRAWLER_SOURCES: Object.freeze([...CRAWLER_SOURCES]),
+    clock,
+  });
+};
+
+module.exports = { wireRegistryDomain };
