@@ -99,13 +99,16 @@ const pinoLogger = pino(loggerConfig);
         countBySource: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
         listRecent: async () => ({ ok: false, error: { code: 'db_unavailable', message: 'DB not configured' } }),
       }),
+      crawlRunsRepo: null,
       shutdown: async () => {},
     });
   }
 
-  // Resolve agentStorage from dbClient — passed to VM sandbox via loadApplication.
-  // agentStorage = null when DB not configured (production-safe zero fallback).
+  // Resolve agentStorage + crawlRunsRepo from dbClient — passed to VM sandbox
+  // via loadApplication and to wireProducts for FA-01 registry wiring.
+  // Both are null when DB not configured (production-safe zero fallback).
   const agentStorage = dbClient && !dbClient._isNoop ? dbClient.agentStorage : null;
+  const crawlRunsRepo = dbClient && !dbClient._isNoop ? dbClient.crawlRunsRepo : null;
 
   // Load application code (app/lib, app/domain, app/api) into VM sandbox.
   //
@@ -125,7 +128,7 @@ const pinoLogger = pino(loggerConfig);
         agentStorage,
       },
       {
-        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage }),
+        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage, crawlRunsRepo }),
       },
     );
   } catch (err) {
