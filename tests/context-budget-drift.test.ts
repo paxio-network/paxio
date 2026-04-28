@@ -144,40 +144,32 @@ describe('M-Q4 — rule frontmatter is timeless', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. startup-protocol Step 2 + Step 5 are role-conditional with grep/head
+// 3. dev-startup.md — devs do NOT browse tech-debt / project-state
+// (M-Q8 replacement: startup-protocol.md is now a deprecated stub. Devs auto-load
+//  dev-startup.md via narrow globs; it must explicitly forbid bloated reads.)
 // ---------------------------------------------------------------------------
 
-describe('startup-protocol — role-conditional tech-debt + state scan', () => {
-  const readProtocol = () => readFile('.claude/rules/startup-protocol.md');
+describe('dev-startup — devs do NOT browse tech-debt / project-state', () => {
+  const readDevStartup = () => readFile('.claude/rules/dev-startup.md');
 
-  it('tech-debt step tells dev-agents to use grep', () => {
-    const content = readProtocol();
-    expect(content).toMatch(/grep -E '🔴 OPEN'/);
-    expect(content).toMatch(/dev-агент/i);
+  it('dev-startup.md mentions tech-debt.md (in forbid context)', () => {
+    const content = readDevStartup();
+    expect(content).toMatch(/tech-debt\.md/);
   });
 
-  it('tech-debt step tells architect/reviewer to read full', () => {
-    const content = readProtocol();
-    expect(content).toMatch(/architect\/reviewer.*целиком|architect.*reviewer.*целиком/i);
+  it('dev-startup.md mentions project-state.md (in forbid context)', () => {
+    const content = readDevStartup();
+    expect(content).toMatch(/project-state\.md/);
   });
 
-  it('state step tells dev-agents to head -60', () => {
-    const content = readProtocol();
-    expect(content).toMatch(/head -60 docs\/project-state\.md/);
+  it('dev-startup.md mentions feature-areas (in forbid context)', () => {
+    const content = readDevStartup();
+    expect(content).toMatch(/feature-areas/);
   });
 
-  it('state step tells architect/reviewer to read full', () => {
-    const content = readProtocol();
-    // Both tech-debt and state mention architect/reviewer with "целиком" (read full)
-    const fullReadMatches = content.match(/целиком/g) ?? [];
-    expect(fullReadMatches.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('startup-protocol does NOT contain milestone IDs', () => {
-    const content = readProtocol();
-    expect(content).not.toMatch(/M-Q\d+/);
-    expect(content).not.toMatch(/M-L\d+/);
-    expect(content).not.toMatch(/TD-\d+/);
+  it('dev-startup.md uses english "do not" or russian "не читай" forbid wording', () => {
+    const content = readDevStartup().toLowerCase();
+    expect(content).toMatch(/не читай|forbidden|do not|never read/);
   });
 });
 
@@ -291,17 +283,18 @@ describe('size limits — auto-loaded files stay slim', () => {
     expect(stat.size).toBeLessThanOrEqual(16 * 1024);
   });
 
-  it('startup-protocol.md ≤ 3 KB (auto-loads on every dev open)', () => {
+  it('startup-protocol.md ≤ 3 KB (deprecated stub since M-Q8 — globs:[])', () => {
     const stat = statSync(root('.claude/rules/startup-protocol.md'));
     expect(stat.size).toBeLessThanOrEqual(3 * 1024);
   });
 
-  it('startup-protocol.md does NOT contain inline worktree boilerplate', () => {
-    const content = readFile('.claude/rules/startup-protocol.md');
-    // Worktree details should live in docs/dev/worktree-isolation.md, not inline
+  it('dev-startup.md does NOT contain inline worktree boilerplate', () => {
+    // M-Q8: dev impl protocol moved to dev-startup.md. Worktree details still
+    // live in docs/dev/worktree-isolation.md (M-Q3) — referenced from architect-protocol.md,
+    // not duplicated inline in dev-startup.md (terse, ≤ 1.5 KB).
+    const content = readFile('.claude/rules/dev-startup.md');
     expect(content).not.toMatch(/Cross-user chmod EPERM/);
     expect(content).not.toMatch(/Branch race condition/);
-    expect(content).toMatch(/docs\/dev\/worktree-isolation\.md/);
   });
 
   it('docs/dev/worktree-isolation.md exists', () => {
