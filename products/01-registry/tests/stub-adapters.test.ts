@@ -94,15 +94,29 @@ const validA2a: A2aAgentCard = {
   provider: { organization: 'Example' },
 };
 
-describe('a2a stub adapter', () => {
-  const adapter = createA2aAdapter();
+describe('a2a adapter — sourceName + toCanonical (post-T-3-round2)', () => {
+  // M-L1 T-3 round 2 (commit 529facb): createA2aAdapter is no longer a zero-arg
+  // stub; it requires deps (httpClient, seeds, maxDepth, maxHosts). These tests
+  // pin sourceName + toCanonical projection only — fetchAgents behavior is
+  // covered by a2a-adapter.test.ts (well-known / peers BFS / dedup, 9/9 GREEN).
+  const noopHttpClient = {
+    async fetch() {
+      return { status: 404, headers: new Map<string, string>(), body: null };
+    },
+  };
+  const adapter = createA2aAdapter({
+    httpClient: noopHttpClient,
+    seeds: [],
+    maxDepth: 0,
+    maxHosts: 1,
+  });
 
   it('sourceName=a2a and frozen', () => {
     expect(adapter.sourceName).toBe('a2a');
     expect(Object.isFrozen(adapter)).toBe(true);
   });
 
-  it('fetchAgents yields zero (stub)', async () => {
+  it('fetchAgents yields zero when seeds=[] (no discovery target)', async () => {
     const collected: A2aAgentCard[] = [];
     for await (const r of adapter.fetchAgents()) collected.push(r);
     expect(collected.length).toBe(0);
