@@ -1,521 +1,247 @@
 ---
 name: rust-canister
-description: >
-  Rust canister development for Paxio ICP integration.
-  Use when building canisters in canisters/src/.
+description: Rust canister development for Paxio ICP integration. Use when building canisters in products/*/canister*/, platform/canister-shared/, designing stable storage, inter-canister calls, threshold ECDSA, or async patterns in CLI/proxy binaries (tokio::fs, Arc<RwLock>, lock duration).
 ---
 
-# Rust Canister Patterns
+# Rust Canister (Paxio)
 
-## Project structure
+> See also: `rust-error-handling`, `rust-build`, `rust-data-structures`, `icp-rust`, `icp-threshold-ecdsa`, `bitcoin-icp`, `chain-fusion`.
+
+## Canister structure
 
 ```
-canisters/
+products/<fa>/canister/
 ├── Cargo.toml
+├── canister.did     # Candid interface
 └── src/
-    ├── wallet/
-    │   ├── lib.rs
-    │   └── wallet.rs
-    ├── audit_log/
-    │   ├── lib.rs
-    │   └── log.rs
-    ├── reputation/
-    │   ├── lib.rs
-    │   └── engine.rs
-    └── security_sidecar/
-        ├── lib.rs
-        └── intent.rs
+    ├── lib.rs       # entry, public methods
+    ├── domain/      # business logic, pure
+    ├── storage/     # StableBTreeMap wrappers
+    └── ecdsa/       # threshold ECDSA (if applicable)
 ```
 
-## Cargo.toml
+## State — stable storage survives upgrades
 
-```toml
-[package]
-name = "wallet_canister"
-version = "0.1.0"
-edition = "2021"
+```rust
+use ic_stable_structures::{StableBTreeMap, memory_manager::*, DefaultMemoryImpl};
 
-[dependencies]
-ic-cdk = "0.12"
-ic-cdk-timers = "0.6"
-serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
+thread_local! {
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
+    static AGENTS: RefCell<StableBTreeMap<Principal, AgentRecord, _>> =
+        RefCell::new(StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        ));
+}
 ```
 
-## Basic canister
+- One `MemoryId` per stable structure — never reuse
+- `Storable` impl with `BOUND = Bounded { max_size, ... }` for stable BTree (test pins `max_size > 0`)
+- Avoid in-memory `HashMap` for state that must survive upgrade
+
+## Public method patterns
 
 ```rust
 #[ic_cdk::query]
-fn greet(name: String) -> String {
-    format!("Hello, {}!", name)
+fn get_agent(did: String) -> Result<AgentRecord, RegistryError> {
+    AGENTS.with(|m| m.borrow().get(&did).ok_or(RegistryError::NotFound))
 }
 
 #[ic_cdk::update]
-fn set_greeting(greeting: String) {
-    GreetStorage.with(|g| {
-        let mut storage = g.borrow_mut();
-        storage.greeting = greeting;
-    })
-}
-
-thread_local! {
-    static GreetStorage: RefCell<GreetStorage> = RefCell::default();
-}
-
-#[derive(Default)]
-struct GreetStorage {
-    greeting: String,
+fn register(input: RegisterInput) -> Result<Did, RegistryError> {
+    let caller = ic_cdk::caller();      // identity from runtime, never argument
+    domain::registry::register(caller, input)
 }
 ```
 
-## Error handling with thiserror
+- All public methods return `Result<T, ConcreteError>` — never panic, never `unwrap`
+- `ic_cdk::caller()` for identity (see `paxio-backend-architecture::Multi-Tenancy`)
+- Validate inputs at canister boundary; domain assumes clean inputs
+
+## Inter-canister calls
 
 ```rust
-use thiserror::Error;
+use ic_cdk::call;
 
-#[derive(Error, Debug)]
-pub enum WalletError {
-    #[error("zero amount not allowed")]
-    ZeroAmount,
-
-    #[error("insufficient balance: got {got}, need {need}")]
-    InsufficientBalance { got: u64, need: u64 },
-
-    #[error("invalid BTC address: {0}")]
-    InvalidAddress(String),
-
-    #[error("transfer failed: {0}")]
-    TransferFailed(String),
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum WalletResult {
-    Ok(String),  // tx hash
-    Err(WalletError),
-}
-```
-
-## Input validation
-
-```rust
-#[update]
-pub fn send_bitcoin(to: String, amount: u64) -> Result<String, WalletError> {
-    // Validate inputs at boundary
-    if amount == 0 {
-        return Err(WalletError::ZeroAmount);
-    }
-    if !is_valid_btc_address(&to) {
-        return Err(WalletError::InvalidAddress(to));
-    }
-
-    // Internal logic after validation
-    do_transfer(to, amount)
-}
-
-fn is_valid_btc_address(addr: &str) -> bool {
-    // Basic validation: starts with bc1 and has correct length
-    addr.starts_with("bc1") && addr.len() >= 26 && addr.len() <= 62
-}
-```
-
-## State management
-
-```rust
-use ic_cdk::storage;
-
-#[derive(Default)]
-struct CanisterState {
-    balances: std::collections::HashMap<String, u64>,
-    transactions: Vec<Transaction>,
-}
-
-#[query]
-fn get_state() -> CanisterState {
-    CanisterState::default() // Be careful — don't expose sensitive state
-}
-
-// For persistent state:
-fn get_state() -> &'static mut CanisterState {
-    storage::get_mut()
-}
-```
-
-## Inter-canister call
-
-```rust
-use ic_cdk::api::call::*;
-
-#[update]
-async fn call_audit_log(action: String) -> Result<(), String> {
-    let audit_canister: canister_id = "aaaaa-cccc.ddd".parse().unwrap();
-
-    let (result,): (Result<(), String>,) = call(audit_canister, "log", (action,))
+#[ic_cdk::update]
+async fn cross_call(target: Principal, args: MyArgs) -> Result<MyResp, MyError> {
+    let (resp,): (MyResp,) = call(target, "method_name", (args,))
         .await
-        .map_err(|e| format!("call failed: {:?}", e))?;
-
-    result.map_err(|e| format!("audit log error: {}", e))
+        .map_err(|(code, msg)| MyError::CanisterCall { code: code as i32, msg })?;
+    Ok(resp)
 }
 ```
 
-## Threshold ECDSA (wallet canister)
+- Always `match` on `CallResult`, never `.unwrap()`
+- Idempotency: if call may retry, design messages with `idempotency_key` field, track in state
+
+## serde + Candid wire format
 
 ```rust
-#[update]
-pub async fn sign_message(message: Vec<u8>) -> Result<Vec<u8>, WalletError> {
-    // Get the public key
-    let public_key = ic_cdk::api::management_canister::ecdsa::ecdsa_public_key(
-        ic_cdk::api::management_canister::ecdsa::EcdsaKeyIds::TestKeyOfSize256,
-        None,
-    ).await
-    .map_err(|e| WalletError::CryptoError(format!("{:?}", e)))?;
-
-    // Sign using threshold ECDSA
-    let (signature,): (Vec<u8>,) = ic_cdk::api::management_canister::ecdsa::sign_with_ecdsa(
-        ic_cdk::api::management_canister::ecdsa::SignWithEcdsaArgs {
-            message_hash: sha256(&message),
-            ..
-        },
-    ).await
-    .map_err(|e| WalletError::CryptoError(format!("{:?}", e)))?;
-
-    Ok(signature)
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]   // ← required for TS↔Rust interop
+pub struct AgentRecord {
+    pub agent_did: String,            // wire: agentDid
+    pub registered_at: u64,           // wire: registeredAt
+    pub capabilities: Vec<String>,
 }
 ```
 
-## Certified variables (for browser queries)
+P1 invariant: `#[serde(rename_all = "camelCase")]` on every wire struct shared with TS.
+
+## Init / pre/post upgrade
 
 ```rust
-#[derive(Default)]
-struct CertifiedData {
-    data: Vec<u8>,
-    certificate: Vec<u8>,
-}
-
-#[query]
-fn get_certified_data() -> (Vec<u8>, Vec<u8>) {
-    let state = CertifiedData::default();
-    (state.data, state.certificate)
-}
-
-#[update]
-fn update_data(new_data: Vec<u8>) {
-    CertifiedData::with(|s| {
-        s.data = new_data;
-        // Recertify for browsers
-    });
-}
-```
-
-## No secrets in canister state
-
-```rust
-// BAD: API key in canister
-struct CanisterState {
-    api_key: String, // NEVER do this
-}
-
-// GOOD: Use management canister calls for secrets
-// Or read from environment at init
-#[init]
+#[ic_cdk::init]
 fn init() {
-    // Read from environment, not hardcoded
+    // pre-conditions checked here — .expect() OK with rationale
+    let cycles = ic_cdk::api::canister_balance();
+    assert!(cycles > 1_000_000_000_000, "init cycles below threshold");
+}
+
+#[ic_cdk::pre_upgrade]
+fn pre_upgrade() {
+    // serialize non-stable state if any
+}
+
+#[ic_cdk::post_upgrade]
+fn post_upgrade() {
+    // restore non-stable state
 }
 ```
 
----
+`panic` in `init` / `pre_upgrade` is acceptable (system error, halts upgrade); in normal methods → propagate as `Result`.
 
-## Paxio Async Patterns (ported from .claude/rules/rust-async.md)
+## Async patterns (CLI / proxy binaries — NOT canisters)
 
-> Tokio runtime patterns for Paxio CLI / HTTP proxy / off-chain Rust binaries. Canisters use ic_cdk async.
+Canisters use `ic_cdk` async; the rules below apply to off-chain Rust binaries (`products/*/cli/`, `products/*/http-proxy/`).
 
-# Rust Async — Paxio canisters + Rust binaries
-
-> Источник: ported from `/home/openclaw/complior/CODING-STANDARDS-RUST.md` §10 + §15.
-> Применяется ко всем Rust async code: `products/*/canister*/`, `products/*/cli/`,
-> `products/*/http-proxy/`, `platform/canister-shared/`.
->
-> **ICP canister specific:** canister calls inherently async (cross-canister). Tokio
-> runtime НЕ используется внутри canister'а — `ic_cdk` имеет свой `await`. Эти правила
-> применяются для CLI / proxy / off-chain Rust binaries.
-
-## R-Rust-Async-1: `tokio::fs` not `std::fs` в async context
-
-**Severity: P1** — `std::fs` blocks runtime threads, kills concurrent throughput.
+### `tokio::fs`, never `std::fs` in async
 
 ```rust
-// ❌ blocks tokio runtime thread
+// ❌ blocks runtime thread
 async fn load_config(path: &Path) -> Result<Config, ConfigError> {
-    let content = std::fs::read_to_string(path)?;  // BLOCKS thread
+    let content = std::fs::read_to_string(path)?;
     Ok(toml::from_str(&content)?)
 }
 
-// ✅ tokio::fs — non-blocking
+// ✅ non-blocking
 use tokio::fs;
 async fn load_config(path: &Path) -> Result<Config, ConfigError> {
-    let content = fs::read_to_string(path).await?;  // yields if blocked
+    let content = fs::read_to_string(path).await?;
     Ok(toml::from_str(&content)?)
 }
 ```
 
-**Правило:**
-- В любом `async fn` использовать `tokio::fs`, `tokio::process::Command`, `tokio::net`
-- Sync `std::fs` / `std::process` — ТОЛЬКО в sync code (build scripts, CLI parsing
-  before runtime starts)
-- Канareечка: `tokio::task::spawn_blocking()` для CPU-intensive work чтобы не блокировать
-  main runtime threads
+CPU-intensive work → `tokio::task::spawn_blocking()`.
 
-**Common imports:**
-```rust
-use tokio::fs;                    // file I/O
-use tokio::sync::{Mutex, RwLock, mpsc, oneshot, watch};  // sync primitives
-use tokio::time::{sleep, timeout, interval};             // timers
-use tokio::net::{TcpListener, TcpStream};                // network
-```
-
-## R-Rust-Async-2: Минимизировать lock duration через `.await` boundaries
-
-**Severity: P1** — long-held lock blocks all readers/writers, causes deadlocks.
+### Lock guards never held across `.await` (P1)
 
 ```rust
-// ❌ holds lock across .await — другие tasks blocked
-async fn process_intent(state: &Arc<RwLock<State>>, intent: Intent) -> Result<()> {
+// ❌ holds lock during external call — deadlock risk
+async fn process(state: &Arc<RwLock<State>>, intent: Intent) -> Result<()> {
     let mut s = state.write().await;
-    let validation = validate_remote(&intent).await?;  // ← AWAIT с зажатым lock
+    let validation = validate_remote(&intent).await?;  // ← lock held
     s.apply(validation);
     Ok(())
 }
 
-// ✅ release lock перед .await, re-acquire после
-async fn process_intent(state: &Arc<RwLock<State>>, intent: Intent) -> Result<()> {
-    // Read minimum data with lock held
-    let snapshot = {
-        let s = state.read().await;
-        s.snapshot_for(&intent)
-    };  // lock released here
-    
-    // Long-running async work — no lock held
+// ✅ snapshot → release → external work → re-acquire for short write
+async fn process(state: &Arc<RwLock<State>>, intent: Intent) -> Result<()> {
+    let snapshot = { let s = state.read().await; s.snapshot_for(&intent) };
     let validation = validate_remote(&snapshot, &intent).await?;
-    
-    // Re-acquire lock for short write
-    {
-        let mut s = state.write().await;
-        s.apply(validation);
-    }
+    { let mut s = state.write().await; s.apply(validation); }
     Ok(())
 }
 ```
 
-**Правило:**
-- Lock guard scope = ровно столько кода, сколько needs to read/write state
-- НИКОГДА не держи lock across `.await` если operation external (network, disk)
-- Используй `{ ... }` block to make scope explicit
-- Для read-heavy workload: `RwLock` > `Mutex`
+### Shared async state — `Arc<RwLock<T>>`, never `Rc<RefCell<T>>`
 
-## R-Rust-Async-3: `Arc<RwLock<T>>` для shared async state, не `Rc<RefCell<T>>`
+`Rc<RefCell>` is not `Send` → panics across thread boundaries. Use `Arc<RwLock>` (read-heavy) or `Arc<Mutex>` (otherwise). Use `tokio::sync::Mutex` (yields on contention), not `std::sync::Mutex`, in async paths.
 
-**Severity: P1** — `Rc` + `RefCell` not `Send`, panics across thread boundaries.
+### Concurrent operations — `tokio::join!` / `try_join!`
 
 ```rust
-// ❌ Rc<RefCell<T>> — single-threaded only, не работает с tokio::spawn
-let state = Rc::new(RefCell::new(State::default()));
-tokio::spawn(async move {
-    state.borrow_mut().mutate();  // PANIC если runtime multi-threaded
-});
+// ❌ sequential
+for url in urls { results.push(fetch(url).await); }
 
-// ✅ Arc<RwLock<T>> для shared async state
-let state = Arc::new(RwLock::new(State::default()));
-tokio::spawn(async move {
-    let mut s = state.write().await;
-    s.mutate();
-});
+// ✅ fixed N
+let (a, b, c) = tokio::try_join!(fetch(&urls[0]), fetch(&urls[1]), fetch(&urls[2]))?;
 
-// ✅ Arc<Mutex<T>> когда нет read-heavy pattern
-let counter = Arc::new(Mutex::new(0u64));
-```
-
-**Правило:**
-- Multi-tasked / multi-threaded shared state → `Arc<RwLock<T>>` или `Arc<Mutex<T>>`
-- Single-task ownership → `Box<T>` или просто owned `T`
-- НИКОГДА `Rc<T>` в async runtime (compile error в Send context, panic в runtime)
-- НИКОГДА `static mut` (UB, racy, replaced by `OnceCell` / `LazyLock` или `Arc<Mutex>`)
-
-**Tokio-specific:**
-- `tokio::sync::Mutex` (async) ≠ `std::sync::Mutex` (sync). Async version yields on contention.
-- `parking_lot::Mutex` для tight CPU loops где await не нужен — faster than `std::sync::Mutex`.
-
-## R-Rust-Async-4: `tokio::join!` / `try_join!` для concurrent operations
-
-**Severity: P2** — sequential awaits = wasted concurrency.
-
-```rust
-// ❌ sequential — total time = sum of individual times
-async fn fetch_all(urls: &[String]) -> Vec<Result<Body, Error>> {
-    let mut results = Vec::new();
-    for url in urls {
-        results.push(fetch(url).await);
-    }
-    results
-}
-
-// ✅ concurrent — total time = max of individual times
-async fn fetch_all(urls: &[String]) -> Result<(Body, Body, Body), Error> {
-    let (a, b, c) = tokio::try_join!(
-        fetch(&urls[0]),
-        fetch(&urls[1]),
-        fetch(&urls[2]),
-    )?;
-    Ok((a, b, c))
-}
-
-// ✅ concurrent with N items — futures::stream::buffered
+// ✅ variable N with rate limit
 use futures::stream::{self, StreamExt};
-async fn fetch_all(urls: &[String]) -> Vec<Result<Body, Error>> {
-    stream::iter(urls)
-        .map(|url| fetch(url))
-        .buffer_unordered(10)  // up to 10 concurrent
-        .collect()
-        .await
-}
+let results: Vec<_> = stream::iter(urls)
+    .map(|url| fetch(url))
+    .buffer_unordered(10)
+    .collect()
+    .await;
 ```
 
-**Правило:**
-- Independent async operations → `tokio::join!` / `try_join!` для fixed N
-- Variable N → `futures::stream::buffer_unordered(MAX_CONCURRENT)` с rate limit
-- Fail-fast (abort other tasks on first error) → `try_join!`
-- Collect-all (run all to completion regardless) → `tokio::join!` или `JoinSet`
-
-## R-Rust-Async-5: Iterator chains lazy, no intermediate `.collect()`
-
-**Severity: P2** — extra allocations, slower.
+### Iterator chains — lazy, no intermediate collect
 
 ```rust
-// ❌ intermediate collect — allocates Vec<u32>, then iterates again
-let result: Vec<String> = items
-    .iter()
-    .filter(|x| x.is_valid())
-    .collect::<Vec<_>>()  // allocates
-    .iter()
-    .map(|x| x.to_string())
-    .collect();
+// ❌ extra alloc
+let result: Vec<String> = items.iter().filter(|x| x.is_valid()).collect::<Vec<_>>().iter().map(|x| x.to_string()).collect();
 
-// ✅ chained, lazy — single pass, single allocation
-let result: Vec<String> = items
-    .iter()
-    .filter(|x| x.is_valid())
-    .map(|x| x.to_string())
-    .collect();
+// ✅ chained
+let result: Vec<String> = items.iter().filter(|x| x.is_valid()).map(|x| x.to_string()).collect();
 
-// ✅ filter_map — combine filter + map
-let result: Vec<String> = items
-    .iter()
-    .filter_map(|x| x.is_valid().then(|| x.to_string()))
-    .collect();
+// ✅ filter_map for Option-returning
+let result: Vec<String> = items.iter().filter_map(|x| x.is_valid().then(|| x.to_string())).collect();
 ```
 
-**Правило:**
-- Chain `.iter().filter().map().collect()` без intermediate `.collect()`
-- `.filter_map()` для Option-returning transformations
-- `.fold()` / `.reduce()` для aggregations (without intermediate Vec)
-- В async context: `.into_stream().filter().map().collect::<Vec<_>>().await`
+### String types — `&str` < `String` < `Cow<'a, str>`
 
-## R-Rust-Async-6: String types — `&str` < `String` < `Cow<'a, str>`
+- `&str` for read-only parameters
+- `String` for owned / stored
+- `Cow<'_, str>` when may-be-modified (avoids alloc when not modified)
+- ❌ `&String` parameter — useless, always `&str`
+- ❌ `String` parameter when no ownership transfer needed → `&str`
 
-**Severity: P2** — choosing wrong type wastes allocations.
-
-```rust
-// ✅ &str для read-only access
-fn parse_did(did: &str) -> Result<Did, ParseError> {
-    if !did.starts_with("did:paxio:") {
-        return Err(ParseError::InvalidPrefix);
-    }
-    Ok(Did(did.to_string()))  // own only at boundary
-}
-
-// ✅ String для owned/stored strings
-struct Agent {
-    did: String,           // owned, lives for Agent's lifetime
-    name: String,
-}
-
-// ✅ Cow<'a, str> когда «may-be-modified» — avoids alloc если no modification
-fn normalize_name(name: &str) -> Cow<'_, str> {
-    if name.contains(' ') {
-        Cow::Owned(name.replace(' ', "_"))  // alloc only if needed
-    } else {
-        Cow::Borrowed(name)  // no alloc — passes through
-    }
-}
-
-// ❌ String аргумент когда не нужен ownership — forces caller to clone
-fn parse_did(did: String) -> Result<Did, ParseError> { /* WRONG */ }
-
-// ❌ &String — useless, всегда use &str
-fn parse_did(did: &String) -> Result<Did, ParseError> { /* WRONG */ }
-```
-
-**Decision tree:**
-- Function accepts string for read-only → `&str`
-- Function accepts string and stores it → `impl Into<String>` или `String`
-- Function returns string that MAY be borrowed → `Cow<'_, str>`
-- Struct field stored → `String` (owned, simple lifetime)
-
-## R-Rust-Async-7: Newtype для domain types (DID, Satoshi, Nonce)
-
-**Severity: P2** — type safety на boundaries, prevents argument confusion.
+### Newtype for domain types (P2)
 
 ```rust
-// ❌ primitive obsession — easy to swap arguments
-fn transfer(amount: u64, from: String, to: String, fee: u64) -> Result<TxId, _> {
-    // caller may swap from/to or amount/fee — compiles but wrong
-}
-
-// ✅ newtype — compiler catches misuse
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Satoshi(pub u64);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Did(pub String);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TxId(pub [u8; 32]);
-
 fn transfer(amount: Satoshi, from: Did, to: Did, fee: Satoshi) -> Result<TxId, _> {
-    // compiler ensures Satoshi can't be passed as Did, fee can't be swapped с amount
-}
-
-// ✅ implement common conversions
-impl From<u64> for Satoshi {
-    fn from(n: u64) -> Self { Satoshi(n) }
-}
-
-impl Display for Did {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+    // compiler prevents swap of fee/amount or from/to
 }
 ```
 
-**Применять в Paxio:**
-- `Did` (`struct Did(String)`)
-- `Satoshi` (`struct Satoshi(u64)`)
-- `Nonce` (`struct Nonce(u64)`)
-- `BtcAddress` (`struct BtcAddress(String)`)
-- `IcpPrincipal` (already provided by `ic_cdk::Principal`)
-- `WalletId`, `IntentId`, `TxHash` etc.
+Use for: `Did`, `Satoshi`, `Nonce`, `BtcAddress`, `WalletId`, `IntentId`, `TxHash`. ICP `Principal` already serves as canister-side identity.
 
-## Quick checklist (для reviewer Phase 0)
+## Exhaustive match on enums (P1)
 
-- [ ] Все async fn используют `tokio::fs`, не `std::fs`
-- [ ] Lock guards не зажаты across `.await` для external operations
-- [ ] Shared async state через `Arc<RwLock<T>>` / `Arc<Mutex<T>>`, не `Rc<RefCell<T>>`
-- [ ] Independent operations через `tokio::join!` / `try_join!` / `buffer_unordered`
-- [ ] Iterator chains без intermediate `.collect()` где возможно
-- [ ] Function arguments: `&str` для read-only, `String` для ownership transfer
-- [ ] Domain types через newtype (`struct Did(String)`, etc.) на API boundaries
+```rust
+// ❌ catch-all hides new variant
+match status { Status::Active => ..., _ => default }
 
-## See also
+// ✅ explicit per variant
+match status {
+    Status::Active => ...,
+    Status::Pending => ...,
+    Status::Closed => ...,
+}
+```
 
-- `rust-error-handling.md` — Result vs panic
-- `rust-build.md` — release profile, clippy lints
-- `engineering-principles.md` §17 «Concurrency & async»
-- `coding-standards-checklist.md` — C25, C80, C82, C84, C85 (Phase 0/N walks)
+If new variant added later, compiler fails — find every site to update.
+
+## Reviewer Phase 0 quick checklist
+
+- [ ] Public methods return `Result<T, ConcreteError>` — no panic
+- [ ] `ic_cdk::caller()` for identity, not argument
+- [ ] `#[serde(rename_all = "camelCase")]` on wire structs
+- [ ] `Storable` bound is `Bounded { max_size > 0 }` for stable BTree
+- [ ] No `unwrap()` / `panic!` in production paths (`expect("invariant")` only with rationale)
+- [ ] Async fn use `tokio::fs`, not `std::fs`
+- [ ] No lock guard held across `.await` for external operations
+- [ ] Shared state via `Arc<RwLock<T>>` / `Arc<Mutex<T>>`
+- [ ] Iterator chains without intermediate `.collect()`
+- [ ] Function arguments: `&str` for read-only, `String` for ownership transfer
+- [ ] Domain types via newtype on API boundaries
+- [ ] Exhaustive `match` on enums

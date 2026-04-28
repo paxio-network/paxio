@@ -108,10 +108,19 @@ describe('M-Q13 — new + extended skills exist with frontmatter', () => {
   }
 
   for (const skill of extendedSkills) {
-    it(`extended skill \`${skill}\` includes Paxio Extensions section`, () => {
+    it(`extended skill \`${skill}\` covers Paxio-specific content (was rule-only) — metaskills format`, () => {
+      // M-Q13 Step 1 added «Paxio Extensions» section markers (1-в-1 ports).
+      // M-Q14 (Step 2) refactored to metaskills format — unified prose, no
+      // sectional «ported from» markers. Pin specific Paxio invariants instead.
       const content = readSkill(skill);
-      expect(content).toMatch(/Paxio Extensions|Paxio Async Patterns|Paxio Backend Code Style/);
-      expect(content).toMatch(/ported from/);
+      const paxioSpecificMarkers: Record<string, RegExp[]> = {
+        'typescript-patterns': [/VM sandbox/i, /factory/i, /no.*class.*app/i],
+        'rust-canister': [/ic_cdk::caller/i, /tokio::fs/i, /Storable/i],
+        'rust-error-handling': [/thiserror/i, /unwrap.*denied|deny.*unwrap|no.*unwrap/i, /TryFrom/],
+      };
+      for (const re of paxioSpecificMarkers[skill] ?? []) {
+        expect(content, `${skill} missing marker: ${re}`).toMatch(re);
+      }
     });
   }
 });
