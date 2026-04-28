@@ -78,7 +78,7 @@ STRATEGY → Roadmap → Feature Area → Milestone (тесты) → Code
 5. **Data externalization**: справочные данные в `app/data/*.json`, не в коде.
 6. **No hardcoded values**: пути, порты, ключи через `app/config/` или env.
 7. **Onion deps**: `server/ → app/api/ → app/domain/ → app/lib/`. Строго внутрь.
-8. **ICP только там где надо**: threshold ECDSA, immutable proof, decentralized consensus, deterministic enforcement, Chain Fusion. Всё остальное — TS/Rust off-chain.
+8. **ICP только там где надо**: см. секцию «Принцип ICP» ниже.
 
 ## File Ownership
 
