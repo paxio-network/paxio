@@ -45,10 +45,11 @@ describe('M-L1-expansion createA2aAdapter — factory', () => {
   });
 });
 
-// TD-34: skip behaviour-driven tests until registry-dev T-3 lands real impl.
-// Stubs return empty AsyncIterable so these tests RED. Registry-dev removes
-// `.skip` when wiring well-known + peers BFS in domain/sources/a2a.ts.
-describe.skip('M-L1-expansion A2A fetchAgents — well-known discovery', () => {
+// TD-34 RESOLVED (M-L1 T-3 round 2, commit 529facb): a2a impl now wires
+// well-known/agent.json discovery + peers[] BFS + dedup + maxDepth/maxHosts
+// bounds. All 9/9 tests pass on registry-dev's impl. Architect (TESTS SACRED
+// gate) unskips here as part of merge PR.
+describe('M-L1-expansion A2A fetchAgents — well-known discovery', () => {
   it('GETs <host>/.well-known/agent.json for each seed', async () => {
     const calls: string[] = [];
     const httpClient: HttpClient = {
