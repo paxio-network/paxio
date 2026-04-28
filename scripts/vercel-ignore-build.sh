@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Ensure we operate from repo root (Vercel runs with cwd = app subdir)
+cd "$(git rev-parse --show-toplevel)"
+
 # Vercel ignore script — Berkner-style
 # exit 1 = BUILD (changes detected), exit 0 = SKIP (no relevant changes)
 # Vercel convention is counter-intuitive: 1 = do build, 0 = skip
