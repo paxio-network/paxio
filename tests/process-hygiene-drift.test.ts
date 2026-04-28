@@ -58,9 +58,11 @@ describe('per-session worktree convention — extracted to docs/dev/', () => {
     expect(worktreeDoc()).toMatch(/git worktree remove|worktree prune/);
   });
 
-  it('startup-protocol.md links to the extracted worktree doc', () => {
-    expect(readRule('startup-protocol.md')).toMatch(/docs\/dev\/worktree-isolation\.md/);
-  });
+  // M-Q8: removed obsolete assertion that startup-protocol.md must link to the extracted
+  // worktree doc. With startup-protocol.md now a deprecated stub (globs:[], not auto-loaded),
+  // devs use dev-startup.md (terse, no worktree rationale) and architect uses architect-protocol.md
+  // (full ФАЗА 0 inline). Neither needs a link to the rationale doc — the doc exists for
+  // humans browsing docs/dev/, not for agent context auto-load.
 });
 
 describe('M-Q3 T-1 architect-protocol.md — § 1.0 worktree setup', () => {
