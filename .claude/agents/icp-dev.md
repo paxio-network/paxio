@@ -71,7 +71,7 @@ fn send_btc(to: String, amount: u64) -> Result<TxHash, WalletError> {
 }
 ```
 
-Detail: `.claude/rules/rust-error-handling.md` (auto-loaded), `rust-async.md`, `rust-build.md`.
+Detail: `.claude/rules/rust-error-handling.md`, `rust-async.md`, `rust-build.md` (all auto-load on Rust files).
 
 ### No secrets in canister state
 

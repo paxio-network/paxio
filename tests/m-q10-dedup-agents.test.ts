@@ -51,6 +51,18 @@ describe('M-Q10 — scope-guard.md manual-load + dev-startup.md absorbs hard rul
     expect(desc).not.toMatch(/\bdedup\b/);
   });
 
+  it('rust-async / rust-build / rust-error-handling auto-load on Rust paths (so icp-dev / registry-dev get them without manual Read)', () => {
+    for (const file of ['rust-async.md', 'rust-build.md', 'rust-error-handling.md']) {
+      const content = readFile(`.claude/rules/${file}`);
+      const globs = getFrontmatterField(content, 'globs') ?? '';
+      expect(globs, `${file} missing globs frontmatter`).toMatch(/products\/\*\*\/\*\.rs/);
+      expect(globs, `${file} missing platform glob`).toMatch(/platform\/\*\*\/\*\.rs/);
+      const desc = getFrontmatterField(content, 'description') ?? '';
+      expect(desc.length, `${file} description empty`).toBeGreaterThan(20);
+      expect(desc, `${file} description carries milestone tag (antipattern)`).not.toMatch(/\bM-Q\d+\b|\bM-L\d+\b|\bdedup\b/);
+    }
+  });
+
   it('dev-startup.md auto-loads on impl paths (globs cover apps/ + products/ + packages/ + platform/)', () => {
     const content = readFile('.claude/rules/dev-startup.md');
     const globs = getFrontmatterField(content, 'globs') ?? '';

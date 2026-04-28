@@ -1,3 +1,8 @@
+---
+description: Rust async — tokio::fs over std::fs, minimize lock duration across .await, Arc<RwLock<T>> for shared async state, newtype for domain types
+globs: ["products/**/*.rs", "platform/**/*.rs"]
+---
+
 # Rust Async — Paxio canisters + Rust binaries
 
 > Источник: ported from `/home/openclaw/complior/CODING-STANDARDS-RUST.md` §10 + §15.
