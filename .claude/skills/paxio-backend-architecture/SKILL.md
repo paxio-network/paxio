@@ -1,226 +1,148 @@
 ---
 name: paxio-backend-architecture
-description: >
-  Paxio backend architecture — server/ (CJS infrastructure) vs app/ (VM sandbox business logic),
-  layered loading order, IIFE module format, multi-tenancy P0 invariants. Use when
-  implementing files under apps/back/server/, apps/back/app/, or products/*/app/, designing
-  server↔app boundary, writing SQL with tenant filtering, or when the user mentions
-  VM sandbox, Object.freeze, identity filter, agentDid, organizationId, multi-tenancy,
-  or audit log.
+description: Paxio backend split — server/ (CJS infrastructure) vs app/ (VM sandbox business logic), layered loading order, IIFE module format, multi-tenancy P0 invariants. Use when implementing apps/back/server/, apps/back/app/, or products/*/app/, designing server↔app boundary, writing SQL with tenant filtering, or when the user mentions VM sandbox, Object.freeze, identity filter, agentDid, organizationId, multi-tenancy, audit log.
 ---
 
-# Paxio Backend Architecture — server/ vs app/
+# Paxio Backend Architecture
 
-> Ported 1-в-1 from `.claude/rules/backend-architecture.md`. Rule file is now archive
-> (`globs: []`); this skill is the canonical reference.
+> See also: `paxio-backend-api` (handler format, AppError), `typescript-patterns` (FP style), `sql-best-practices`.
 
-Два каталога, два мира. Не смешивать.
-
-## Принцип
+## Two worlds — never mix
 
 ```
-server/  = ИНФРАСТРУКТУРА (Fastify, WebSocket, external clients)
-           CommonJS (.cjs), require() разрешён, I/O разрешён
+server/  = INFRASTRUCTURE (Fastify, WebSocket, DB clients, ICP HTTP)
+           CommonJS .cjs — require() OK, I/O OK, process.env OK
 
-app/     = БИЗНЕС-ЛОГИКА (domain, API handlers, config)
-           Загружается через vm.Script в sandbox
-           require() ЗАПРЕЩЁН, import ЗАПРЕЩЁН, I/O ЗАПРЕЩЁН
+app/     = BUSINESS LOGIC (domain, API handlers, config)
+           Loaded via vm.Script with frozen sandbox context
+           require/import/fs/process/global ALL FORBIDDEN
 ```
 
-## VM Sandbox — изоляция app/
+## VM sandbox — what's injected into `app/`
 
-Каждый .js модуль в app/ загружается через `vm.Script` с `Object.freeze()` на контексте.
-
-1. **НЕТ require()** — модуль не может подключить Node.js модули
-2. **НЕТ import** — ESM не работает в VM context
-3. **НЕТ fs/net/http** — никакого I/O из бизнес-логики
-4. **НЕТ process/global** — только то что инжектировано через sandbox
-5. **Timeout: 5000ms** — модуль который зависает = ошибка
-
-### Что доступно внутри sandbox:
+`server/src/loader.cjs` builds a frozen context per request:
 
 ```javascript
-// Инжектируется server/src/loader.cjs:
 {
   setTimeout, clearTimeout, AbortController, Buffer,
   console,    // Pino logger (frozen)
-  crypto,     // Node.js crypto (frozen)
+  crypto,     // node:crypto (frozen)
   config,     // app/config/* (frozen)
   errors,     // AppError hierarchy (frozen)
   telemetry,  // WebSocket broadcaster (frozen)
-  lib,        // app/lib/* (frozen, после загрузки)
-  domain,     // app/domain/* (frozen, после загрузки)
+  lib,        // app/lib/* (frozen, after lib load)
+  domain,     // app/domain/* (frozen, after domain load)
 }
 ```
 
-### Порядок загрузки (СТРОГИЙ):
+5000 ms timeout per script. No `require`, no `import`, no I/O, no `process.env`.
+
+## Loading order — strict, one-way
 
 ```
-1. lib/         → sandbox.lib         (permissions, validation)
-2. domain/      → sandbox.domain      (pure business logic)
-3. api/         → sandbox.api         (HTTP handlers)
+lib/  →  domain/  →  api/
 ```
 
-Каждый слой видит ТОЛЬКО предыдущие слои:
-- `lib/` видит: config, errors, crypto
-- `domain/` видит: lib + всё выше
-- `api/` видит: domain, lib + всё выше
+- `lib/` sees: config, errors, crypto
+- `domain/` sees: lib + above (NO api)
+- `api/` sees: domain, lib + above (CANNOT call sibling api/ modules)
 
-**api/ НЕ МОЖЕТ обращаться к другим api/ модулям напрямую.** Общая логика — в domain/ или lib/.
+Shared logic across handlers → `domain/` or `lib/`.
 
-## Формат модулей в app/
-
-Каждый .js файл в app/ — это IIFE-выражение, возвращающее объект:
+## Module format in `app/` — IIFE returning plain object
 
 ```javascript
-// app/domain/registry/drone-state.js
+// app/domain/registry/state.js
 const MAX_HISTORY = 100;
-
-const updateDrone = (droneId, data) => { /* ... */ };
-const getDrone = (droneId) => { /* ... */ };
+const updateDrone = (id, data) => { /* ... */ };
+const getDrone = (id) => { /* ... */ };
 
 ({
   updateDrone,
   getDrone,
-})
+})  // ← bare expression, no module.exports / export
 ```
 
-**НЕ export, НЕ module.exports** — просто объект в конце файла.
-loader.cjs оборачивает код в `'use strict';\n{\n${src}\n}` и выполняет через vm.Script.
+`loader.cjs` wraps with `'use strict';\n{\n${src}\n}` and runs through `vm.Script`.
 
-## server/ — что можно, что нельзя
-
-### server/ МОЖЕТ:
-- `require()` npm пакетов (fastify, pino, ws)
-- Открывать TCP/UDP сокеты
-- Создавать HTTP endpoints
-- Управлять WebSocket connections
-- Читать .env переменные
-- Lazy-load infrastructure клиентов
-
-### server/ НЕ МОЖЕТ:
-- Содержать бизнес-логику (расчёты, FSM, валидация данных)
-- Напрямую манипулировать domain objects
-- Обходить sandbox (вызывать app/ код через require)
-
-## app/ — что можно, что нельзя
-
-### app/ МОЖЕТ:
-- Чистая бизнес-логика (расчёты, FSM, state management)
-- Использовать инжектированные сервисы (console, errors, telemetry)
-- Возвращать данные через return (handler → Fastify → client)
-
-### app/ НЕ МОЖЕТ:
-- require() или import
-- fs, net, http, child_process — любой I/O
-- process.env — конфиг только через инжектированный `config`
-- Модифицировать sandbox context (он frozen)
-- Обращаться к Fastify API (request, reply) — только входные данные
-
-## Onion слои (backend)
+## Onion dependency direction — strictly inward
 
 ```
-server/ (infrastructure)        ← I/O, Fastify, WebSocket, TCP
-   ↓
-app/api/ (presentation)         ← HTTP handlers, routing
-   ↓
-app/domain/ (core)              ← Pure logic, NO deps outward
+server/  →  app/api/  →  app/domain/  →  app/lib/
 ```
 
-Зависимости направлены СТРОГО ВНУТРЬ:
-- `server/ → app/api/ → app/domain/ → app/lib/`
-- НИКОГДА: `domain/ → api/`, `domain/ → server/`, `lib/ → domain/`
+- ❌ `domain/ → api/`, `domain/ → server/`, `lib/ → domain/` — banned
+- ✅ Pure `domain/` — no I/O, all data via parameters, returns Result/AppError
 
-## Multi-Tenancy / Identity Filter — P0 BLOCKER
+## Multi-tenancy — P0 BLOCKER
 
-**КАЖДЫЙ запрос к агентным/организационным данным ОБЯЗАН фильтровать по identity.**
+**Every query touching agent/org data MUST filter by identity from `session`, never from `body`.**
 
-В Paxio есть ДВА уровня identity:
-
-| Identity | Откуда | Что фильтрует |
+| Identity | Source | Filters |
 |---|---|---|
-| `agentDid` | `session.agentDid` (auth middleware из подписанного DID-токена) | Wallet balance, transactions, signed intents, registry claims, FAP routes |
-| `organizationId` | `session.organizationId` (fleet/enterprise — WorkOS/SSO) | Fleet dashboard, batch операции, биллинг, audit feed |
-
-### Identity SOURCE — `session`, не body
+| `agentDid` | `session.agentDid` (auth middleware → signed DID token) | wallet balance, transactions, signed intents, registry claims, FAP routes |
+| `organizationId` | `session.organizationId` (WorkOS/SSO) | fleet dashboard, batch ops, billing, audit feed |
 
 ```javascript
-// ✅ ПРАВИЛЬНО — identity из session (auth middleware подписал)
+// ✅ identity from session
 method: async ({ body, session }) => {
   if (!session?.agentDid) throw new errors.AuthError();
-  return await db.query(
+  return db.query(
     'SELECT * FROM transactions WHERE agent_did = $1',
     [session.agentDid]
   );
 }
 
-// ❌ НЕПРАВИЛЬНО — identity из body, клиент может подделать
+// ❌ identity from body — client can impersonate
 method: async ({ body }) => {
-  return await db.query(
-    'SELECT * FROM transactions WHERE agent_did = $1',
-    [body.agentDid]   // КЛИЕНТ ПОДСТАВИЛ ЧУЖОЙ DID — data leak
-  );
+  return db.query('SELECT ... WHERE agent_did = $1', [body.agentDid]);
 }
+
+// ❌ no filter — leaks ALL tenants
+method: async () => db.query('SELECT * FROM wallets');
 ```
 
-### Каждый SQL/Qdrant/Redis запрос к tenant-данным фильтруется
+**Same rule for Qdrant + Redis** — payload filter or key prefix on `organizationId` / `agentDid`.
 
-```javascript
-// ✅ wallet balance — фильтр по agentDid
-const balance = await db.query(
-  'SELECT balance FROM wallets WHERE agent_did = $1',
-  [session.agentDid]
-);
-
-// ✅ Qdrant similarity — filter в payload
-const matches = await qdrant.search('agents', {
-  vector: queryVec,
-  filter: { must: [{ key: 'organization_id', match: { value: session.organizationId } }] },
-});
-
-// ❌ НЕПРАВИЛЬНО — нет фильтра, видны ВСЕ tenants
-const wallets = await db.query('SELECT * FROM wallets');
-```
-
-### Public exceptions (явный whitelist)
-
-| Endpoint | Почему public |
-|---|---|
-| `/api/registry/find` (без auth) | Registry — публичный agent index (ERC-8004 пример) |
-| `/api/landing/*` | Landing page metrics — агрегированы, не tenant-specific |
-| `/api/radar/*` (free tier) | Intelligence press magnet — публичные тренды |
-| `/api/docs/*` | Документация |
-
-Любой другой endpoint, который ХОЧЕШЬ сделать публичным — `!!! SCOPE VIOLATION REQUEST !!!`.
-
-### Inter-canister calls — identity передаётся через ic_cdk::caller()
+## Inter-canister calls — `ic_cdk::caller()`, not argument
 
 ```rust
-// ✅ Wallet canister проверяет caller
+// ✅ identity from ICP runtime
 #[ic_cdk::update]
 fn sign_intent(intent: Intent) -> Result<Signature, WalletError> {
-    let caller = ic_cdk::caller();   // identity из ICP runtime
+    let caller = ic_cdk::caller();
     let wallet = WALLETS.with(|w| w.borrow().get(&caller))?;
     wallet.sign(&intent)
 }
 
-// ❌ берём agent_did из аргумента — клиент может передать чужой DID
-fn sign_intent(agent_did: String, intent: Intent) -> Result<Signature, WalletError> { /* WRONG */ }
+// ❌ caller as argument — client can lie
+fn sign_intent(agent_did: String, intent: Intent) -> Result<...> { /* WRONG */ }
 ```
 
-### Ownership invariant
+## Public exceptions whitelist
 
-Wallet, signed intents, audit log entries — **owner = agentDid**, immutable после создания.
-Audit log — append-only, никогда не удаляется (compliance).
+| Endpoint | Why public |
+|---|---|
+| `/api/registry/find` | Public agent index (ERC-8004 standard) |
+| `/api/landing/*` | Aggregated metrics, not tenant-specific |
+| `/api/radar/*` (free tier) | Public market intelligence |
+| `/api/docs/*` | Documentation |
 
-### Reviewer P0 check (B1-B7)
+Anything else public → `!!! SCOPE VIOLATION REQUEST !!!` → architect adds to whitelist.
 
-- B1: каждый SQL имеет `WHERE agent_did = ...` или `WHERE organization_id = ...`?
-- B2: identity берётся из `session.*`, не из `body.*`?
-- B3: canister методы используют `ic_cdk::caller()`, не аргумент?
-- B4: public endpoints в явном whitelist?
-- B5: Qdrant/Redis ключи включают tenant prefix?
-- B6: wallet ownership проверяется перед sign?
-- B7: audit log append-only?
+## Ownership invariants
 
-Любой fail → **REJECT, severity=CRITICAL**. Data leak / финансовый риск.
+- `wallet`, `signed intents`, `audit log entries` — owner = `agentDid`, immutable post-creation
+- `audit log` — append-only, never deleted (compliance)
+
+## Reviewer P0 checks (B1-B7)
+
+- B1: SQL has `WHERE agent_did = ...` or `WHERE organization_id = ...`
+- B2: identity from `session.*`, never `body.*`
+- B3: canister methods use `ic_cdk::caller()`
+- B4: public endpoint in explicit whitelist
+- B5: Qdrant/Redis keys carry tenant prefix
+- B6: wallet ownership verified before sign
+- B7: audit log append-only
+
+Any fail → REJECT, severity=CRITICAL (data leak / financial risk).
