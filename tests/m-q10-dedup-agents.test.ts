@@ -51,15 +51,20 @@ describe('M-Q10 — scope-guard.md manual-load + dev-startup.md absorbs hard rul
     expect(desc).not.toMatch(/\bdedup\b/);
   });
 
-  it('rust-async / rust-build / rust-error-handling auto-load on Rust paths (so icp-dev / registry-dev get them without manual Read)', () => {
+  it('rust-async / rust-build / rust-error-handling — content moved to skills (M-Q13), rules archived', () => {
+    // M-Q13 (rules→skills migration): Rust rules no longer auto-load via globs.
+    // Their content lives in skills `rust-canister`, `rust-build`, `rust-error-handling`
+    // (description-matched, on-demand). icp-dev / registry-dev pick them up via
+    // skill description matching, not via filesystem glob, freeing context budget.
+    //
+    // Replaces old M-Q10 invariant («Rust rules auto-load on .rs paths»). Old invariant
+    // caused MiniMax-M2.7 overflow — see tests/m-q11-no-eager-skills.test.ts banner.
     for (const file of ['rust-async.md', 'rust-build.md', 'rust-error-handling.md']) {
       const content = readFile(`.claude/rules/${file}`);
       const globs = getFrontmatterField(content, 'globs') ?? '';
-      expect(globs, `${file} missing globs frontmatter`).toMatch(/products\/\*\*\/\*\.rs/);
-      expect(globs, `${file} missing platform glob`).toMatch(/platform\/\*\*\/\*\.rs/);
-      const desc = getFrontmatterField(content, 'description') ?? '';
-      expect(desc.length, `${file} description empty`).toBeGreaterThan(20);
-      expect(desc, `${file} description carries milestone tag (antipattern)`).not.toMatch(/\bM-Q\d+\b|\bM-L\d+\b|\bdedup\b/);
+      expect(globs.trim(), `${file} should have globs: [] (archived in M-Q13)`).toBe('[]');
+      expect(content, `${file} should mention M-Q13 archive banner`).toMatch(/ARCHIVED in M-Q13/);
+      expect(content, `${file} should link to its skill counterpart`).toMatch(/\.claude\/skills\/[a-z-]+\/SKILL\.md/);
     }
   });
 

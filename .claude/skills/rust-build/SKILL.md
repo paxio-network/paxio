@@ -1,17 +1,12 @@
 ---
-description: "[ARCHIVED M-Q13] Rust build — Cargo workspace structure, edition 2024, clippy pedantic+nursery, release profile lto/strip/panic=abort, cargo-deny supply chain — moved to skill `rust-build`. Kept for git history; no longer auto-loads."
-globs: []
+name: rust-build
+description: >
+  Paxio Rust build configuration — Cargo workspace, edition 2024, clippy pedantic+nursery,
+  release profile (lto, codegen-units=1, strip, panic=abort), feature flags, cargo-deny.
+  Use when configuring Cargo.toml workspace root or member crates under products/*/canister*/,
+  platform/canister-shared/, products/*/cli/, products/*/http-proxy/, or when the user
+  mentions clippy lint config, release profile, workspace deps, feature gating, or supply chain.
 ---
-
-> **ARCHIVED in M-Q13** — content ported to skill `.claude/skills/rust-build/SKILL.md`.
-> Auto-load disabled (`globs: []`) to free dev context budget. File kept as historical
-> reference; do NOT edit here, edit the skill instead.
->
-> Why: claude-code auto-loaded ~22-31 KB of rule content per turn for dev agents,
-> overflowing MiniMax-M2.7 context before first impl line. Moving content to skills
-> (which are description-matched on-demand) keeps the same knowledge available without
-> the per-turn budget tax.
-
 
 # Rust Build — Cargo workspace, lints, release profile
 

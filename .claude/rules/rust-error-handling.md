@@ -1,7 +1,17 @@
 ---
-description: Rust error handling — thiserror in libraries, anyhow only in main(), no unwrap/panic in production paths, Result<T, ConcreteError> contracts
-globs: ["products/**/*.rs", "platform/**/*.rs"]
+description: "[ARCHIVED M-Q13] Rust error handling — thiserror in libraries, anyhow only in main(), no unwrap/panic in production paths, Result<T, ConcreteError> contracts — moved to skill `rust-error-handling`. Kept for git history; no longer auto-loads."
+globs: []
 ---
+
+> **ARCHIVED in M-Q13** — content ported to skill `.claude/skills/rust-error-handling/SKILL.md`.
+> Auto-load disabled (`globs: []`) to free dev context budget. File kept as historical
+> reference; do NOT edit here, edit the skill instead.
+>
+> Why: claude-code auto-loaded ~22-31 KB of rule content per turn for dev agents,
+> overflowing MiniMax-M2.7 context before first impl line. Moving content to skills
+> (which are description-matched on-demand) keeps the same knowledge available without
+> the per-turn budget tax.
+
 
 # Rust Error Handling — Paxio canisters + Rust binaries
 
