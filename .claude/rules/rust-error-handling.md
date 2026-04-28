@@ -1,3 +1,8 @@
+---
+description: Rust error handling — thiserror in libraries, anyhow only in main(), no unwrap/panic in production paths, Result<T, ConcreteError> contracts
+globs: ["products/**/*.rs", "platform/**/*.rs"]
+---
+
 # Rust Error Handling — Paxio canisters + Rust binaries
 
 > Источник: ported from `/home/openclaw/complior/CODING-STANDARDS-RUST.md` §9 + `cli/src/error.rs`.

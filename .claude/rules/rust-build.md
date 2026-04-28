@@ -1,3 +1,8 @@
+---
+description: Rust build — Cargo workspace structure, edition 2024, clippy pedantic+nursery, release profile lto/strip/panic=abort, cargo-deny supply chain
+globs: ["products/**/*.rs", "platform/**/*.rs"]
+---
+
 # Rust Build — Cargo workspace, lints, release profile
 
 > Источник: ported from `/home/openclaw/complior/Cargo.toml` + `cli/Cargo.toml` lints + §13.7.
