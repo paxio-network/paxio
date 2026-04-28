@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then if git diff --cached --name-only 2>/dev/null | grep -qE '^(\\.claude/|CLAUDE\\.md$|docs/project-state|docs/tech-debt|docs/sprints/|docs/feature-areas/|docs/NOUS_Strategy_v5|docs/NOUS_Development_Roadmap|docs/architecture\\.md$|docs/roadmap\\.md$)'; then echo 'BLOCKED: constitutional documents staged — only architect/user may commit these'; exit 1; fi; fi"
+            "command": "if echo \"$TOOL_INPUT\" | grep -q 'git commit'; then STAGED=$(git diff --cached --name-only 2>/dev/null); MSG=$(cat .git/COMMIT_EDITMSG 2>/dev/null || echo ''); if echo \"$STAGED\" | grep -q '^docs/tech-debt\\.md$'; then if echo \"$MSG\" | grep -qE '^reviewer:|Co-Authored-By:.*reviewer'; then :; elif echo \"$MSG\" | grep -qF '[tech-debt: fill-test-column]'; then :; else echo 'BLOCKED: docs/tech-debt.md authored without authorisation. Reviewer adds new TDs via `reviewer:` commit prefix or `Co-Authored-By: reviewer` trailer. Architect fills «Тест на fix» column with `[tech-debt: fill-test-column]` marker in commit message. See scope-guard.md.'; exit 1; fi; fi; if echo \"$STAGED\" | grep -qE '^(\\.claude/|CLAUDE\\.md$|docs/project-state|docs/sprints/|docs/feature-areas/|docs/NOUS_Strategy_v5|docs/NOUS_Development_Roadmap|docs/architecture\\.md$|docs/roadmap\\.md$)'; then echo 'BLOCKED: constitutional documents staged — only architect/reviewer may commit these'; exit 1; fi; fi"
           }
         ]
       }

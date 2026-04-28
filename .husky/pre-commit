@@ -98,15 +98,60 @@ check_scope '^docs/(sprints|feature-areas)/|^docs/fa-registry\.md$|^docs/NOUS_' 
   "architect@paxio.network"
 # Above protects: docs/sprints/, docs/feature-areas/, docs/fa-registry.md, docs/NOUS_*
 
-# Reviewer-only docs.
-check_scope '^docs/(tech-debt|project-state)\.md$' \
+# Reviewer-only docs — with TD-22 bypass marker for architect filling
+# «Тест на fix» column on existing TD rows (NOT for adding new TDs).
+# Bypass: commit message contains literal `[tech-debt: fill-test-column]`.
+TECHDEBT_MATCHES=$(echo "$DIFF" | grep -E '^docs/tech-debt\.md$' || true)
+if [ -n "$TECHDEBT_MATCHES" ]; then
+  TECHDEBT_MSG=$(cat .git/COMMIT_EDITMSG 2>/dev/null || echo "")
+  if [ "$EMAIL" = "reviewer@paxio.network" ]; then
+    : # OK reviewer
+  elif [ "$EMAIL" = "architect@paxio.network" ] && echo "$TECHDEBT_MSG" | grep -qF '[tech-debt: fill-test-column]'; then
+    : # OK architect bypass — filling «Тест на fix» column
+  else
+    echo "❌ scope violation:"
+    echo "   committer email = $EMAIL"
+    echo "   files matching ^docs/tech-debt\\.md$:"
+    echo "$TECHDEBT_MATCHES" | sed 's,^,     ,'
+    echo ""
+    echo "   docs/tech-debt.md is reviewer-only for new TDs."
+    echo "   Architect may fill «Тест на fix» column ONLY with bypass marker"
+    echo "   '[tech-debt: fill-test-column]' in commit message."
+    echo "   See scope-guard.md::AGENT INVOCATION + tech-debt.md::TD-22."
+    exit 1
+  fi
+fi
+check_scope '^docs/project-state\.md$' \
   "reviewer@paxio.network"
-# Above protects: docs/tech-debt.md, docs/project-state.md
+# Above protects: docs/project-state.md (strict reviewer)
 
 # .claude/ rules + agent definitions — architect or reviewer only.
 check_scope '^\.claude/|^CLAUDE\.md$' \
   "architect@paxio.network reviewer@paxio.network"
 # Above protects: .claude/, CLAUDE.md
+
+# Backend zone enforcement (TD-34 closure — Apr 2026 hook expansion).
+# apps/back/server/, apps/back/app/{config,data}/ — backend-dev only.
+# (architect FORBIDDEN here per scope-guard.md::File Ownership.)
+check_scope '^apps/back/(server|app/(config|data))/' \
+  "backend-dev@paxio.network"
+
+# Frontend zone enforcement (TD-30 closure — 10+ recurrences).
+# apps/frontend/, packages/{ui,hooks,api-client,auth}/ — frontend-dev only.
+check_scope '^apps/frontend/|^packages/(ui|hooks|api-client|auth)/' \
+  "frontend-dev@paxio.network"
+
+# packages/utils/ — backend-dev only (Clock, Logger impls).
+check_scope '^packages/utils/' \
+  "backend-dev@paxio.network"
+
+# FA-01 (Universal Registry) — registry-dev hybrid TS+Rust.
+check_scope '^products/01-registry/(app|canister)/' \
+  "registry-dev@paxio.network"
+
+# Other Rust canisters (FA-02..FA-07) — icp-dev only.
+check_scope '^products/(0[2-7]-[a-z-]+)/canister' \
+  "icp-dev@paxio.network"
 
 # ---------------------------------------------------------------------------
 # 3. Architect-specific: lockfile drift catcher (M-Q2 T-3)
