@@ -1,6 +1,7 @@
 {
   "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "90",
+    "TMPDIR": "$HOME/.cache/paxio-tmp"
   },
   "permissions": {
     "allow": ["Bash", "Read", "Glob", "Grep", "Edit", "Write", "NotebookEdit", "Task"],
