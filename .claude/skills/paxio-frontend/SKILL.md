@@ -1,17 +1,13 @@
 ---
-description: "[ARCHIVED M-Q13] Frontend rules — Next.js 15, TypeScript strict, Tailwind 4, Radix UI, Privy auth, 8 apps + 4 shared packages — moved to skill `paxio-frontend`. Kept for git history; no longer auto-loads."
-globs: []
+name: paxio-frontend
+description: >
+  Paxio frontend rules for 8 Next.js 15 apps + 4 shared packages (@paxio/ui,
+  @paxio/hooks, @paxio/api-client, @paxio/auth). Use when implementing files under
+  apps/frontend/* or packages/{ui,hooks,api-client,auth}/, designing Next.js App Router
+  pages, Privy auth flows, Radix components via @paxio/ui, Tailwind 4 styling, or when
+  the user mentions Real Data Invariant, R-FE-Preview ribbon, useDid, agent-app naming
+  collision, or Vercel Monorepo Project deployment.
 ---
-
-> **ARCHIVED in M-Q13** — content ported to skill `.claude/skills/paxio-frontend/SKILL.md`.
-> Auto-load disabled (`globs: []`) to free dev context budget. File kept as historical
-> reference; do NOT edit here, edit the skill instead.
->
-> Why: claude-code auto-loaded ~22-31 KB of rule content per turn for dev agents,
-> overflowing MiniMax-M2.7 context before first impl line. Moving content to skills
-> (which are description-matched on-demand) keeps the same knowledge available without
-> the per-turn budget tax.
-
 
 # Frontend Rules — `apps/frontend/` + `packages/{ui,hooks,api-client,auth}/`
 
