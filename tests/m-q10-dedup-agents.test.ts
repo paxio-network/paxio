@@ -79,10 +79,13 @@ describe('M-Q10 — scope-guard.md manual-load + dev-startup.md absorbs hard rul
     expect(globs).toMatch(/platform\/canister-shared/);
   });
 
-  it('dev-startup.md contains Three Hard Rules block (devs need it at impl time, scope-guard.md no longer auto-loads)', () => {
+  it('dev-startup.md contains Five Hard Rules block (Three → Five in M-Q16; was «Three Hard Rules» pre-M-Q16)', () => {
+    // M-Q16 expanded Three → Five Hard Rules. New rules 4-5 cover drop-by-amend
+    // (PR #74 incident) + full-baseline-before-готово (registry-dev T-3 round 1).
+    // Detailed pins live in tests/m-q16-dev-startup-hardening.test.ts; here only
+    // the original 3 + heading update.
     const content = readFile('.claude/rules/dev-startup.md');
-    expect(content).toMatch(/Three Hard Rules/i);
-    // Three rules should be enumerated
+    expect(content).toMatch(/Five Hard Rules/i);
     expect(content).toMatch(/NEVER touch other agents'\s*files/i);
     expect(content).toMatch(/NEVER modify tests/i);
     expect(content).toMatch(/NEVER\s+`?git push`?/i);
@@ -155,10 +158,11 @@ describe('M-Q10 — 4 dev agent files slimmed (single source per topic)', () => 
         expect(content).not.toMatch(/B1-B7|reviewer Phase B/);
       });
 
-      it('does NOT duplicate Three Hard Rules (lives in dev-startup.md after M-Q10)', () => {
+      it('does NOT duplicate Five Hard Rules (lives in dev-startup.md after M-Q10/Q16)', () => {
+        // M-Q16: Three → Five Hard Rules. Dedup invariant unchanged — agents
+        // must NOT enumerate the rules locally; canonical source is dev-startup.md.
         const content = readFile(file);
-        // Brief link OK; full enumeration — NOT OK
-        expect(content).not.toMatch(/^##\s+Three Hard Rules/m);
+        expect(content).not.toMatch(/^##\s+(Three|Five)\s+Hard Rules/m);
         expect(content).not.toMatch(/Rule 1: DO NOT touch/);
       });
 
@@ -179,16 +183,17 @@ describe('M-Q10 — 4 dev agent files slimmed (single source per topic)', () => 
 });
 
 describe('M-Q10 — dedup invariant: each topic lives in ONE auto-loaded source', () => {
-  it('Three Hard Rules enumerated only in dev-startup.md (NOT in agent files)', () => {
-    // Search for the explicit "Three Hard Rules" heading + numbered enumeration
+  it('Five Hard Rules enumerated only in dev-startup.md (NOT in agent files) — was «Three» pre-M-Q16', () => {
+    // M-Q16 expanded Three → Five Hard Rules. Dedup invariant unchanged:
+    // canonical source is dev-startup.md only; agent files don't enumerate.
     const startup = readFile('.claude/rules/dev-startup.md');
-    expect(startup).toMatch(/Three Hard Rules/i);
+    expect(startup).toMatch(/Five Hard Rules/i);
 
     const agentFiles = ['backend-dev', 'frontend-dev', 'icp-dev', 'registry-dev'];
     for (const a of agentFiles) {
       const content = readFile(`.claude/agents/${a}.md`);
-      // Heading "## Three Hard Rules" should NOT appear (deduped)
-      expect(content).not.toMatch(/^##\s+Three Hard Rules/m);
+      // Heading "## Three/Five Hard Rules" should NOT appear (deduped)
+      expect(content).not.toMatch(/^##\s+(Three|Five)\s+Hard Rules/m);
     }
   });
 
