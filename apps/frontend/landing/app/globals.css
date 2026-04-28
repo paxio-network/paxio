@@ -53,6 +53,11 @@
 
   --page-pad: clamp(24px, 4vw, 56px);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Legacy alias — M01b invariant (frontend-bootstrap.test.ts) requires every app
+     to declare a unique --color-accent. Landing accent = primary navy (#0F3460).
+     Not used by B5 design tokens; retained for cross-app accent identification. */
+  --color-accent: #0F3460;
 }
 
 /* 2. Dark theme overrides */
