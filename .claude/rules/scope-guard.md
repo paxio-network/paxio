@@ -107,6 +107,17 @@ Hook запускается локально (`.husky/_/husky.sh` инжекти
 - `git push --force` к `main` / `dev` — **ЗАПРЕЩЕНО для всех агентов всегда, без исключений**, даже с user OK
 - dev / reviewer / test-runner **никогда** не мержат куда бы то ни было
 
+### Push permissions — narrow exceptions
+
+| Agent | Push allowed | Scope |
+|---|---|---|
+| **architect** | YES | feature branches + `dev` (chore/fix commits) + initiating PRs |
+| **user** | YES | any branch (manual operations, release flow) |
+| **reviewer** | YES — narrow | `origin/dev` ONLY for commits whose diff touches only `docs/project-state.md` + `docs/tech-debt.md`. Any other file in the push diff = scope violation. Closes friction class «reviewer commits chore in own worktree, architect must cherry-pick to publish». |
+| backend-dev / frontend-dev / icp-dev / registry-dev / test-runner | NO | local commits only — architect handles publication |
+
+`git push --force` to `main` / `dev` is blocked for all agents regardless. Reviewer's allowed push is plain `git push origin dev` after `git pull --rebase origin dev`.
+
 ### Зачем разделение
 
 - `dev` — рабочая интеграционная ветка. Каждый успешно проревьюенный feature должен попадать туда без round-trip через user. Это убирает bottleneck когда работают параллельные milestones.
