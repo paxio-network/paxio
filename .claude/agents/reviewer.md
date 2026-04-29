@@ -333,6 +333,9 @@ For EVERY changed file that touches database queries или canister state:
 - [ ] **J6. Real data** — useQuery через `@paxio/api-client`, no `Math.random()`/`setInterval` для fake live data, no hardcoded "looks like real" numbers
 - [ ] **J7. Workspace naming** — `@paxio/<name>-app` (не конфликтует с `@paxio/<name>` в products/)
 - [ ] **J8. Privy via @paxio/auth** — NO direct `localStorage` для session, use auth hooks
+- [ ] **J9. CSS coverage** — для PRs, добавляющих/изменяющих `apps/frontend/<app>/app/sections/` или `components/`, reviewer ОБЯЗАН run `bash scripts/css-coverage-check.sh <app>` локально и asserter zero-undefined classes. Build clean ≠ visual correct (PostCSS/Tailwind не fail'ят на unknown design-system classes; deploy выходит unstyled).
+- [ ] **J10. Visual diff vs design source** — если PR порт-ит компонент из `docs/design/` source files, reviewer открывает обе стороны (design HTML/JSX + Vercel preview URL of the PR) и сравнивает rendered output. Расхождения в layout/colors/typography = REJECT с конкретным diff. Build pass + tests GREEN не доказательство визуальной корректности.
+- [ ] **J11. Design CSS parity** — если PR includes `className="X"` где X — multi-word kebab-case identifier (не Tailwind utility), grep `apps/frontend/<app>/app/{globals.css,styles/*.css}` для definition. Missing definition = REJECT с указанием файла из `docs/design/<...>/styles/` который должен быть ported.
 
 ### Phase 11: Rust Canister Quality (if applicable)
 
