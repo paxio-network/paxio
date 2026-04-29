@@ -38,7 +38,10 @@ describe('M-L10.4 preview.ts — frozen exports + R-FE-Preview compliance', () =
 
   it('PREVIEW_TICKER_INITIAL exists, frozen, has all required PAEI sub-indices', async () => {
     const mod = await import('../app/data/preview');
-    const t = mod.PREVIEW_TICKER_INITIAL as Record<string, number>;
+    // Cast via unknown — PREVIEW_TICKER_INITIAL has both numeric scalars (paei/btc/...)
+    // AND a `generatedAt: string` field, so direct Record<string, number> cast is unsound.
+    // Tests below check numeric fields explicitly via name; non-numeric `generatedAt` is unread.
+    const t = mod.PREVIEW_TICKER_INITIAL as unknown as Record<string, number>;
     expect(t).toBeDefined();
     expect(Object.isFrozen(t), 'must Object.freeze').toBe(true);
     // Required scalar fields per milestone spec
@@ -54,7 +57,13 @@ describe('M-L10.4 preview.ts — frozen exports + R-FE-Preview compliance', () =
 
   it('PREVIEW_MOVERS exists, frozen, has gainers + losers + paeiHistory', async () => {
     const mod = await import('../app/data/preview');
-    const m = mod.PREVIEW_MOVERS as { gainers: unknown[]; losers: unknown[]; paeiHistory: unknown[] };
+    // Cast via unknown — PREVIEW_MOVERS uses readonly arrays (R-FE-Preview compliance,
+    // Object.freeze invariant). Direct assignment to mutable unknown[] is type-unsound.
+    const m = mod.PREVIEW_MOVERS as unknown as {
+      gainers: readonly unknown[];
+      losers: readonly unknown[];
+      paeiHistory: readonly unknown[];
+    };
     expect(m).toBeDefined();
     expect(Object.isFrozen(m)).toBe(true);
     expect(Array.isArray(m.gainers)).toBe(true);
@@ -94,7 +103,9 @@ describe('M-L10.4 preview.ts — TODO M-L11 markers (R-FE-Preview migration path
 describe('M-L10.4 PREVIEW_AGENTS — conforms to ZodAgentListItem shape', () => {
   it('every agent has all required fields per ZodAgentListItem', async () => {
     const mod = await import('../app/data/preview');
-    for (const agent of mod.PREVIEW_AGENTS as Array<Record<string, unknown>>) {
+    // Cast via unknown — PREVIEW_AGENTS uses readonly arrays + readonly fields
+    // (R-FE-Preview Object.freeze invariant). Direct mutable assignment unsound.
+    for (const agent of mod.PREVIEW_AGENTS as unknown as Array<Record<string, unknown>>) {
       // Identity
       expect(typeof agent.did).toBe('string');
       expect(typeof agent.name).toBe('string');
@@ -132,7 +143,8 @@ describe('M-L10.4 PREVIEW_AGENTS — conforms to ZodAgentListItem shape', () => 
 
   it('contains expected agents from v_hero_b5.jsx (spot-check)', async () => {
     const mod = await import('../app/data/preview');
-    const names = (mod.PREVIEW_AGENTS as Array<{ name: string }>).map(a => a.name);
+    // Same cast pattern — readonly arrays from Object.freeze need unknown bridge.
+    const names = (mod.PREVIEW_AGENTS as unknown as Array<{ name: string }>).map(a => a.name);
     // Spot-check 3 distinctive agents
     expect(names).toContain('btc-escrow.paxio');
     expect(names).toContain('btc-dca.paxio');
