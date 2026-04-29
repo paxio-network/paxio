@@ -37,7 +37,7 @@ fi
 step "4. Critical Hero classes defined"
 HERO_MISSING=0
 for c in v-frame v-stage state-strip state-text; do
-  if grep -F ".$c" "$G" "$S"/*.css >/dev/null 2>&1; then
+  if grep -hE "(^|[^a-zA-Z0-9_-])\.${c}([[:space:]]|[,{:.]|$)" "$G" "$S"/*.css >/dev/null 2>&1; then
     ok "  .${c} defined"
   else
     bad "  .${c} missing"
@@ -48,7 +48,7 @@ done
 step "5. Critical Scrolls classes defined"
 SCROLL_MISSING=0
 for c in b3-grid btcv2-hero btcv2-addr-card; do
-  if grep -F ".$c" "$G" "$S"/*.css >/dev/null 2>&1; then
+  if grep -hE "(^|[^a-zA-Z0-9_-])\.${c}([[:space:]]|[,{:.]|$)" "$G" "$S"/*.css >/dev/null 2>&1; then
     ok "  .${c} defined"
   else
     bad "  .${c} missing"
@@ -65,7 +65,7 @@ else
 fi
 
 step "7. drift-guard test GREEN"
-if cd apps/frontend/landing && pnpm exec vitest run tests/css-class-coverage.test.tsx > "$LOGDIR/m-l10-6-drift.log" 2>&1; then
+if pnpm --filter @paxio/landing-app exec vitest run tests/css-class-coverage.test.tsx > "$LOGDIR/m-l10-6-drift.log" 2>&1; then
   passed=$(grep -oE 'Tests +[0-9]+ passed' "$LOGDIR/m-l10-6-drift.log" | tail -1 || echo "")
   ok "drift-guard tests GREEN — $passed"
 else
