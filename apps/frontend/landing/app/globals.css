@@ -66,31 +66,7 @@
   --color-accent: #0F3460;
 }
 
-/* 2. Dark theme overrides */
-html[data-theme="dark"] {
-  --paper-0: #1d1a16;
-  --paper-1: #25211c;
-  --paper-2: #2d2822;
-  --paper-3: #38322a;
-
-  --ink-0: #f3eadb;
-  --ink-1: #e6dcc9;
-  --ink-2: #c5b698;
-  --ink-3: #8a7c64;
-  --ink-4: #6d6147;
-
-  --gold: #d9a046;
-  --gold-bright: #efb858;
-  --gold-ink: #f8e9c8;
-
-  --up: #6fa55e;
-  --down: #c8553d;
-  --blue: #6f95c0;
-
-  --line: #f3eadb;
-  --line-soft: rgba(243, 234, 219, 0.24);
-  --line-xsoft: rgba(243, 234, 219, 0.10);
-}
+/* dark theme disabled per user — landing light-only until further notice */
 
 /* 3. Resets + body */
 *,
@@ -442,9 +418,7 @@ section.tight {
   to   { transform: translateX(-50%); }
 }
 
-html[data-theme="dark"] .marquee {
-  background: var(--paper-1);
-}
+/* dark theme disabled per user */
 
 /* 12. Reveal-on-scroll */
 .reveal {
