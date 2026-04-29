@@ -99,8 +99,10 @@ describe('M-L10.5 ScrollsB5 — component renders + 6 sub-sections', () => {
       ?? (mod as { default?: () => JSX.Element }).default;
     if (!Scrolls) return;
     render(<Scrolls />);
-    const builders = screen.queryByText(/Builders|Developers|SDK/i);
-    expect(builders, 'ScrollSDK section content must render').toBeTruthy();
+    // queryAllByText returns array (queryByText throws on multiple matches —
+    // ScrollSDK has «SDK» in install snippet AND in heading text → multi-match).
+    const builders = screen.queryAllByText(/Builders|Developers|SDK/i);
+    expect(builders.length, 'ScrollSDK section content must render').toBeGreaterThan(0);
   });
 
   it('contains Bitcoin section copy (ScrollBitcoin)', async () => {
@@ -109,7 +111,7 @@ describe('M-L10.5 ScrollsB5 — component renders + 6 sub-sections', () => {
       ?? (mod as { default?: () => JSX.Element }).default;
     if (!Scrolls) return;
     render(<Scrolls />);
-    expect(screen.queryByText(/Bitcoin|BTC/i), 'ScrollBitcoin section content').toBeTruthy();
+    expect(screen.queryAllByText(/Bitcoin|BTC/i).length, 'ScrollBitcoin section content').toBeGreaterThan(0);
   });
 
   it('renders heatmap structure (ScrollRadar — HEAT_ROWS × HEAT_COLS table)', async () => {
@@ -119,9 +121,11 @@ describe('M-L10.5 ScrollsB5 — component renders + 6 sub-sections', () => {
     if (!Scrolls) return;
     const { container } = render(<Scrolls />);
     // Heatmap = grid of cells. Either via class, role, or HEAT_ROWS labels.
+    // queryAllByText avoids multi-match throw (Radar/Heatmap/Threat coexist).
+    const radarMatches = screen.queryAllByText(/Radar|Heatmap|Threat/i);
     const radarContent =
-      screen.queryByText(/Radar|Heatmap|Threat/i)
-      ?? container.querySelector('[data-screen-label*="Radar"], [data-screen-label*="Threat"]');
+      radarMatches.length > 0
+      || container.querySelector('[data-screen-label*="Radar"], [data-screen-label*="Threat"]');
     expect(radarContent, 'ScrollRadar section content').toBeTruthy();
   });
 });
