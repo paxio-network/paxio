@@ -11,7 +11,7 @@
  * Tests SACRED — only architect modifies.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup } from '@testing-library/react';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
