@@ -8,7 +8,7 @@
  * (frontend-rules.md::R-FE-Preview).
  */
 import { useState, useEffect, useMemo } from 'react';
-import { PREVIEW_AGENTS, PREVIEW_TICKER_INITIAL } from '../data/preview';
+import { PREVIEW_AGENTS, PREVIEW_TICKER_INITIAL, PREVIEW_TICKER_EXTRA_LANES, PREVIEW_WALLET_ADOPTION_BY_SOURCE, PREVIEW_FACILITATOR_MIX } from '../data/preview';
 import type { AgentListItem, PaeiSnapshot } from '@paxio/types';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -170,11 +170,9 @@ function PaeiTicker({ t }: { t: PaeiSnapshot }): React.ReactElement {
         <TickerCell key="c" label="FINANCE"     val={t.finance}    delta={t.financeD}  />,
         <TickerCell key="d" label="RESEARCH"    val={t.research}   delta={t.researchD}  />,
         <TickerCell key="e" label="CX"          val={t.cx}          delta={t.cxD}        />,
-        <TickerCell key="f" label="SECURITY"    val={948.2}        delta={+0.41}       />,
-        <TickerCell key="g" label="INFRA"       val={504.7}        delta={-0.12}       />,
-        <TickerCell key="h" label="DEFI"         val={712.4}        delta={+0.66}       />,
-        <TickerCell key="i" label="LANG"        val={283.9}        delta={+0.08}       />,
-        <TickerCell key="j" label="DEV"         val={416.1}        delta={+0.22}       />,
+        ...PREVIEW_TICKER_EXTRA_LANES.map(({ label, val, delta }) =>
+          <TickerCell key={label} label={label} val={val} delta={delta} />
+        ),
         <TickerCell key="k" label="AGENTS"      val={t.agents.toLocaleString()} />,
         <TickerCell key="l" label="PXI COMPOSITE" val={t.paei}     delta={t.paeiD}    gold />,
       ],
@@ -465,7 +463,7 @@ function WalletAdoptionPanel({ adoption }: { adoption: { k: string; pct: number 
   );
 }
 
-function FacilitatorPanel({ facilitators }: { facilitators: [string, number, string, boolean][] }): React.ReactElement {
+function FacilitatorPanel({ facilitators }: { facilitators: readonly [string, number, string, boolean][] }): React.ReactElement {
   return (
     <div className="panel" style={{ padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
@@ -535,24 +533,15 @@ function MarketMovers({ agents }: { agents: readonly AgentListItem[] }): React.R
     const by: Record<string, { tot: number; wal: number }> = {};
     for (const a of agents) by[a.source] = by[a.source] || { tot: 0, wal: 0 };
     for (const a of agents) { by[a.source].tot++; if (a.wallet.status !== 'none') by[a.source].wal++; }
-    const fake: Record<string, number> = { 'paxio-native': 100, 'erc8004': 67, 'fetch-ai': 94, 'mcp': 3, 'virtuals': 45 };
     return Object.entries(by)
-      .map(([k, v]) => ({ k, pct: fake[k] ?? Math.round((v.wal / v.tot) * 100) }))
+      .map(([k, v]) => ({ k, pct: PREVIEW_WALLET_ADOPTION_BY_SOURCE[k] ?? Math.round((v.wal / v.tot) * 100) }))
       .sort((a, b) => b.pct - a.pct);
   }, [agents]);
-
-  const facilitators: [string, number, string, boolean][] = [
-    ['Coinbase x402', 67, '#A54233', true],
-    ['Paxio FAP',     18, '#C08A2E', false],
-    ['Skyfire',        8, '#35557A', false],
-    ['Stripe MPP',     5, '#4C7A3F', false],
-    ['Self-hosted',    2, '#6D6147', false],
-  ];
 
   return (
     <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 16 }} data-section="movers">
       <WalletAdoptionPanel adoption={adoption} />
-      <FacilitatorPanel facilitators={facilitators} />
+      <FacilitatorPanel facilitators={PREVIEW_FACILITATOR_MIX} />
       <DriftPanel agents={agents} />
     </div>
   );

@@ -54,7 +54,7 @@ const _agents = [
 for (let i = 0; i < _agents.length; i++) Object.freeze(_agents[i] as object);
 Object.freeze(_agents);
 
-export const PREVIEW_AGENTS = Object.freeze(_agents) as unknown as readonly AgentListItem[];
+export const PREVIEW_AGENTS = Object.freeze(_agents) as readonly AgentListItem[];
 
 // ─── PREVIEW_TICKER_INITIAL ───────────────────────────────────────────────────
 // TODO M-L11: replace with paxioClient.intelligence.getPaeiSnapshot()
@@ -138,3 +138,39 @@ export const PREVIEW_MOVERS = Object.freeze<PreviewMoversShape>({
   paeiHistory: buildPaeiHistory(),
   generatedAt: new Date().toISOString(),
 });
+
+// ─── PREVIEW_TICKER_EXTRA_LANES ──────────────────────────────────────────────
+// TODO M-L11: replace with paxioClient.intelligence.getPaeiSnapshot() extension fields
+// (security/infra/defi/lang/dev sub-indices + deltas).
+// Schema not yet in @paxio/types; architect to add to ZodPaeiSnapshot in M-L11 Phase 4.5.
+export const PREVIEW_TICKER_EXTRA_LANES = Object.freeze([
+  { label: 'SECURITY', val: 948.2, delta: +0.41 },
+  { label: 'INFRA',    val: 504.7, delta: -0.12 },
+  { label: 'DEFI',     val: 712.4, delta: +0.66 },
+  { label: 'LANG',     val: 283.9, delta: +0.08 },
+  { label: 'DEV',      val: 416.1, delta: +0.22 },
+] as const);
+
+// ─── PREVIEW_WALLET_ADOPTION_BY_SOURCE ──────────────────────────────────────
+// TODO M-L11: replace with paxioClient.intelligence.getWalletAdoptionBySource()
+// (or derive client-side from paxioClient.registry.list aggregated by source × wallet.status).
+// Hardcoded design-comp values matching v_hero_b5.jsx::AdoptionPanel.
+export const PREVIEW_WALLET_ADOPTION_BY_SOURCE: Readonly<Record<string, number>> = Object.freeze({
+  'paxio-native': 100,
+  'erc8004': 67,
+  'fetch-ai': 94,
+  'mcp': 3,
+  'virtuals': 45,
+});
+
+// ─── PREVIEW_FACILITATOR_MIX ─────────────────────────────────────────────────
+// TODO M-L11: replace with paxioClient.intelligence.getFacilitatorMix() — endpoint TBD,
+// likely Phase 7+ (FAP routing-distribution aggregator not in Phase 4 scope).
+// Tuple shape: [name, pct, accentHex, isRiskFlag].
+export const PREVIEW_FACILITATOR_MIX: readonly [string, number, string, boolean][] = Object.freeze([
+  ['Coinbase x402', 67, '#A54233', true],
+  ['Paxio FAP',     18, '#C08A2E', false],
+  ['Skyfire',        8, '#35557A', false],
+  ['Stripe MPP',     5, '#4C7A3F', false],
+  ['Self-hosted',    2, '#6D6147', false],
+]);
