@@ -70,8 +70,19 @@ function getSkillsList(content: string): string[] {
 }
 
 const REQUIRED_PER_ROLE: Record<string, string[]> = {
-  // Backend-dev: VM sandbox app/ work, Fastify routes, Zod boundaries
-  'backend-dev': ['paxio-backend-api', 'paxio-backend-architecture', 'typescript-patterns'],
+  // Backend-dev: VM sandbox app/ work, Fastify routes, Zod boundaries.
+  // M-Q18 expanded from 6→10 — added metarhia-principles, sql-best-practices,
+  // redis-cache, complior-security for deeper architectural + security knowledge.
+  // Reasoning: contracts/SQL/cache/security are core to financial backend
+  // and should not be on-demand for backend-dev.
+  'backend-dev': [
+    'paxio-backend-api',
+    'paxio-backend-architecture',
+    'typescript-patterns',
+    'metarhia-principles',
+    'sql-best-practices',
+    'complior-security',
+  ],
 
   // Icp-dev: Rust canister work
   'icp-dev': ['rust-canister', 'rust-error-handling', 'icp-rust'],

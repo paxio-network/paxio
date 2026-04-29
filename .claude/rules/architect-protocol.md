@@ -631,16 +631,52 @@ Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запуск
 
    Dev знает какие skills существуют + когда invoke'ить. Без этой строки dev не догадается что Skill tool ему доступен (skills больше не упоминаются в его system prompt).
 
-   Per-task mapping (типичный набор для TS/Fastify/registry impl):
-   - All TS impl: `typescript-patterns`, `error-handling`, `zod-validation`
-   - HTTP adapter / crawler: + `registry-patterns` (если применимо)
-   - Postgres / SQL: + `sql-best-practices`
-   - Cache / Redis: + `redis-cache`
-   - Fastify route / handler: + `fastify-best-practices`
-   - Frontend React component: `typescript-patterns`, `react-patterns`, `nextjs-15` (если App Router)
-   - Rust canister: `icp-rust`, `rust-canister`, `rust-error-handling`, + per-domain (`bitcoin-icp`, `chain-fusion`, `icp-threshold-ecdsa`)
+   **NB (M-Q15+M-Q18):** dev-agents теперь имеют curated `skills:` allowlist в их frontmatter (description-listed automatically). On-demand secret recipe ниже = ТОЛЬКО skills которые НЕ в always-on allowlist агента. Не дублируй always-on в spec.
 
-   Architect picks 3-5 skills MAX per task (не дамп всего списка — это overflow vector).
+   ### Per-role on-demand mapping (only mention what's NOT in agent's always-on)
+
+   #### backend-dev (10 always-on, добавь только при triggers)
+
+   | Task scope trigger | On-demand skills для slim spec |
+   |---|---|
+   | FA-02 facilitator (x402 / MPP / TAP wiring) | `x402-protocol` |
+   | Cross-canister Bitcoin / chain integration (rare from backend side) | `chain-fusion`, `bitcoin-icp` |
+   | (DB, caching, security, Fastify, Zod, Metarhia, FP — already always-on, skip) | — |
+
+   #### frontend-dev (7 always-on)
+
+   | Task scope trigger | On-demand skills |
+   |---|---|
+   | Page transitions / chart reveals / animation work | `framer-motion` |
+   | Client-side form / API response validation | `zod-validation` |
+   | (React, Next.js, Radix, Tailwind, Paxio frontend — already always-on, skip) | — |
+
+   #### icp-dev (4 always-on)
+
+   | Task scope trigger | On-demand skills |
+   |---|---|
+   | Wallet / threshold ECDSA / signing intents | `icp-threshold-ecdsa` |
+   | Bitcoin txn / address derivation / UTXO ops | `bitcoin-icp` |
+   | Cross-chain payments / EVM RPC from canister | `chain-fusion` |
+   | Stable storage choice — Vec vs StableBTreeMap | `rust-data-structures` |
+   | GoF patterns в Rust (factory / facade / strategy) | `rust-gof` |
+   | Security-sidecar / Guard integration | `complior-security` |
+
+   #### registry-dev (9 always-on, dual-stack)
+
+   | Task scope trigger | On-demand skills |
+   |---|---|
+   | Caching layer / Redis usage | `redis-cache` |
+   | Heavy SQL / migrations / indexes | `sql-best-practices` |
+   | Stable storage tuning в Reputation canister | `rust-data-structures` |
+   | Rust GoF patterns в canister | `rust-gof` |
+   | Fastify-specific patterns | `fastify-best-practices` |
+
+   ### Selection rule
+
+   Architect picks **0-3 on-demand skills MAX** per slim spec (always-on already gives 4-10). Если none triggered — пиши `Skills доступны on-demand: (none beyond agent's always-on allowlist)`.
+
+   Dump всего каталога → overflow vector. Per-task pick → guided + cheap.
 
 #### Если task большой (>1 file impl):
 
