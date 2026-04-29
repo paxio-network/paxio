@@ -10,7 +10,6 @@ const path = require('node:path');
 
 const { Logger } = require('./src/logger.cjs');
 const { loadApplication } = require('./src/loader.cjs');
-const { wireProducts } = require('./wiring/index.cjs');
 const { agentMetricsRepoStub } = require('./infrastructure/agent-metrics-repo-stub.cjs');
 const { moversRepoStub } = require('./infrastructure/movers-repo-stub.cjs');
 const { MemoryCache } = require('./infrastructure/cache-memory.cjs');
