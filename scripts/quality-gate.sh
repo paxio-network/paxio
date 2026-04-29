@@ -18,6 +18,29 @@ MILESTONE="${1:?usage: quality-gate.sh <milestone>}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# M-Q19 — refuse to run in shared /home/nous/paxio checkout.
+# Cross-user node_modules/.vite/ ownership causes vitest EPERM on cache write
+# at step 2/6. Test-runner MUST create own worktree per session
+# (.claude/agents/test-runner.md::Workflow Step 0).
+case "$ROOT" in
+  /home/nous/paxio|/home/nous/paxio/)
+    echo "🔴 INFRASTRUCTURE — quality-gate.sh refused: shared checkout /home/nous/paxio"
+    echo ""
+    echo "    Cross-user node_modules/ ownership pollutes vitest cache (EPERM at step 2/6)."
+    echo "    Test-runner MUST run in own worktree per .claude/agents/test-runner.md::Workflow Step 0."
+    echo ""
+    echo "    Fix:"
+    echo "      cd /home/nous/paxio"
+    echo "      git fetch origin"
+    echo "      git worktree add /tmp/paxio-test-${MILESTONE} feature/<branch> 2>/dev/null \\"
+    echo "        || git worktree add /tmp/paxio-test-${MILESTONE} --detach origin/<branch>"
+    echo "      cd /tmp/paxio-test-${MILESTONE}"
+    echo "      pnpm install"
+    echo "      bash scripts/quality-gate.sh ${MILESTONE}"
+    exit 1
+    ;;
+esac
+
 PASS=0
 FAIL=0
 ok()   { echo "  ✅ $1"; PASS=$((PASS+1)); }
