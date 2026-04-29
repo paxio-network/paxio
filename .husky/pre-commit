@@ -28,6 +28,40 @@ EMAIL=$(git config user.email 2>/dev/null || echo "")
 DIFF=$(git diff --cached --name-only)
 
 # ---------------------------------------------------------------------------
+# 0. Branch state check (TD-36 — M-Q18) — block commits on detached HEAD.
+#
+# Detached HEAD = commit lives on (no branch). Recurrence after M-Q16's
+# textual instruction in dev-startup.md (frontend-dev session 2026-04-29 PR #78).
+# Mechanical gate is the only safe enforcement.
+#
+# Bypass: amend / cherry-pick during architect-stage rebase ops sometimes
+# produce intermediate detached state. Architect identity bypass — set
+# environment variable ARCHITECT_DETACHED_OK=1 for one commit.
+# ---------------------------------------------------------------------------
+
+if ! git symbolic-ref --quiet HEAD > /dev/null 2>&1; then
+  if [ "${ARCHITECT_DETACHED_OK:-}" = "1" ] && [ "$EMAIL" = "architect@paxio.network" ]; then
+    : # OK — architect explicit bypass for cherry-pick / rebase staging
+  else
+    echo "❌ branch state: detached HEAD"
+    echo "   git symbolic-ref HEAD failed — current commit lives on (no branch)."
+    echo ""
+    echo "   This is M-Q18 / TD-36 mechanical guard — was a recurring incident"
+    echo "   (frontend-dev PR #78 round-1 fix amended on detached HEAD, dropped"
+    echo "   architect's RED-test commit 19eccda)."
+    echo ""
+    echo "   Fix:"
+    echo "     git checkout <branch-from-spec>"
+    echo "   OR"
+    echo "     git switch -c feature/<your-branch>"
+    echo ""
+    echo "   Architect bypass for cherry-pick staging:"
+    echo "     ARCHITECT_DETACHED_OK=1 git commit ..."
+    exit 1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 1. Identity check — name MUST match email per the role mapping
 # ---------------------------------------------------------------------------
 
@@ -88,10 +122,42 @@ check_scope() {
   fi
 }
 
-# Tests are spec — only architect writes/modifies them.
-check_scope '^(tests/|products/[^/]+/tests/|apps/frontend/[^/]+/tests/)' \
+# Like check_scope, but excludes paths matching `exclude_pattern` from claim.
+# Use case: frontend-dev owns packages/{ui,...}/ EXCEPT for tests/ which are
+# architect's per TESTS SACRED. Without the exclusion the inner-zone owner
+# rule would falsely claim files already approved by an earlier rule.
+check_scope_with_exclude() {
+  local pattern="$1"
+  local exclude_pattern="$2"
+  shift 2
+  local allowed_emails="$*"
+  local matches
+  matches=$(echo "$DIFF" | grep -E "$pattern" | grep -vE "$exclude_pattern" || true)
+  if [ -n "$matches" ]; then
+    if ! echo " $allowed_emails " | grep -q " $EMAIL "; then
+      echo "❌ scope violation:"
+      echo "   committer email = $EMAIL"
+      echo "   files matching $pattern (excluding $exclude_pattern):"
+      echo "$matches" | sed 's,^,     ,'
+      echo "   allowed emails: $allowed_emails"
+      echo ""
+      echo "   This is a hard scope guard from .claude/rules/scope-guard.md."
+      echo "   If you genuinely need to modify files outside your zone, write"
+      echo "   '!!! SCOPE VIOLATION REQUEST !!!' marker in commit message and"
+      echo "   ask user/architect for exception in PR review."
+      exit 1
+    fi
+  fi
+}
+
+# Tests are spec — only architect writes/modifies them. Includes packages/<x>/tests/
+# (per TESTS SACRED rule + existing pattern: all packages/ui/tests/* historically
+# authored by architect@). M-L10.3 fix: previously hook missed packages/<x>/tests/
+# and the frontend-dev scope rule below would falsely claim them.
+check_scope '^(tests/|products/[^/]+/tests/|apps/frontend/[^/]+/tests/|packages/[^/]+/tests/)' \
   "architect@paxio.network"
-# Above protects: tests/, products/<fa>/tests/, apps/frontend/<app>/tests/
+# Above protects: tests/, products/<fa>/tests/, apps/frontend/<app>/tests/,
+# packages/<pkg>/tests/ — all architect's per TESTS SACRED.
 
 # Architect-only docs.
 check_scope '^docs/(sprints|feature-areas)/|^docs/fa-registry\.md$|^docs/NOUS_' \
@@ -138,7 +204,12 @@ check_scope '^apps/back/(server|app/(config|data))/' \
 
 # Frontend zone enforcement (TD-30 closure — 10+ recurrences).
 # apps/frontend/, packages/{ui,hooks,api-client,auth}/ — frontend-dev only.
-check_scope '^apps/frontend/|^packages/(ui|hooks|api-client|auth)/' \
+# EXCEPT tests/ subdirectories (architect's per TESTS SACRED — claimed earlier
+# at line 95). M-L10.3 fix: previously this rule falsely claimed
+# packages/ui/tests/* even though architect@ wrote them all historically.
+check_scope_with_exclude \
+  '^apps/frontend/|^packages/(ui|hooks|api-client|auth)/' \
+  '^(apps/frontend/[^/]+/tests/|packages/[^/]+/tests/)' \
   "frontend-dev@paxio.network"
 
 # packages/utils/ — backend-dev only (Clock, Logger impls).

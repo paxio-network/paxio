@@ -9,8 +9,6 @@ import { ThemeProvider } from './_components/ThemeProvider';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
-  // `axes: ['opsz']` requires weight to be variable; using default variable
-  // weight to keep all 400/500/600/700 + italic available + opsz axis active.
   style: ['normal', 'italic'],
   axes: ['opsz'],
   display: 'swap',
@@ -41,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const fontClass = `${fraunces.variable} ${interTight.variable} ${jetBrainsMono.variable}`;
   return (
     <html lang="en" className={fontClass}>
-      <body>
+      <body data-production="false" data-motion="live">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

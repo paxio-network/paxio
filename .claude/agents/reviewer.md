@@ -209,6 +209,24 @@ tree мог их закоммитить без явного intent. Per-session 
 (scope-guard.md::Per-session worktree isolation) — primary defense;
 этот checkpoint — secondary.
 
+### Phase 1.7: Cleanup worktree (M-Q19 mandate)
+
+После того как report опубликован + reviewer commit на dev запушен:
+
+```bash
+cd /home/nous/paxio
+git worktree remove --force /tmp/paxio-rev-<session>
+git worktree prune
+```
+
+Stale worktrees накапливают disk + cross-user `node_modules/` pollution
+который ломает следующий test-runner / reviewer session (EPERM на vitest
+cache). `--force` нужен из-за git submodule в `products/04-security/guard/`.
+
+**Если у тебя были два worktree** (review + dev для commit) — почисти оба.
+**Don't cleanup before report submitted** — иначе если что-то пойдёт не
+так с push'ом коммита, придётся пересоздавать.
+
 ### Phase 2: Multi-Tenancy (CRITICAL — БЛОКЕР при нарушении)
 
 Multi-tenancy leak = data visible between agents/organizations. This is a **P0 security incident**.
