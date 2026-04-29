@@ -115,3 +115,45 @@ describe('M-Q19 — quality-gate.sh shared-checkout refusal', () => {
     expect(c).toMatch(/pnpm install/);
   });
 });
+
+describe('M-Q19 — quality-gate.sh early TMPDIR sanity (M-Q17 reinforcement)', () => {
+  it('quality-gate.sh checks TMPDIR for literal $HOME', () => {
+    const c = readFile('scripts/quality-gate.sh');
+    expect(c).toMatch(/TMPDIR.*\$HOME/);
+    expect(c).toMatch(/Claude Code does NOT expand env/);
+  });
+
+  it('TMPDIR check exits 1 with diagnostic before pnpm install runs', () => {
+    const c = readFile('scripts/quality-gate.sh');
+    // Diagnostic must include absolute-path fix template
+    expect(c).toMatch(/\/home\/<your-user>\/\.cache\/paxio-tmp/);
+  });
+
+  it('quality-gate.sh detects leftover literal $HOME/ directory at repo root', () => {
+    const c = readFile('scripts/quality-gate.sh');
+    expect(c).toMatch(/\$ROOT\/\\\$HOME/);
+    expect(c).toMatch(/leftover|Leftover/);
+  });
+
+  it('leftover-dir check provides rm -rf cleanup recipe', () => {
+    const c = readFile('scripts/quality-gate.sh');
+    expect(c).toMatch(/rm -rf .*\$ROOT.*\$HOME/);
+  });
+
+  it('both TMPDIR + leftover checks run AFTER shared-checkout refusal but BEFORE main 6-step flow', () => {
+    const c = readFile('scripts/quality-gate.sh');
+    const sharedRefusalIdx = c.indexOf('quality-gate.sh refused: shared checkout');
+    const tmpdirIdx = c.indexOf('TMPDIR contains literal');
+    // Bash escape: `literal \$HOME/` in source — the backslash is real in the file
+    const leftoverIdx = c.indexOf('literal \\$HOME/ directory at');
+    const step1Idx = c.indexOf('1/6 pnpm typecheck');
+    expect(sharedRefusalIdx, 'shared-checkout refusal block must exist').toBeGreaterThan(0);
+    expect(tmpdirIdx, 'TMPDIR check must exist').toBeGreaterThan(0);
+    expect(leftoverIdx, 'leftover check must exist').toBeGreaterThan(0);
+    expect(step1Idx, 'step 1/6 typecheck must exist').toBeGreaterThan(0);
+    // Order: shared-refusal < TMPDIR < leftover < step 1/6
+    expect(sharedRefusalIdx).toBeLessThan(tmpdirIdx);
+    expect(tmpdirIdx).toBeLessThan(leftoverIdx);
+    expect(leftoverIdx).toBeLessThan(step1Idx);
+  });
+});

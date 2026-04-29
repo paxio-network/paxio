@@ -41,6 +41,49 @@ case "$ROOT" in
     ;;
 esac
 
+# M-Q19 patch — early TMPDIR sanity (M-Q17 reinforcement).
+#
+# Class of bug: TMPDIR env value contains literal `$HOME` because Claude Code
+# does NOT expand env values before passing to subprocesses. When pnpm install
+# resolves $TMPDIR, it gets a literal `$HOME/...` path → creates literal
+# `./\$HOME/.cache/...` directory at cwd → poisoned worktree.
+#
+# Caught post-fact by tests/m-q17-tmpdir-no-literal-home.test.ts at vitest step.
+# This pre-flight catches it BEFORE pnpm install runs in the worktree at all.
+if [[ "${TMPDIR:-}" == *'$HOME'* ]]; then
+  echo "🔴 INFRASTRUCTURE — TMPDIR contains literal \$HOME"
+  echo ""
+  echo "    Current value: TMPDIR=$TMPDIR"
+  echo ""
+  echo "    Claude Code does NOT expand env values. Fix ~/.claude/settings.json:"
+  echo "      {"
+  echo "        \"env\": {"
+  echo "          \"TMPDIR\": \"/home/<your-user>/.cache/paxio-tmp\""
+  echo "        }"
+  echo "      }"
+  echo "    (absolute path, NOT \$HOME literal)"
+  echo ""
+  echo "    Then restart Claude Code session — env is captured at session start."
+  exit 1
+fi
+
+# M-Q19 patch — early leftover \$HOME/ dir check.
+#
+# If a literal \$HOME/ directory exists at repo root, pnpm install previously
+# ran with bad TMPDIR. Even if TMPDIR is now fixed in env, the leftover dir
+# trips the M-Q17 drift-guard at step 2/6. Catch + diagnose at start.
+if [ -d "$ROOT/\$HOME" ]; then
+  echo "🔴 INFRASTRUCTURE — literal \$HOME/ directory at $ROOT/\$HOME"
+  echo ""
+  echo "    Leftover from prior pnpm install with bad TMPDIR (now fixed)."
+  echo "    Cleanup:"
+  echo "      rm -rf \"$ROOT/\\\$HOME\""
+  echo ""
+  echo "    Then re-run quality-gate. (If recurs, your session env still has"
+  echo "    bad TMPDIR — see M-Q19 TMPDIR-sanity diagnostic above.)"
+  exit 1
+fi
+
 PASS=0
 FAIL=0
 ok()   { echo "  ✅ $1"; PASS=$((PASS+1)); }
