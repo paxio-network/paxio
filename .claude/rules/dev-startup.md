@@ -21,7 +21,10 @@ You implement a SPECIFIC task assigned by architect. Do NOT browse for work.
 
 4. **Verify**: `pnpm typecheck && pnpm exec vitest run <test-file>`. Rust: `cargo test -p <crate>`.
 
-   **4.1 — Frontend CSS coverage check.** When touching `apps/frontend/<app>/app/sections/` or `components/`, run `bash scripts/css-coverage-check.sh <app>`. Script asserts each `className` token resolves to a CSS rule in `app/{globals.css,styles/*.css}` or known Tailwind utility. Non-zero = unstyled classes — fix before «готово». PostCSS/Tailwind don't fail-fast on unknown design-system classes; build passes with broken visual output. JSX copied from `docs/design/` MUST come with matching CSS.
+   **4.1 — Drift-guards.** CI green ≠ deploy correct.
+   - CSS coverage check — `apps/frontend/<app>/app/{sections,components}/` → `bash scripts/css-coverage-check.sh <app>` (Tailwind/PostCSS don't fail-fast on unstyled design-system classes; JSX from `docs/design/` MUST come with matching CSS)
+   - Server syntax check — `apps/back/server/**/*.cjs` → `bash scripts/server-syntax-check.sh` (`node --check`; typecheck handles only `.ts`, vitest skips `main.cjs`)
+   Non-zero = fix before «готово».
 
 5. **Commit local + clean-tree check**. Before saying «готово»:
    - `pnpm exec vitest run` (FULL baseline, NOT just target test) — catches regression in adjacent files

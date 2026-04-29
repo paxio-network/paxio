@@ -336,6 +336,7 @@ For EVERY changed file that touches database queries или canister state:
 - [ ] **J9. CSS coverage** — для PRs, добавляющих/изменяющих `apps/frontend/<app>/app/sections/` или `components/`, reviewer ОБЯЗАН run `bash scripts/css-coverage-check.sh <app>` локально и asserter zero-undefined classes. Build clean ≠ visual correct (PostCSS/Tailwind не fail'ят на unknown design-system classes; deploy выходит unstyled).
 - [ ] **J10. Visual diff vs design source** — если PR порт-ит компонент из `docs/design/` source files, reviewer открывает обе стороны (design HTML/JSX + Vercel preview URL of the PR) и сравнивает rendered output. Расхождения в layout/colors/typography = REJECT с конкретным diff. Build pass + tests GREEN не доказательство визуальной корректности.
 - [ ] **J11. Design CSS parity** — если PR includes `className="X"` где X — multi-word kebab-case identifier (не Tailwind utility), grep `apps/frontend/<app>/app/{globals.css,styles/*.css}` для definition. Missing definition = REJECT с указанием файла из `docs/design/<...>/styles/` который должен быть ported.
+- [ ] **J12. Backend server syntax** — для PRs touching `apps/back/server/**/*.cjs`, reviewer ОБЯЗАН run `bash scripts/server-syntax-check.sh` локально. Non-zero exit = REJECT (server won't start on deploy). `pnpm typecheck` skips `.cjs`; vitest tests don't load `main.cjs` end-to-end. Catches duplicate-`const`, broken-require, similar syntax bugs that pass all other gates green.
 
 ### Phase 11: Rust Canister Quality (if applicable)
 
