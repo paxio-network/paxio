@@ -333,6 +333,10 @@ For EVERY changed file that touches database queries или canister state:
 - [ ] **J6. Real data** — useQuery через `@paxio/api-client`, no `Math.random()`/`setInterval` для fake live data, no hardcoded "looks like real" numbers
 - [ ] **J7. Workspace naming** — `@paxio/<name>-app` (не конфликтует с `@paxio/<name>` в products/)
 - [ ] **J8. Privy via @paxio/auth** — NO direct `localStorage` для session, use auth hooks
+- [ ] **J9. CSS coverage** — для PRs, добавляющих/изменяющих `apps/frontend/<app>/app/sections/` или `components/`, reviewer ОБЯЗАН run `bash scripts/css-coverage-check.sh <app>` локально и asserter zero-undefined classes. Build clean ≠ visual correct (PostCSS/Tailwind не fail'ят на unknown design-system classes; deploy выходит unstyled).
+- [ ] **J10. Visual diff vs design source** — если PR порт-ит компонент из `docs/design/` source files, reviewer открывает обе стороны (design HTML/JSX + Vercel preview URL of the PR) и сравнивает rendered output. Расхождения в layout/colors/typography = REJECT с конкретным diff. Build pass + tests GREEN не доказательство визуальной корректности.
+- [ ] **J11. Design CSS parity** — если PR includes `className="X"` где X — multi-word kebab-case identifier (не Tailwind utility), grep `apps/frontend/<app>/app/{globals.css,styles/*.css}` для definition. Missing definition = REJECT с указанием файла из `docs/design/<...>/styles/` который должен быть ported.
+- [ ] **J12. Backend server syntax** — для PRs touching `apps/back/server/**/*.cjs`, reviewer ОБЯЗАН run `bash scripts/server-syntax-check.sh` локально. Non-zero exit = REJECT (server won't start on deploy). `pnpm typecheck` skips `.cjs`; vitest tests don't load `main.cjs` end-to-end. Catches duplicate-`const`, broken-require, similar syntax bugs that pass all other gates green.
 
 ### Phase 11: Rust Canister Quality (if applicable)
 
@@ -359,6 +363,25 @@ For EVERY changed file that touches database queries или canister state:
 - [ ] **L1. Update `docs/project-state.md`** with results
 - [ ] **L2. Record tech-debt** items found during review
 - [ ] **L3. Flag patterns** that should become rules
+- [ ] **L4. Push chore commit to `origin/dev`** — see Phase 1.8 below
+- [ ] **L5. Supersede prior CHANGES REQUESTED entry** when round-N APPROVED lands — DELETE the round-(N-1) CHANGES REQUESTED block from `docs/project-state.md` for the same milestone, don't append. Only the latest verdict per milestone stays. Round-1 was committed earlier for audit trail; once APPROVED arrives the file should reflect the closed state.
+
+### Phase 1.8: Push reviewer chore to origin/dev
+
+After committing `docs/project-state.md` + `docs/tech-debt.md` updates, reviewer pushes the commit to `origin/dev` directly. Reviewer is the only agent (besides architect + user) authorized to push to `origin/dev`, **narrowly** for commits whose diff touches only those two files. Any other file in the push diff = scope violation, abort.
+
+```bash
+# In reviewer worktree:
+git fetch origin
+git pull --rebase origin dev   # sync if other chores landed meanwhile
+# Resolve any docs/project-state.md conflict by superseding stale CHANGES
+# REQUESTED block for same milestone (per L5).
+git push origin dev
+```
+
+**Why direct push:** reviewer's worktree dev branch is local-only by default. If reviewer doesn't push, the chore commit stays in `/tmp/` and architect must cherry-pick to publish — friction creates a bug class where verdict reports claim «Committed X to dev» but the commit never reaches `origin/dev`. Direct push closes the gap.
+
+**Conflict resolution on `docs/project-state.md`** — common when multiple PRs APPROVE in parallel or round-N supersedes round-(N-1). Keep most-recent state at top. If unsure, abort rebase and ask architect.
 
 ---
 

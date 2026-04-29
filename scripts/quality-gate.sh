@@ -100,6 +100,37 @@ else
   exit 1
 fi
 
+# 1.5/6 — node --check on backend server CJS entry points.
+#
+# Catches the bug class «backend .cjs edit breaks node syntax but typecheck
+# + vitest don't catch it» (typecheck runs only on .ts; vitest tests don't
+# load main.cjs; build doesn't run server). Same shape as M-Q20 closed for
+# frontend (build-clean ≠ visual-correct) — this closes the backend analog
+# (tests-GREEN ≠ server-starts).
+#
+# Scope: every .cjs file in apps/back/server/ when any of them are in diff.
+# Skips if no server CJS changes — saves ~200ms on pure-frontend or pure-Rust
+# milestones.
+step "1.5/6 node --check apps/back/server/*.cjs (only if server CJS touched)"
+if git diff --name-only origin/dev..HEAD 2>/dev/null \
+   | grep -qE '^apps/back/server/.*\.cjs$'; then
+  syntax_failed=0
+  while IFS= read -r f; do
+    if ! node --check "$f" > /tmp/qg-node-check.log 2>&1; then
+      bad "node --check failed on $f (full: /tmp/qg-node-check.log)"
+      tail -10 /tmp/qg-node-check.log | sed 's,^,    ,'
+      syntax_failed=1
+    fi
+  done < <(find apps/back/server -name '*.cjs' -type f 2>/dev/null)
+  if [ "$syntax_failed" -eq 0 ]; then
+    ok "all apps/back/server/*.cjs node --check clean"
+  else
+    exit 1
+  fi
+else
+  ok "no apps/back/server/*.cjs changes in diff — skipping node --check"
+fi
+
 # 2/6 — Root vitest (catches workspace config drift, the M-L9 round-2 gap)
 step "2/6 pnpm exec vitest run (ROOT — not per-app filter!)"
 if pnpm exec vitest run > /tmp/qg-root-vitest.log 2>&1; then

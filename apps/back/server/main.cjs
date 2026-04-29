@@ -10,14 +10,10 @@ const path = require('node:path');
 
 const { Logger } = require('./src/logger.cjs');
 const { loadApplication } = require('./src/loader.cjs');
-const {
-  initHealth,
-  initCors,
-  initRequestId,
-  initErrorHandler,
-  initSecurityHeaders,
-  registerSandboxRoutes,
-} = require('./src/http.cjs');
+const { agentMetricsRepoStub } = require('./infrastructure/agent-metrics-repo-stub.cjs');
+const { moversRepoStub } = require('./infrastructure/movers-repo-stub.cjs');
+const { MemoryCache } = require('./infrastructure/cache-memory.cjs');
+const { initHealth, initCors, initRequestId, initErrorHandler, initSecurityHeaders, registerSandboxRoutes } = require('./src/http.cjs');
 const { initWs, createBroadcaster } = require('./src/ws.cjs');
 const { wireProducts } = require('./wiring/index.cjs'); // agentStorage → wiring
 
@@ -110,6 +106,11 @@ const pinoLogger = pino(loggerConfig);
   const agentStorage = dbClient && !dbClient._isNoop ? dbClient.agentStorage : null;
   const crawlRunsRepo = dbClient && !dbClient._isNoop ? dbClient.crawlRunsRepo : null;
 
+  // Intelligence stubs (W-1.2..1.4): in-memory cache + zero-fill repos.
+  // M-L1-impl replaces these with Postgres-backed agents + Redis cache.
+  const cache = new MemoryCache();
+  const intelligenceStubs = { agentMetricsRepo: agentMetricsRepoStub, moversRepo: moversRepoStub, cache };
+
   // Load application code (app/lib, app/domain, app/api) into VM sandbox.
   //
   // Composition root (wireProducts) is passed as a callback so loader can
@@ -128,7 +129,7 @@ const pinoLogger = pino(loggerConfig);
         agentStorage,
       },
       {
-        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage, crawlRunsRepo }),
+        wireProducts: (rawDomain) => wireProducts(rawDomain, { agentStorage, crawlRunsRepo, ...intelligenceStubs }),
       },
     );
   } catch (err) {
