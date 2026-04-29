@@ -17,7 +17,7 @@
  *   - Has 3 services: `landing` (existing), `intelligenceSnapshot` (NEW), `movers` (NEW)
  *   - `intelligenceSnapshot.getPaeiSnapshot()` for cold registry → `ok({ paei: 0, ... })`
  *     matching ZodPaeiSnapshot shape
- *   - `movers.getMovers('24h')` for cold registry → `ok({ window, gainers: [], losers: [], paeiHistory: [] })`
+ *   - `movers.getMovers('24h')` for cold registry → `ok({ window, topGainers: [], topLosers: [], paeiHistory: [] })`
  *     matching ZodMarketMoversWindow shape
  *   - `movers.getMovers('invalid' as MoverWindow)` → `err({ code: 'invalid_window', ... })`
  *
@@ -77,7 +77,11 @@ const buildDepsStub = (): Record<string, unknown> => ({
       facilitatorMix: [],
     }),
   },
-  // Stub adapters expected to be supplied by backend-dev:
+  // Stub adapters — fields match the AgentMetricsRepo port shape declared
+  // in products/07-intelligence/app/domain/intelligence-snapshot.ts. Cold
+  // registry: every numeric aggregate = 0, prior = null. ZodPaeiSnapshot
+  // requires hhi/drift7/attacks24/slaP50/fapThroughput/uptimeAvg/txns24
+  // present (not just composite paei/btc/...) so stub returns full shape.
   agentMetricsRepo: {
     aggregateAll: async () => ({
       totalAgents: 0,
@@ -87,16 +91,17 @@ const buildDepsStub = (): Record<string, unknown> => ({
       legal: 0,
       finance: 0,
       research: 0,
-      security: 0,
-      infra: 0,
-      defi: 0,
-      lang: 0,
-      dev: 0,
-      walletsTotal: 0,
-      walletsBtc: 0,
-      walletsUsdc: 0,
-      walletsMulti: 0,
-      walletsExternal: 0,
+      cx: 0,
+      walletAdoption: 0,
+      x402Share: 0,
+      btcShare: 0,
+      hhi: 0,
+      drift7: 0,
+      attacks24: 0,
+      slaP50: 0,
+      fapThroughput: 0,
+      uptimeAvg: 0,
+      txns24: 0,
     }),
     aggregatePrior: async () => null,
   },
@@ -181,7 +186,7 @@ describe('M-L11 P6 — intelligenceSnapshot zero-fill (cold registry)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('M-L11 P6 — movers zero-fill (cold registry) + error path', () => {
-  it("getMovers('24h') for cold registry returns ok({ gainers: [], losers: [], paeiHistory: [] })", async () => {
+  it("getMovers('24h') for cold registry returns ok({ topGainers: [], topLosers: [], paeiHistory: [] })", async () => {
     const wired = tryRequireWiring();
     if (!wired) return;
     const raw = await buildRawDomainStub();
@@ -197,8 +202,8 @@ describe('M-L11 P6 — movers zero-fill (cold registry) + error path', () => {
     expect(parsed.success, `cold movers must match ZodMarketMoversWindow: ${parsed.success ? '' : JSON.stringify(parsed.error.issues)}`).toBe(true);
     if (!parsed.success) return;
     expect(parsed.data.window).toBe('24h');
-    expect(parsed.data.gainers, 'cold registry gainers empty').toEqual([]);
-    expect(parsed.data.losers, 'cold registry losers empty').toEqual([]);
+    expect(parsed.data.topGainers, 'cold registry topGainers empty').toEqual([]);
+    expect(parsed.data.topLosers, 'cold registry topLosers empty').toEqual([]);
   });
 
   it("getMovers('invalid') returns err({ code: 'invalid_window', ... })", async () => {
