@@ -28,6 +28,40 @@ EMAIL=$(git config user.email 2>/dev/null || echo "")
 DIFF=$(git diff --cached --name-only)
 
 # ---------------------------------------------------------------------------
+# 0. Branch state check (TD-36 — M-Q18) — block commits on detached HEAD.
+#
+# Detached HEAD = commit lives on (no branch). Recurrence after M-Q16's
+# textual instruction in dev-startup.md (frontend-dev session 2026-04-29 PR #78).
+# Mechanical gate is the only safe enforcement.
+#
+# Bypass: amend / cherry-pick during architect-stage rebase ops sometimes
+# produce intermediate detached state. Architect identity bypass — set
+# environment variable ARCHITECT_DETACHED_OK=1 for one commit.
+# ---------------------------------------------------------------------------
+
+if ! git symbolic-ref --quiet HEAD > /dev/null 2>&1; then
+  if [ "${ARCHITECT_DETACHED_OK:-}" = "1" ] && [ "$EMAIL" = "architect@paxio.network" ]; then
+    : # OK — architect explicit bypass for cherry-pick / rebase staging
+  else
+    echo "❌ branch state: detached HEAD"
+    echo "   git symbolic-ref HEAD failed — current commit lives on (no branch)."
+    echo ""
+    echo "   This is M-Q18 / TD-36 mechanical guard — was a recurring incident"
+    echo "   (frontend-dev PR #78 round-1 fix amended on detached HEAD, dropped"
+    echo "   architect's RED-test commit 19eccda)."
+    echo ""
+    echo "   Fix:"
+    echo "     git checkout <branch-from-spec>"
+    echo "   OR"
+    echo "     git switch -c feature/<your-branch>"
+    echo ""
+    echo "   Architect bypass for cherry-pick staging:"
+    echo "     ARCHITECT_DETACHED_OK=1 git commit ..."
+    exit 1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 1. Identity check — name MUST match email per the role mapping
 # ---------------------------------------------------------------------------
 

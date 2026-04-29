@@ -9,6 +9,10 @@ skills:
   - error-handling
   - fastify-best-practices
   - zod-validation
+  - metarhia-principles
+  - sql-best-practices
+  - redis-cache
+  - complior-security
 ---
 
 # Backend Dev
