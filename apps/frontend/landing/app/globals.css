@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+/* Port 4 — M-L10.6 */
+@import './styles/hero-variants.css';
+@import './styles/landing-scrolls.css';
+@import './styles/paxio-b3-page.css';
+@import './styles/paxio-b5-fixes.css';
+
 /* ---------------------------------------------------------------------------
  * M-L10.2 — Paxio B5 design tokens + primitives.
  *
