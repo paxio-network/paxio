@@ -119,21 +119,28 @@ const makeSandbox = (impls: Record<string, unknown> = {}) => ({
     },
   },
   domain: {
-    intelligence: {
-      getPaeiSnapshot: async () => ({
-        ok: true as const,
-        value: sampleSnapshot(),
-      }),
-      getMovers: async (window: string) => ({
-        ok: true as const,
-        value: {
-          window,
-          topGainers: [],
-          topLosers: [],
-          paeiHistory: [],
-          generatedAt: '2026-04-27T20:00:00.000Z',
-        },
-      }),
+    // Wiring uses FA-name nesting (apps/back/server/wiring/07-intelligence.cjs):
+    //   domain['07-intelligence'].{landing, intelligenceSnapshot, movers}
+    // Tests must mirror real shape — handlers reference domain['07-intelligence'].*
+    '07-intelligence': {
+      intelligenceSnapshot: {
+        getPaeiSnapshot: async () => ({
+          ok: true as const,
+          value: sampleSnapshot(),
+        }),
+      },
+      movers: {
+        getMovers: async (window: string) => ({
+          ok: true as const,
+          value: {
+            window,
+            topGainers: [],
+            topLosers: [],
+            paeiHistory: [],
+            generatedAt: '2026-04-27T20:00:00.000Z',
+          },
+        }),
+      },
     },
     registryList: {
       list: async () => ({
@@ -174,17 +181,31 @@ describe('M-L11 GET /api/intelligence/paei/snapshot', () => {
     const h = await loadHandler(
       PAEI_HANDLER,
       makeSandbox({
-        intelligence: {
-          getPaeiSnapshot: async () => ({
-            ok: true as const,
-            value: {
-              ...sampleSnapshot(),
-              paei: 0,
-              btc: 0,
-              agents: 0,
-              txns: 0,
-            },
-          }),
+        '07-intelligence': {
+          intelligenceSnapshot: {
+            getPaeiSnapshot: async () => ({
+              ok: true as const,
+              value: {
+                ...sampleSnapshot(),
+                paei: 0,
+                btc: 0,
+                agents: 0,
+                txns: 0,
+              },
+            }),
+          },
+          movers: {
+            getMovers: async (window: string) => ({
+              ok: true as const,
+              value: {
+                window,
+                topGainers: [],
+                topLosers: [],
+                paeiHistory: [],
+                generatedAt: '2026-04-27T20:00:00.000Z',
+              },
+            }),
+          },
         },
       }),
     );
