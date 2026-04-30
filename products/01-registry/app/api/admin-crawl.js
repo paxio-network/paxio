@@ -72,7 +72,7 @@
     const summary = await reg.crawler.runCrawler({
       adapter: srcAdapter,
       storage: reg.agentStorage,
-      maxRecords: 5000,
+      maxRecords: 50000,
     });
     const finishedAt = new Date(clk()).toISOString();
     const durationMs = clk() - startTs;
