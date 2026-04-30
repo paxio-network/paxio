@@ -876,3 +876,15 @@ pre, code, .mono-code, .code-block {
 }
 
 /* end */
+
+/* M-L10.7.2 D-4: ScrollNetwork CTA dark banner */
+.network-cta-banner {
+  background: var(--ink-0);
+  color: var(--paper-0);
+  padding: 28px 24px;
+  display: block;
+  text-align: center;
+  width: 100%;
+  margin: 32px 0;
+}
+.network-cta-banner a { color: var(--paper-0); }
