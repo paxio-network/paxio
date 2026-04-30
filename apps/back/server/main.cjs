@@ -71,6 +71,12 @@ const pinoLogger = pino(loggerConfig);
       heartbeatInterval: 30_000,
       staleTimeout: 60_000,
     },
+    admin: {
+      // Bearer token for /api/admin/* endpoints (e.g. crawl trigger).
+      // Reads from process.env.ADMIN_TOKEN — must be set on the host.
+      // Handler short-circuits with AuthError if null; never falls through.
+      token: process.env.ADMIN_TOKEN || null,
+    },
   };
 
   // createDbClient: initialises pg pool + createsPostgresStorage agentStorage.
