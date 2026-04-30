@@ -159,23 +159,17 @@ function PaeiTicker({ t }: { t: PaeiSnapshot }): React.ReactElement {
   const lanes = [
     {
       label: 'INDICES',
-      // NOTE: ticker labels use plain category names (LEGAL, FINANCE, etc.) — NOT
-      // "PAEI·LEGAL" — to keep PAEI text unique in the DOM for the
-      // hero-b5.test.tsx ticker section assertion.
-      // NOTE: ticker labels use plain category names (LEGAL, FINANCE, etc.) — NOT
-      // prefixed with PAEI — to keep "PAEI" text unique in the DOM for the
-      // hero-b5.test.tsx ticker section assertion.
       items: [
-        <TickerCell key="a" label="BTC"          val={t.btc}       delta={t.btcD}       gold />,
-        <TickerCell key="b" label="LEGAL"       val={t.legal}      delta={t.legalD}    />,
-        <TickerCell key="c" label="FINANCE"     val={t.finance}    delta={t.financeD}  />,
-        <TickerCell key="d" label="RESEARCH"    val={t.research}   delta={t.researchD}  />,
-        <TickerCell key="e" label="CX"          val={t.cx}          delta={t.cxD}        />,
+        <TickerCell key="paei" label="PAEI"        val={t.paei}     delta={t.paeiD}    gold />,
+        <TickerCell key="a"    label="PAEI·BTC"    val={t.btc}       delta={t.btcD}       gold />,
+        <TickerCell key="b"    label="PAEI·LEGAL"   val={t.legal}      delta={t.legalD}    />,
+        <TickerCell key="c"    label="PAEI·FINANCE" val={t.finance}    delta={t.financeD}  />,
+        <TickerCell key="d"    label="PAEI·RESEARCH" val={t.research}   delta={t.researchD} />,
+        <TickerCell key="e"    label="PAEI·CX"       val={t.cx}          delta={t.cxD}        />,
         ...PREVIEW_TICKER_EXTRA_LANES.map(({ label, val, delta }) =>
-          <TickerCell key={label} label={label} val={val} delta={delta} />
+          <TickerCell key={label} label={`PAEI·${label}`} val={val} delta={delta} />
         ),
-        <TickerCell key="k" label="AGENTS"      val={t.agents.toLocaleString()} />,
-        <TickerCell key="l" label="PXI COMPOSITE" val={t.paei}     delta={t.paeiD}    gold />,
+        <TickerCell key="k"    label="PAEI·AGENTS"  val={t.agents.toLocaleString()} />,
       ],
     },
   ];
@@ -600,7 +594,7 @@ export function HeroB5(): React.ReactElement {
             <span style={{ color: 'var(--up)' }}>▲{t.btcShareD}pp</span>) ·{' '}
             <b style={{ color: 'var(--down)' }}>{t.drift7}</b> agents drifted this week ·{' '}
             <b style={{ color: 'var(--ink-0)' }}>{(t.attacks24 / 1e6).toFixed(2)}M</b> Guard-blocked attacks (24h) ·{' '}
-            PXI Composite <b>{t.paei.toFixed(2)}</b> <span style={{ color: 'var(--up)' }}>▲{t.paeiD}%</span>
+            PAEI <b>{t.paei.toFixed(2)}</b> <span style={{ color: 'var(--up)' }}>▲{t.paeiD}%</span>
           </p>
         </div>
 
