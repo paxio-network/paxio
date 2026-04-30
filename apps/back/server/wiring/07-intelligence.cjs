@@ -26,10 +26,18 @@ const wireIntelligenceDomain = (rawDomain, deps) => {
     landing: createLandingStats({
       agentStorage: deps.agentStorage,
       clock: () => Date.now(),
-      // Zero-fallback callbacks — replaced when Registry/Audit/Guard wire
-      // through in their respective FA milestones. Until then handlers
-      // serve real-empty state (agents=0, txns=0, attacks24=0) via these.
-      getRegistryCount: okZero,
+      // getRegistryCount: real count via agentStorage.count() now that
+      // FA-01 crawler upserts records into agent_cards. Returns Result
+      // matching the LandingStats signature; falls back to ok(0) on DB
+      // errors per "zero is real data" invariant.
+      getRegistryCount: deps.agentStorage
+        ? async () => {
+            const r = await deps.agentStorage.count();
+            return r.ok ? r : { ok: true, value: 0 };
+          }
+        : okZero,
+      // Audit / Guard zero-fallbacks remain — wire through when their
+      // respective infra clients land.
       getAuditCount24h: okZero,
       getGuardAttacks24h: okZero,
     }),
