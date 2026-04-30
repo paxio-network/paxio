@@ -84,34 +84,7 @@ const SQL = Object.freeze({
       $1, $2, $3, $4, $5, $6,
       $7, $8, $9, $10, $11, $12
     )
-    ON CONFLICT (did) DO UPDATE SET
-      name        = EXCLUDED.name,
-      description = EXCLUDED.description,
-      capability  = EXCLUDED.capability,
-      endpoint    = EXCLUDED.endpoint,
-      version     = EXCLUDED.version,
-      source      = EXCLUDED.source,
-      external_id = EXCLUDED.external_id,
-      source_url  = EXCLUDED.source_url,
-      crawled_at  = EXCLUDED.crawled_at,
-      raw_payload = EXCLUDED.raw_payload
-  `,
-
-  // Update existing row keyed on (source, external_id) — used when the
-  // (source, external_id) partial UNIQUE constraint fires (different DID,
-  // same external record).
-  updateBySourceExternalId: `
-    UPDATE agent_cards SET
-      did         = $1,
-      name        = $2,
-      description = $3,
-      capability  = $4,
-      endpoint    = $5,
-      version     = $6,
-      source_url  = $9,
-      crawled_at  = $10,
-      raw_payload = $12
-    WHERE source = $7 AND external_id = $8
+    ON CONFLICT (did) DO NOTHING
   `,
 
   resolveByDid: `
@@ -263,21 +236,8 @@ const rowToCard = (row: AgentCardRow): Result<AgentCard, StorageError> => {
 interface PgErrorLike {
   readonly code?: string;
   readonly constraint?: string;
-  readonly detail?: string;
   readonly message?: string;
 }
-
-const isUniqueExternalIdViolation = (e: unknown): boolean => {
-  if (!e || typeof e !== 'object') return false;
-  const pe = e as PgErrorLike;
-  // PG SQLSTATE 23505 = unique_violation. Constraint name is set up by the
-  // partial unique index: uq_agent_cards_source_external_id.
-  return (
-    pe.code === '23505' &&
-    typeof pe.constraint === 'string' &&
-    pe.constraint.includes('source_external_id')
-  );
-};
 
 const toStorageError = (e: unknown): StorageError => {
   const pe = (e ?? {}) as PgErrorLike;
@@ -361,21 +321,15 @@ export const createPostgresStorage = async (
       await deps.pool.query(SQL.upsertByDid, upsertParams(valid));
       return ok(undefined);
     } catch (e) {
-      // Same external record arriving with a different DID — update by
-      // (source, external_id) and the consumer is none the wiser.
+      const pe = (e ?? {}) as PgErrorLike;
+      // 23505 on uq_agent_cards_source_external_id = same record re-crawled
+      // under same (source, external_id) but different DID → skip silently.
       if (
-        isUniqueExternalIdViolation(e) &&
-        valid.externalId !== undefined
+        pe.code === '23505' &&
+        typeof pe.constraint === 'string' &&
+        pe.constraint.includes('source_external_id')
       ) {
-        try {
-          await deps.pool.query(
-            SQL.updateBySourceExternalId,
-            upsertParams(valid),
-          );
-          return ok(undefined);
-        } catch (e2) {
-          return err(toStorageError(e2));
-        }
+        return ok(undefined); // silent skip — crawler идёт «вперёд»
       }
       return err(toStorageError(e));
     }
