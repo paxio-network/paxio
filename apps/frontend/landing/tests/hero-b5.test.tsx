@@ -145,10 +145,10 @@ describe('M-L10.4 PREVIEW_AGENTS — conforms to ZodAgentListItem shape', () => 
     const mod = await import('../app/data/preview');
     // Same cast pattern — readonly arrays from Object.freeze need unknown bridge.
     const names = (mod.PREVIEW_AGENTS as unknown as Array<{ name: string }>).map(a => a.name);
-    // Spot-check 2 distinctive agents (renamed in M-L10.5: btc- prefix dropped
-    // since b5 design specs use bare service names — escrow.paxio / dca.paxio).
-    expect(names).toContain('escrow.paxio');
-    expect(names).toContain('dca.paxio');
+    // Spot-check 2 distinctive agents — match design source
+    // (docs/design/paxio-b5/components/v_hero_b5.jsx uses btc- prefix).
+    expect(names).toContain('btc-escrow.paxio');
+    expect(names).toContain('btc-dca.paxio');
   });
 });
 

@@ -70,7 +70,7 @@ function TickerCell({
         alignItems: 'baseline',
         gap: 6,
         paddingRight: 14,
-        borderRight: '1px dashed rgba(26,22,18,0.18)',
+        borderRight: '1px dashed rgba(26,22,18,0.42)',
         whiteSpace: 'nowrap',
       }}
     >
@@ -87,9 +87,10 @@ function TickerCell({
       <span
         style={{
           fontFamily: 'var(--f-mono)',
-          fontSize: 12,
+          fontSize: 13,
           color: gold ? 'var(--gold)' : 'var(--ink-0)',
-          fontWeight: 500,
+          fontWeight: 700,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {typeof val === 'number' ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : val}

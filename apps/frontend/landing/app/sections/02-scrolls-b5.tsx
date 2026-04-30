@@ -1240,31 +1240,15 @@ function ScrollDoors(): React.ReactElement {
           <span className="serif display-italic">agentic economy.</span>
         </h2>
 
-        {/* 2+2 grid */}
-        <div className="doors-grid-v2">
-          {PREVIEW_AUDIENCES.slice(0, 2).map((d, i) => (
+        {/* 4-column flat grid */}
+        <div className="doors-flat-grid">
+          {PREVIEW_AUDIENCES.map((d, i) => (
             <a key={i} href={d.href} className="door-card">
               <div className="door-tag mono">{d.tag}</div>
               <div className="door-kpi mono">{d.kpi}</div>
               <div className="door-kpi-sub mono">{d.kpi_sub}</div>
               <h3 className="door-title">{d.title}</h3>
               <p className="door-desc">{d.desc}</p>
-              <div className="door-link mono">{d.href.replace('https://', '')} ↗</div>
-            </a>
-          ))}
-        </div>
-
-        <div className="doors-divider" aria-hidden="true" />
-
-        <div className="doors-grid-v2">
-          {PREVIEW_AUDIENCES.slice(2, 4).map((d, i) => (
-            <a key={i + 2} href={d.href} className="door-card">
-              <div className="door-tag mono">{d.tag}</div>
-              <div className="door-kpi mono">{d.kpi}</div>
-              <div className="door-kpi-sub mono">{d.kpi_sub}</div>
-              <h3 className="door-title">{d.title}</h3>
-              <p className="door-desc">{d.desc}</p>
-              <div className="door-note mono">We will respond within 24h</div>
               <div className="door-link mono">{d.href.replace('https://', '')} ↗</div>
             </a>
           ))}

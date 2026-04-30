@@ -1,0 +1,18 @@
+# landing app — explicit className whitelist for CSS coverage drift-guard.
+#
+# Architect-owned per M-Q20 governance (`scripts/css-whitelist/` directory).
+# Each entry must have rationale. Lines starting with `#` are comments.
+#
+# How loaded: scripts/css-coverage-check.sh checks `scripts/css-whitelist/<app>.txt`
+# in addition to `apps/frontend/<app>/.css-whitelist`.
+
+# Modifier variants — additive to base classes, no own CSS needed
+btcv2-hero-copy
+dim-manifest
+drift-col
+fap-fg-feature
+fap-node-title
+
+# Word-boundary artifact: "stage" extracts from kebab classes (fap-stage,
+# v-stage, scroll-stage, network-stage) — those base classes ARE defined.
+stage

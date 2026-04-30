@@ -31,8 +31,8 @@ function seededSparkline(seed: number, n = 24): Readonly<{ t: number; v: number 
 // TODO M-L11: replace with paxioClient.registry.list({ limit: 100, sort: 'vol24' })
 // Expected: AgentListPage.items (z.array(ZodAgentListItem))
 const _agents: readonly AgentListItem[] = [
-  { did:'did:paxio:0x91…71e2', name:'escrow.paxio',    source:'native',    category:'Escrow',     wallet:{status:'paxio-native',type:'btc+usdc'}, rails:Object.freeze(['L1','USDC','x402']), facilitator:'Paxio FAP',     rep:812, repD:12,  vol24:8_400_000,  success:98.7, uptime:99.4, p50:284,  guard24:12, driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(2)  },
-  { did:'did:paxio:0x4f…bb09', name:'dca.paxio',       source:'native',    category:'DCA',         wallet:{status:'paxio-native',type:'btc+usdc'}, rails:Object.freeze(['L1','USDC','x402']), facilitator:'Paxio FAP',     rep:881, repD:6,   vol24:2_100_000,  success:99.2, uptime:99.8, p50:210,  guard24:3,  driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(5)  },
+  { did:'did:paxio:0x91…71e2', name:'btc-escrow.paxio',    source:'native',    category:'Escrow',     wallet:{status:'paxio-native',type:'btc+usdc'}, rails:Object.freeze(['L1','USDC','x402']), facilitator:'Paxio FAP',     rep:812, repD:12,  vol24:8_400_000,  success:98.7, uptime:99.4, p50:284,  guard24:12, driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(2)  },
+  { did:'did:paxio:0x4f…bb09', name:'btc-dca.paxio',       source:'native',    category:'DCA',         wallet:{status:'paxio-native',type:'btc+usdc'}, rails:Object.freeze(['L1','USDC','x402']), facilitator:'Paxio FAP',     rep:881, repD:6,   vol24:2_100_000,  success:99.2, uptime:99.8, p50:210,  guard24:3,  driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(5)  },
   { did:'did:paxio:0x6e…2b88', name:'payroll-agent.paxio',  source:'native',    category:'Finance · Payroll',    wallet:{status:'paxio-native',type:'multi'},    rails:Object.freeze(['USDC','x402','Stripe MPP']), facilitator:'Paxio FAP', rep:798, repD:2,   vol24:412_000,   success:97.8, uptime:99.2, p50:340,  guard24:8,  driftHoursAgo:22,  verif:'silver', trend24h:seededSparkline(8)  },
   { did:'did:paxio:0x8c…f2a1', name:'guard.complior.ai',   source:'erc8004',   category:'Security · Guard',    wallet:{status:'external',type:'evm'},          rails:Object.freeze(['USDC','x402']),            facilitator:'Paxio FAP',     rep:952, repD:18, vol24:482_000,   success:96.1, uptime:99.9, p50:110,  guard24:0,  driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(3)  },
   { did:'did:paxio:0x7d…c112', name:'comply.complior.ai',  source:'erc8004',   category:'Compliance · Audit',  wallet:{status:'external',type:'evm'},          rails:Object.freeze(['USDC','x402']),            facilitator:'Coinbase x402', rep:927, repD:9,   vol24:310_000,   success:95.3, uptime:99.7, p50:180,  guard24:2,  driftHoursAgo:null, verif:'gold',   trend24h:seededSparkline(4)  },
@@ -108,7 +108,7 @@ function buildPaeiHistory(): readonly { t: number; v: number }[] {
 const _gainers = Object.freeze([
   { did:'did:paxio:0xa1…d301', name:'fraud-watch.finix',   category:'Fraud · Finance',    rep:871, repD:24, vol24:221_000 },
   { did:'did:paxio:0x8c…f2a1', name:'guard.complior.ai',   category:'Security · Guard',   rep:952, repD:18, vol24:482_000 },
-  { did:'did:paxio:0x91…71e2', name:'escrow.paxio',    category:'Escrow',   rep:812, repD:12, vol24:8_400_000 },
+  { did:'did:paxio:0x91…71e2', name:'btc-escrow.paxio', category:'Escrow',   rep:812, repD:12, vol24:8_400_000 },
   { did:'did:paxio:0x2f…99c3', name:'code-review.eliza',   category:'Dev · Code Review',  rep:701, repD:11, vol24:28_000 },
   { did:'did:paxio:0x7d…c112', name:'comply.complior.ai', category:'Compliance · Audit',  rep:927, repD:9,  vol24:310_000 },
 ]);
@@ -306,7 +306,7 @@ export const PREVIEW_NETWORK_SNAPSHOT: {
   readonly stats24h: { readonly txCount: number; readonly valueMoved: number };
 } = Object.freeze({
   nodes: Object.freeze([
-    { id: 'escrow.paxio',  x: 50, y: 28, btc: true  },
+    { id: 'btc-escrow.paxio',  x: 50, y: 28, btc: true  },
     { id: 'legal-trans.de',   x: 82, y: 38, btc: false },
     { id: 'price-oracle.mcp',  x: 74, y: 70, btc: false },
     { id: 'guard.complior.ai', x: 28, y: 62, btc: false },
