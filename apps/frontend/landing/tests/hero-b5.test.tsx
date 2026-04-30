@@ -168,8 +168,12 @@ describe('M-L10.4 HeroB5 — component renders', () => {
     const mod = await import('../app/sections/01-hero-b5');
     const Hero = mod.HeroB5 ?? mod.default;
     render(<Hero />);
-    // PAEI label or section identifier visible
-    const paeiNode = screen.queryByText(/PAEI/i) ?? document.querySelector('[data-section="ticker"], #ticker, .ticker');
+    // PAEI label or section identifier visible. Use queryAllByText — it
+    // tolerates multiple matches (queryByText throws on ≥2). Design source
+    // uses PAEI in 12 ticker cells + state strip closing, so multi-match is
+    // expected and required.
+    const paeiNodes = screen.queryAllByText(/PAEI/i);
+    const paeiNode = paeiNodes[0] ?? document.querySelector('[data-section="ticker"], #ticker, .ticker');
     expect(paeiNode, 'ticker section / PAEI label must render').toBeTruthy();
   });
 
