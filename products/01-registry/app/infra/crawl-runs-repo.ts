@@ -26,6 +26,32 @@ export interface CrawlRunsRepoDeps {
 }
 
 /**
+ * Inline migration mirrors packages/contracts/sql/002_crawl_runs.sql.
+ * Source-of-truth rule: any change in the .sql file MUST be reflected here
+ * (and vice-versa) in the same PR — this constant is for VM-sandbox-friendly
+ * one-shot startup migration without requiring psql tooling on host.
+ */
+const MIGRATION_002_CRAWL_RUNS = `
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS crawl_runs (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source       TEXT NOT NULL CHECK (source IN ('native','erc8004','a2a','mcp','fetch-ai','virtuals')),
+  started_at   TIMESTAMPTZ NOT NULL,
+  finished_at  TIMESTAMPTZ NOT NULL,
+  duration_ms  INTEGER NOT NULL CHECK (duration_ms >= 0),
+  triggered_by TEXT NOT NULL CHECK (triggered_by IN ('cron','manual','startup')),
+  summary      JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_crawl_runs_source_started
+  ON crawl_runs (source, started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_crawl_runs_started
+  ON crawl_runs (started_at DESC);
+`;
+
+/**
  * Encode CrawlRunSummary -> JSON string for PostgreSQL JSONB column.
  * PostgreSQL driver handles parameterisation; we pass the summary as a
  * JSON-encoded string so Zod can parse it back on read.
@@ -88,6 +114,21 @@ const parseRow = (raw: unknown): CrawlRun | null => {
  * The pool is injected so tests can use a fake; production wiring uses
  * the real pg Pool instance from infrastructure.
  */
+/**
+ * Run the crawl_runs migration once. Idempotent. Composition root calls
+ * this BEFORE createCrawlRunsRepo so the factory stays sync (existing
+ * tests call it synchronously and we keep TESTS SACRED).
+ */
+export const runCrawlRunsMigration = async (pool: PgPool): Promise<void> => {
+  try {
+    await pool.query(MIGRATION_002_CRAWL_RUNS);
+  } catch (e) {
+    throw new Error(
+      `crawl-runs-repo: migration 002_crawl_runs failed: ${(e as Error).message}`,
+    );
+  }
+};
+
 export const createCrawlRunsRepo = (deps: CrawlRunsRepoDeps) => {
   const { pool } = deps;
 
