@@ -26,7 +26,11 @@ SECTIONS="$APP_DIR/app/sections"
 COMPONENTS="$APP_DIR/app/components"
 GLOBALS="$APP_DIR/app/globals.css"
 STYLES_DIR="$APP_DIR/app/styles"
-WHITELIST="$APP_DIR/.css-whitelist"
+# Two whitelist paths checked (architect-owned wins on conflict — entries are
+# additive). Per-app .css-whitelist is frontend-dev convenience; architect
+# whitelist at scripts/css-whitelist/<app>.txt holds governance exemptions.
+WHITELIST_APP="$APP_DIR/.css-whitelist"
+WHITELIST_ARCH="$ROOT/scripts/css-whitelist/$APP.txt"
 
 # Collect every CSS selector defined in app's stylesheets.
 collect_defined() {
@@ -90,8 +94,9 @@ is_tailwind_atom() {
 # Per-app whitelist — explicitly allowed classes (one per line, # for comments)
 in_whitelist() {
   local t="$1"
-  [ -f "$WHITELIST" ] || return 1
-  grep -qE "^${t}\$" "$WHITELIST" 2>/dev/null
+  [ -f "$WHITELIST_ARCH" ] && grep -qE "^${t}\$" "$WHITELIST_ARCH" 2>/dev/null && return 0
+  [ -f "$WHITELIST_APP" ] && grep -qE "^${t}\$" "$WHITELIST_APP" 2>/dev/null && return 0
+  return 1
 }
 
 defined=$(collect_defined)

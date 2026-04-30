@@ -94,6 +94,24 @@ describe('M-L10.6 — design source CSS files present', () => {
 // 2. CSS port coverage — every source selector MUST be in landing globals
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Per-source whitelist of selectors landing INTENTIONALLY does not port —
+// either obsoleted by a later refactor or replaced with a different selector.
+// Each entry has a one-line rationale referencing the milestone that diverged.
+const INTENTIONAL_DIVERGENCE: Record<string, ReadonlySet<string>> = {
+  // M-L10.7.1 D-5: Doors section refactored from "grouped" layout (doors-group/
+  // doors-grid-v2/doors-divider/dgl-dot) to a flat 4-column grid (doors-flat-grid).
+  // The grouped selectors stay in design source as historical reference; landing
+  // diverges intentionally.
+  'paxio_b5_fixes.css': new Set([
+    'doors-grid-v2',
+    'doors-group',
+    'doors-group-label',
+    'doors-group-cards',
+    'doors-divider',
+    'dgl-dot',
+  ]),
+};
+
 describe('M-L10.6 — design-system parity (every source CSS selector ported)', () => {
   for (const sourceName of [
     'hero_variants.css',
@@ -107,9 +125,11 @@ describe('M-L10.6 — design-system parity (every source CSS selector ported)', 
       const sourceSelectors = extractSelectors(sourceCss);
       const landingCss = readEffectiveStylesheet();
       const landingSelectors = extractSelectors(landingCss);
+      const allowed = INTENTIONAL_DIVERGENCE[sourceName] ?? new Set<string>();
 
       const missing: string[] = [];
       for (const sel of sourceSelectors) {
+        if (allowed.has(sel)) continue;
         if (!landingSelectors.has(sel)) missing.push(sel);
       }
 
@@ -117,7 +137,8 @@ describe('M-L10.6 — design-system parity (every source CSS selector ported)', 
         missing.length,
         `${sourceName} → landing missing ${missing.length}/${sourceSelectors.size} selectors. ` +
           `First 10: ${missing.slice(0, 10).join(', ')}. ` +
-          `Frontend-dev: port ${sourceName} into apps/frontend/landing/app/{globals.css OR styles/*.css}.`,
+          `Frontend-dev: port ${sourceName} into apps/frontend/landing/app/{globals.css OR styles/*.css}. ` +
+          `If a selector is intentionally diverged (refactored to a different name), add it to INTENTIONAL_DIVERGENCE in this test (architect-only edit).`,
       ).toBe(0);
     });
   }

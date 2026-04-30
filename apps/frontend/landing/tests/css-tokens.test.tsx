@@ -119,45 +119,12 @@ describe.skipIf(skipUntilImpl())('M-L10.2 — light theme CSS tokens', () => {
 // 2. Dark-theme overrides — html[data-theme="dark"]
 // ---------------------------------------------------------------------------
 
-describe.skipIf(skipUntilImpl())('M-L10.2 — dark theme overrides', () => {
-  it('defines html[data-theme="dark"] block', () => {
-    expect(globals()).toMatch(/html\[data-theme=["']dark["']\]\s*\{/);
-  });
-
-  it('dark block overrides --paper-0 to dark value (e.g. #1d1a16)', () => {
-    const css = globals();
-    const darkMatch = css.match(
-      /html\[data-theme=["']dark["']\]\s*\{[\s\S]*?--paper-0\s*:\s*([^;]+);/,
-    );
-    expect(darkMatch).not.toBeNull();
-    const value = darkMatch![1].trim();
-    // Should be hex starting with #1 or #2 (dark warm bg)
-    expect(value).toMatch(/^#[12][a-fA-F0-9]{5}$/);
-  });
-
-  it('dark block overrides --ink-0 to light value (e.g. #f3eadb)', () => {
-    const css = globals();
-    const darkMatch = css.match(
-      /html\[data-theme=["']dark["']\]\s*\{[\s\S]*?--ink-0\s*:\s*([^;]+);/,
-    );
-    expect(darkMatch).not.toBeNull();
-    const value = darkMatch![1].trim();
-    // Should be hex starting with #e or #f (cream)
-    expect(value).toMatch(/^#[ef][a-fA-F0-9]{5}$/i);
-  });
-
-  it('dark block overrides --gold to brighter dark variant', () => {
-    const css = globals();
-    expect(css).toMatch(
-      /html\[data-theme=["']dark["']\][\s\S]*?--gold\s*:\s*#[a-fA-F0-9]{6}/,
-    );
-  });
-
-  it('dark block overrides --line to light value (inverted contrast)', () => {
-    const css = globals();
-    expect(css).toMatch(
-      /html\[data-theme=["']dark["']\][\s\S]*?--line\s*:\s*#[ef][a-fA-F0-9]{5}/i,
-    );
+// Dark theme overrides removed per user request — landing is light-only until
+// further notice. Tests asserting `html[data-theme="dark"]` block are obsolete:
+// expect there to be NO dark block in landing CSS.
+describe.skipIf(skipUntilImpl())('landing is light-only — no dark theme overrides', () => {
+  it('globals.css has NO html[data-theme="dark"] block', () => {
+    expect(globals()).not.toMatch(/html\[data-theme=["']dark["']\]\s*\{/);
   });
 });
 
