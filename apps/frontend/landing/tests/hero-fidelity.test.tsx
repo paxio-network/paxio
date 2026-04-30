@@ -134,9 +134,10 @@ describe('M-L10.7.1 D-4 — PaeiTicker stronger dotted dividers + prominent numb
     // Heuristic: find borderRight with rgba alpha
     const borderMatches = src.match(/borderRight:[^,]*?rgba\(26,\s*22,\s*18,\s*([0-9.]+)\)/g) ?? [];
     expect(borderMatches.length, 'TickerCell borderRight rgba expected').toBeGreaterThan(0);
-    if (borderMatches.length === 0) return;
+    const first = borderMatches[0];
+    if (!first) return;
     // Extract first alpha value
-    const alphaMatch = borderMatches[0].match(/0\.[0-9]+/);
+    const alphaMatch = first.match(/0\.[0-9]+/);
     expect(alphaMatch, 'alpha expected in borderRight rgba').not.toBeNull();
     if (!alphaMatch) return;
     const alpha = parseFloat(alphaMatch[0]);
