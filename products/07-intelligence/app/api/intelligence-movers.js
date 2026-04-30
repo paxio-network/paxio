@@ -10,7 +10,7 @@
     if (!['1h', '24h', '7d', '30d'].includes(window)) {
       throw new errors.ValidationError(`invalid window: ${window}`);
     }
-    const result = await domain.intelligence.getMovers(window);
+    const result = await domain['07-intelligence'].movers.getMovers(window);
     if (!result.ok) {
       if (result.error.code === 'invalid_window') {
         throw new errors.ValidationError(result.error.message);
