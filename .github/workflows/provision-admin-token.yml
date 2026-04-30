@@ -90,16 +90,19 @@ jobs:
               exit 1
             }
 
-            echo "=== Smoke: /api/admin/crawl auth check ==="
-            # POST without auth — must reject with 401 (proves ADMIN_TOKEN
-            # is now read by handler, not falling through to internal_error).
-            STATUS=$(curl -sX POST -o /dev/null -w "%{http_code}" "http://localhost/api/admin/crawl?source=mcp")
-            echo "Status without auth: $STATUS (expect 401)"
-            if [ "$STATUS" = "401" ]; then
-              echo "✅ ADMIN_TOKEN is loaded — handler rejects unauth correctly"
-            else
-              echo "⚠️  Unexpected status (got $STATUS, expected 401) — check logs"
-              docker logs paxio-backend --tail=30
+            echo "=== Verify ADMIN_TOKEN env reached container ==="
+            docker exec paxio-backend printenv ADMIN_TOKEN | head -c 12
+            echo " ... (truncated)"
+
+            echo "=== Smoke: /api/admin/crawl direct to backend port 3001 ==="
+            STATUS=$(curl -sX POST -o /tmp/admin-resp.txt -w "%{http_code}" "http://localhost:3001/api/admin/crawl?source=mcp")
+            echo "Status without auth: $STATUS"
+            if [ "$STATUS" != "401" ]; then
+              echo "Response body:"
+              cat /tmp/admin-resp.txt
+              echo ""
+              echo "=== Backend recent error logs ==="
+              docker logs paxio-backend --tail=50 2>&1 | grep -iE "admin|crawl|error|throw" | tail -20
             fi
 
             echo "=== Done ==="
