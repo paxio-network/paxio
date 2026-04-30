@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const fontClass = `${fraunces.variable} ${interTight.variable} ${jetBrainsMono.variable}`;
   return (
     <html lang="en" className={fontClass}>
-      <body data-production="false" data-motion="live">
+      <body data-production="false" data-motion="live" data-density="regular" data-accent="classic">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

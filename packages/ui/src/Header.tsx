@@ -1,5 +1,5 @@
 /**
- * M-L10.3 — `<Header>` B5 shell component.
+ * M-L10.3 + M-L10.7.3 — `<Header>` B5 shell component.
  * 'use client' — needs Radix Dialog for mobile drawer + theme state.
  *
  * Spec: docs/sprints/M-L10.3-shell-components.md
@@ -77,15 +77,7 @@ function ThemeToggle({ theme, toggle }: { theme: string; toggle: () => void }) {
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
       onClick={toggle}
-      style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '6px',
-        borderRadius: '4px',
-      }}
+      className="hdr-theme-btn"
     >
       {/* Light icon — sun */}
       <svg
@@ -139,91 +131,28 @@ function MobileDrawer() {
           aria-label="Open menu"
           aria-expanded="false"
           type="button"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'none',
-            flexDirection: 'column',
-            gap: '5px',
-            padding: '6px',
-          }}
-          className="hdr-mobile-btn"
+          className="hdr-menu-btn"
         >
-          <span
-            style={{
-              display: 'block',
-              width: '20px',
-              height: '1.5px',
-              background: 'currentColor',
-              borderRadius: '1px',
-            }}
-          />
-          <span
-            style={{
-              display: 'block',
-              width: '20px',
-              height: '1.5px',
-              background: 'currentColor',
-              borderRadius: '1px',
-            }}
-          />
-          <span
-            style={{
-              display: 'block',
-              width: '20px',
-              height: '1.5px',
-              background: 'currentColor',
-              borderRadius: '1px',
-            }}
-          />
+          <span />
+          <span />
+          <span />
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(26,22,18,0.4)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 49,
-          }}
-        />
+        <Dialog.Overlay className="drw-overlay" />
         <Dialog.Content
           aria-label="Navigation"
-          style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            height: '100%',
-            width: '280px',
-            background: 'var(--paper-0)',
-            borderLeft: '1.5px solid var(--ink-0)',
-            boxShadow: '-4px 0 0 var(--ink-0)',
-            zIndex: 50,
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-          }}
+          className="drw-panel"
         >
           <Dialog.Close asChild>
             <button
               aria-label="Close menu"
               type="button"
-              style={{
-                alignSelf: 'flex-end',
-                background: 'none',
-                border: 'none',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '4px 8px',
-              }}
             >
               ×
             </button>
           </Dialog.Close>
-          <nav aria-label="Mobile navigation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <nav aria-label="Mobile navigation" className="drw-nav">
             {[
               { href: 'https://registry.paxio.network', label: 'Registry' },
               { href: 'https://radar.paxio.network', label: 'Radar' },
@@ -240,7 +169,7 @@ function MobileDrawer() {
               </Dialog.Close>
             ))}
           </nav>
-          <div aria-label="Network status" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+          <div className="hdr-live" aria-label="Network status">
             <span className="pulse-dot" />
             <span>live</span>
           </div>
@@ -255,132 +184,38 @@ export function Header() {
   const { theme, toggle } = useTheme();
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        background: 'rgba(var(--paper-0-rgb, 246,239,221), 0.88)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1.5px solid var(--ink-0)',
-      }}
-      className="paxio-header"
-    >
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-          paddingInline: 'clamp(24px, 4vw, 56px)',
-          height: '64px',
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr auto',
-          alignItems: 'center',
-          gap: '24px',
-        }}
-      >
+    <header id="paxio-header">
+      <div className="hdr-inner">
         {/* Brand block */}
-        <a
-          href="https://paxio.network"
-          aria-label="Paxio home"
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}
-        >
-          <PaxioMark size={22} />
-          <span
-            style={{
-              fontFamily: 'var(--f-display)',
-              fontWeight: 600,
-              fontSize: '18px',
-              letterSpacing: '-0.01em',
-              color: 'var(--ink-0)',
-            }}
-          >
-            Paxio
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--f-sans)',
-              fontSize: '12px',
-              color: 'var(--ink-2)',
-              display: 'none',
-            }}
-            className="hdr-tagline-inline"
-          >
-            Financial OS · Agentic Economy
-          </span>
+        <a href="https://paxio.network" aria-label="Paxio home" className="hdr-brand">
+          <span className="hdr-mark"><PaxioMark size={22} /></span>
+          <span className="hdr-wordmark">Paxio</span>
+          <span className="hdr-tagline">Financial OS · Agentic Economy</span>
         </a>
 
         {/* Primary nav */}
-        <nav
-          aria-label="Primary"
-          style={{ display: 'flex', gap: '32px', alignItems: 'center', justifyContent: 'center' }}
-          className="hdr-nav-desktop"
-        >
-          <a href="https://registry.paxio.network" style={{ fontFamily: 'var(--f-sans)', fontSize: '14px', color: 'var(--ink-1)' }}>Registry</a>
-          <a href="https://radar.paxio.network" style={{ fontFamily: 'var(--f-sans)', fontSize: '14px', color: 'var(--ink-1)' }}>Radar</a>
-          <a href="https://docs.paxio.network" style={{ fontFamily: 'var(--f-sans)', fontSize: '14px', color: 'var(--ink-1)' }}>Docs</a>
+        <nav aria-label="Primary" className="hdr-links">
+          <a href="https://registry.paxio.network">Registry</a>
+          <a href="https://radar.paxio.network">Radar</a>
+          <a href="https://docs.paxio.network">Docs</a>
         </nav>
 
         {/* Actions block */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="hdr-actions">
           <ThemeToggle theme={theme} toggle={toggle} />
-          <a
-            href="#quickstart"
-            data-variant="outline"
-            className="hdr-cta-outline"
-            style={{
-              fontFamily: 'var(--f-sans)',
-              fontSize: '14px',
-              padding: '6px 14px',
-              border: '1.5px solid var(--ink-0)',
-              boxShadow: '3px 3px 0 0 var(--ink-0)',
-              color: 'var(--ink-0)',
-              textDecoration: 'none',
-              transition: 'transform 0.1s',
-            }}
-          >
-            Install SDK
-          </a>
-          <a
-            href="https://registry.paxio.network"
-            data-variant="primary"
-            className="hdr-cta-primary"
-            style={{
-              fontFamily: 'var(--f-sans)',
-              fontSize: '14px',
-              padding: '6px 14px',
-              border: '1.5px solid var(--ink-0)',
-              boxShadow: '3px 3px 0 0 var(--ink-0)',
-              background: 'var(--ink-0)',
-              color: 'var(--paper-0)',
-              textDecoration: 'none',
-              transition: 'transform 0.1s',
-            }}
-          >
-            Open Registry →
-          </a>
-          <span aria-label="Network status" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ink-2)', fontFamily: 'var(--f-mono)' }}>
+          <a href="#quickstart" className="hdr-cta hdr-cta-outline">Install SDK</a>
+          <a href="https://registry.paxio.network" className="hdr-cta hdr-cta-primary">Open Registry →</a>
+          <span className="hdr-live" aria-label="Network status">
             <span className="pulse-dot" />
             <span>live</span>
           </span>
         </div>
 
         {/* Mobile trigger — visible < 900px */}
-        <div className="hdr-mobile-trigger" style={{ display: 'none' }}>
+        <div className="hdr-mobile-trigger">
           <MobileDrawer />
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .hdr-nav-desktop { display: none !important; }
-          .hdr-mobile-trigger { display: flex !important; }
-          .hdr-tagline-inline { display: none !important; }
-        }
-        @media (min-width: 901px) {
-          .hdr-mobile-btn { display: none !important; }
-          .hdr-tagline-inline { display: inline !important; }
-        }
-      `}</style>
     </header>
   );
 }
