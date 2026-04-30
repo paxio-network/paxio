@@ -100,19 +100,25 @@ const makeSandbox = (overrides: Partial<{
         constructor(msg?: string) { super(msg); this.name = 'InternalError'; }
       },
     },
+    // Wiring shape (apps/back/server/wiring/01-registry.cjs):
+    //   domain['01-registry'].{crawler, crawlRuns, crawlerAdapters,
+    //                          agentStorage, CRAWLER_SOURCES, clock}
+    // Tests must mirror real shape — handler reads via FA-name nesting.
     domain: {
-      crawler: { runCrawler: vi.fn(runCrawlerImpl) },
-      crawlRuns: {
-        recordRun: vi.fn(recordRunImpl),
-        lastRunForSource: vi.fn(lastRunImpl),
+      '01-registry': {
+        crawler: { runCrawler: vi.fn(runCrawlerImpl) },
+        crawlRuns: {
+          recordRun: vi.fn(recordRunImpl),
+          lastRunForSource: vi.fn(lastRunImpl),
+        },
+        crawlerAdapters: {
+          mcp: { sourceName: 'mcp' as const, fetchAgents: async function* () {}, toCanonical: () => ({ ok: false as const, error: { code: 'parse_error' as const, message: '', raw: null } }) },
+        },
+        agentStorage: { upsert: vi.fn(), resolve: vi.fn(), find: vi.fn(), count: vi.fn(), countBySource: vi.fn() },
+        clock: () => clockNow,
+        CRAWLER_SOURCES: ['native','erc8004','a2a','mcp','fetch-ai','virtuals'] as const,
       },
-      crawlerAdapters: {
-        mcp: { sourceName: 'mcp' as const, fetchAgents: async function* () {}, toCanonical: () => ({ ok: false as const, error: { code: 'parse_error' as const, message: '', raw: null } }) },
-      },
-      agentStorage: { upsert: vi.fn(), resolve: vi.fn(), find: vi.fn(), count: vi.fn(), countBySource: vi.fn() },
     },
-    clock: () => clockNow,
-    CRAWLER_SOURCES: ['native','erc8004','a2a','mcp','fetch-ai','virtuals'] as const,
   };
 };
 
@@ -193,8 +199,8 @@ describe('M-L1-launch POST /api/admin/crawl — happy path', () => {
       headers: { authorization: 'Bearer test-admin-token' },
     });
 
-    expect(sb.domain.crawler.runCrawler).toHaveBeenCalledTimes(1);
-    const callArgs = sb.domain.crawler.runCrawler.mock.calls[0][0];
+    expect(sb.domain['01-registry'].crawler.runCrawler).toHaveBeenCalledTimes(1);
+    const callArgs = sb.domain['01-registry'].crawler.runCrawler.mock.calls[0][0];
     expect(callArgs.adapter.sourceName).toBe('mcp');
   });
 
@@ -208,8 +214,8 @@ describe('M-L1-launch POST /api/admin/crawl — happy path', () => {
       headers: { authorization: 'Bearer test-admin-token' },
     });
 
-    expect(sb.domain.crawlRuns.recordRun).toHaveBeenCalledTimes(1);
-    const recordArgs = sb.domain.crawlRuns.recordRun.mock.calls[0][0];
+    expect(sb.domain['01-registry'].crawlRuns.recordRun).toHaveBeenCalledTimes(1);
+    const recordArgs = sb.domain['01-registry'].crawlRuns.recordRun.mock.calls[0][0];
     expect(recordArgs.source).toBe('mcp');
     expect(recordArgs.triggeredBy).toBe('manual');
     expect(recordArgs.summary.source).toBe('mcp');
@@ -267,6 +273,6 @@ describe('M-L1-launch POST /api/admin/crawl — rate limit', () => {
     expect(result._statusCode).toBe(429);
     expect(result.data?.error).toBe('rate_limited');
     // Did NOT actually call runCrawler
-    expect(sb.domain.crawler.runCrawler).not.toHaveBeenCalled();
+    expect(sb.domain['01-registry'].crawler.runCrawler).not.toHaveBeenCalled();
   });
 });

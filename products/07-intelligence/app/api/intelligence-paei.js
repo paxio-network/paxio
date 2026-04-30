@@ -5,7 +5,7 @@
   httpMethod: 'GET',
   path: '/api/intelligence/paei/snapshot',
   method: async () => {
-    const result = await domain.intelligence.getPaeiSnapshot();
+    const result = await domain['07-intelligence'].intelligenceSnapshot.getPaeiSnapshot();
     if (!result.ok) {
       throw new errors.InternalError(`PAEI snapshot: ${result.error.message}`);
     }
