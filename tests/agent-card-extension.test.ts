@@ -32,9 +32,9 @@ describe('M-L1 — AgentCard provenance extension', () => {
       expect(parsed.success).toBe(true);
     });
 
-    it('defaults `source` to "native" when omitted', () => {
+    it('defaults `source` to "paxio-native" when omitted (M-L1-taxonomy)', () => {
       const parsed = ZodAgentCard.parse(native);
-      expect(parsed.source).toBe('native');
+      expect(parsed.source).toBe('paxio-native');
     });
 
     it('leaves externalId / sourceUrl / crawledAt undefined for native cards', () => {
