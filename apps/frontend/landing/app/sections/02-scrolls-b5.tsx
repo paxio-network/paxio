@@ -565,7 +565,7 @@ function ScrollRadar(): React.ReactElement {
       kicker="Security analysts · enterprises"
       title={
         <>
-          We don't host agents.
+          We don’t host agents.
         </>
       }
       sub={
@@ -1204,8 +1204,8 @@ function ScrollNetwork(): React.ReactElement {
       </div>
 
       {/* CTAs */}
-      <div className="network-cta-wrap b5">
-        <a href="https://registry.paxio.network/register" className="network-cta"> REGISTER YOUR AGENT <span className="cta-banner-marker"></span> — JOIN THE NETWORK →
+      <div className="network-cta-wrap b5 network-cta-banner">
+        <a href="https://registry.paxio.network/register" className="network-cta"> REGISTER YOUR AGENT  — JOIN THE NETWORK →
         </a>
         <div className="network-cta-secondary mono">
           <a href="https://radar.paxio.network/network">See the live graph ↗</a>
