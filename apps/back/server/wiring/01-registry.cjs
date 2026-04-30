@@ -61,9 +61,23 @@ const wireRegistryDomain = (rawDomain, deps) => {
     }
     if (createAdapter) {
       // Stubs use fetch (global), MCP uses injected httpClient.
-      // Pass a minimal dep object; real adapters extend as needed.
+      // MCP adapter expects HttpResponse shape {status, headers, body};
+      // raw fetch().then(r=>r.json()) loses status + headers and returns
+      // only the parsed body, breaking pagination + 429 retry logic →
+      // adapter sees response.body=undefined and yields 0 records.
       const adapterDeps = source === 'mcp'
-        ? { httpClient: { get: (url) => fetch(url).then((r) => r.json()) } }
+        ? {
+            httpClient: {
+              get: async (url) => {
+                const r = await fetch(url);
+                let body = null;
+                try { body = await r.json(); } catch { body = null; }
+                const headers = new Map();
+                r.headers.forEach((v, k) => { headers.set(k, v); });
+                return { status: r.status, headers, body };
+              },
+            },
+          }
         : {};
       crawlerAdapters[source] = createAdapter(adapterDeps);
     }
