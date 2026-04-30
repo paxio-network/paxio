@@ -135,12 +135,16 @@ describe('createPostgresStorage.upsert', () => {
     pool = makeFakePool();
   });
 
-  it('emits ON CONFLICT (did) DO UPDATE SQL with all 12 params', async () => {
+  it('emits ON CONFLICT (did) DO NOTHING SQL with all 12 params (M-L1-taxonomy T-6)', async () => {
+    // M-L1-taxonomy T-6: skip-if-exists semantics — registered DIDs are
+    // skipped silently so crawler естественно идёт «вперёд» (старые
+    // записи не перезатираются каждый cron tick).
     const storage = await createPostgresStorage({ pool });
     const r = await storage.upsert(sampleCard);
     expect(r.ok).toBe(true);
     expect(pool.calls.length).toBe(1);
-    expect(pool.calls[0]!.sql).toMatch(/ON CONFLICT \(did\) DO UPDATE/);
+    expect(pool.calls[0]!.sql).toMatch(/ON CONFLICT \(did\) DO NOTHING/);
+    expect(pool.calls[0]!.sql).not.toMatch(/DO UPDATE SET/);
     expect(pool.calls[0]!.params.length).toBe(12);
     expect(pool.calls[0]!.params[0]).toBe(sampleCard.did);
     expect(pool.calls[0]!.params[1]).toBe(sampleCard.name);
@@ -169,35 +173,35 @@ describe('createPostgresStorage.upsert', () => {
     expect(pool.calls.length).toBe(0);
   });
 
-  it('falls back to UPDATE by (source, external_id) on partial-unique violation', async () => {
-    const storage = await createPostgresStorage({ pool });
-    let firstCall = true;
-    pool.setQueryFn(async (sql) => {
-      if (firstCall) {
-        firstCall = false;
-        throw makePgError('23505', 'uq_agent_cards_source_external_id');
-      }
-      return { rows: [], rowCount: 1 };
-    });
-    const r = await storage.upsert(sampleCard);
-    expect(r.ok).toBe(true);
-    expect(pool.calls.length).toBe(2);
-    expect(pool.calls[0]!.sql).toMatch(/ON CONFLICT \(did\)/);
-    expect(pool.calls[1]!.sql).toMatch(
-      /UPDATE agent_cards SET[\s\S]*WHERE source = \$7 AND external_id = \$8/,
-    );
-  });
-
-  it('returns constraint_violation when both upsert paths fail', async () => {
+  it('skips silently on (source, external_id) partial-unique violation (M-L1-taxonomy T-6)', async () => {
+    // M-L1-taxonomy T-6: with DO NOTHING ON CONFLICT (did), the partial
+    // UNIQUE INDEX (source, external_id) is the only path that can still
+    // raise 23505. Storage should treat that the same as DID conflict —
+    // skip silently (return ok), NOT fall back to an UPDATE that
+    // overwrites the existing row's metadata.
     const storage = await createPostgresStorage({ pool });
     pool.setQueryFn(async () => {
       throw makePgError('23505', 'uq_agent_cards_source_external_id');
     });
     const r = await storage.upsert(sampleCard);
+    expect(r.ok).toBe(true);
+    expect(pool.calls.length).toBe(1);
+    expect(pool.calls[0]!.sql).toMatch(/ON CONFLICT \(did\)/);
+    // No second UPDATE call — only one INSERT attempt
+  });
+
+  it('returns constraint_violation only on non-uniqueness 23505 (e.g. CHECK)', async () => {
+    // M-L1-taxonomy T-6: per-uniqueness 23505 → silent skip (covered by
+    // sibling test). Other 23505 (CHECK constraint, FK, etc.) → still
+    // surface as constraint_violation.
+    const storage = await createPostgresStorage({ pool });
+    pool.setQueryFn(async () => {
+      throw makePgError('23514', 'agent_cards_category_check'); // CHECK violation
+    });
+    const r = await storage.upsert(sampleCard);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.code).toBe('constraint_violation');
-      expect(r.error.message).toMatch(/simulated/);
     }
   });
 
