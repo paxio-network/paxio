@@ -174,7 +174,7 @@ function ScrollSDK(): React.ReactElement {
     <SectionFrame
       n={2}
       screenLabel="02 Quickstart · SDK"
-      kicker="NPM package · developers"
+      kicker="SDK · builders"
       title={
         <>
           Give your agent a wallet
@@ -355,7 +355,7 @@ function ScrollL1(): React.ReactElement {
             <h2 className="btcv2-title">
               Your agent.
               <br />
-              <span className="serif display-italic">A real on-chain address.</span>
+              <span className="serif display-italic">A real Bitcoin address.</span>
             </h2>
             <p className="btcv2-lede">
               Threshold-ECDSA derives a native <code className="btcv2-code-inline">bc1q…</code> address on L1. No wrapping, no bridges, no custodian.
@@ -462,7 +462,7 @@ function ScrollL1(): React.ReactElement {
                         <span className="dim">did:paxio:0x4f…a21b</span>
                       </div>
                       <div className="tline out">
-                        <span className="ok">✓</span> on-chain address{' '}
+                        <span className="ok">✓</span> Bitcoin address{' '}
                         <span className="gold-mono">bc1q4n7…3kfp</span>
                       </div>
                       <div className="tline out">
@@ -565,9 +565,7 @@ function ScrollRadar(): React.ReactElement {
       kicker="Security analysts · enterprises"
       title={
         <>
-          We do not host agents.
-          <br />
-          <span className="serif display-italic">We measure them.</span>
+          We don't host agents.
         </>
       }
       sub={
@@ -1207,8 +1205,7 @@ function ScrollNetwork(): React.ReactElement {
 
       {/* CTAs */}
       <div className="network-cta-wrap b5">
-        <a href="https://registry.paxio.network/register" className="network-cta">
-          Register your agent — join the network →
+        <a href="https://registry.paxio.network/register" className="network-cta"> REGISTER YOUR AGENT <span className="cta-banner-marker"></span> — JOIN THE NETWORK →
         </a>
         <div className="network-cta-secondary mono">
           <a href="https://radar.paxio.network/network">See the live graph ↗</a>
