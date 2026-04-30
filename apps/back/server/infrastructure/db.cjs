@@ -42,7 +42,7 @@ const createDbClient = async (opts = {}) => {
     /* webpackIgnore: true */
     '../../../../dist/products/01-registry/app/infra/postgres-storage.js'
   );
-  const { createCrawlRunsRepo } = await import(
+  const { createCrawlRunsRepo, runCrawlRunsMigration } = await import(
     /* webpackIgnore: true */
     '../../../../dist/products/01-registry/app/infra/crawl-runs-repo.js'
   );
@@ -53,6 +53,11 @@ const createDbClient = async (opts = {}) => {
   });
 
   const agentStorage = await createPostgresStorage({ pool, runMigrations });
+  // crawl-runs-repo factory stays sync (registry-dev tests call it
+  // synchronously) — migration runs separately when runMigrations=true.
+  if (runMigrations) {
+    await runCrawlRunsMigration(pool);
+  }
   const crawlRunsRepo = createCrawlRunsRepo({ pool });
 
   return Object.freeze({

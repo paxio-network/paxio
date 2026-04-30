@@ -84,7 +84,12 @@ const pinoLogger = pino(loggerConfig);
   const { createDbClient } = require('./infrastructure/db.cjs');
   let dbClient = null;
   try {
-    dbClient = await createDbClient({ databaseUrl: DATABASE_URL });
+    // runMigrations: true → idempotent inline migrations create
+    // agent_cards (001) + crawl_runs (002) tables on startup. CREATE
+    // TABLE IF NOT EXISTS is a no-op on subsequent boots. Without this,
+    // first crawl returns processed=N storageErrors=N because tables
+    // don't exist (verified live 2026-04-30 against Hetzner Postgres).
+    dbClient = await createDbClient({ databaseUrl: DATABASE_URL, runMigrations: true });
     pinoLogger.info(dbClient._isNoop
       ? 'Postgres: no DATABASE_URL — agentStorage + health use no-op'
       : `Postgres pool initialized for ${DATABASE_URL.replace(/:[^:@/]*@/, ':***@')}`);
