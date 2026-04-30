@@ -123,16 +123,37 @@ describe('M-L10.7.2 D-4 — ScrollNetwork CTA banner styling', () => {
     expect(src).toMatch(/JOIN THE NETWORK/);
   });
 
-  it('CTA has dark banner class (banner / dark / cta-banner / similar)', () => {
+  it('CTA wrap carries dark banner class + matching CSS rule exists', () => {
     const src = readScrolls();
-    // Heuristic: find network-cta block, ensure it carries a class implying dark/banner styling
-    const networkBlock = src.match(/REGISTER YOUR AGENT[\s\S]{0,500}/);
-    if (!networkBlock) return;
-    // The CTA wrap or anchor must use a class with "banner", "dark", or "tone-ink"
+    // Find the wrap markup containing REGISTER YOUR AGENT — both the wrap class
+    // (BEFORE the text) and inner anchor/span classes need to carry a dark
+    // banner indicator. Window covers up to 500 chars BEFORE + 500 AFTER.
+    const idx = src.indexOf('REGISTER YOUR AGENT');
+    if (idx < 0) return;
+    const window = src.slice(Math.max(0, idx - 500), idx + 500);
     expect(
-      networkBlock[0],
-      'CTA wrap requires dark banner class — banner/dark/tone-ink/ink/cta-banner',
-    ).toMatch(/(banner|tone-ink|cta-dark|dark-cta|ink-bg|class[^>]*dark)/i);
+      window,
+      'CTA wrap requires dark banner class (banner/cta-banner/cta-dark/tone-ink/ink-bg/dark-cta) — current marker-only span without CSS rule does NOT satisfy: this assertion catches the wrap class itself.',
+    ).toMatch(/className=["'][^"']*(banner|cta-dark|dark-cta|tone-ink|ink-bg)[^"']*["']/i);
+
+    // Plus: the matched class must have a CSS rule in landing styles —
+    // empty marker class with no rule = test gaming, not impl. Walk landing
+    // CSS files looking for a rule body that includes background:var(--ink-0)
+    // OR background-color:var(--ink-0) on any of the candidate classes.
+    const stylesDir = resolve(__dirname, '..', 'app', 'styles');
+    const fs = require('node:fs') as typeof import('node:fs');
+    let allCss = '';
+    if (fs.existsSync(stylesDir)) {
+      for (const f of fs.readdirSync(stylesDir)) {
+        if (f.endsWith('.css')) allCss += '\n' + readFileSync(resolve(stylesDir, f), 'utf8');
+      }
+    }
+    const globalsCss = readFileSync(resolve(__dirname, '..', 'app', 'globals.css'), 'utf8');
+    allCss += '\n' + globalsCss;
+    expect(
+      allCss,
+      'dark banner CSS rule expected — class with `background: var(--ink-0)` (or color var) somewhere in landing styles. Marker span without CSS rule is M-Q20 anti-pattern.',
+    ).toMatch(/(banner|cta-dark|dark-cta|tone-ink|ink-bg)[^{}]*\{[^}]*background[^}]*var\(--ink-0\)/);
   });
 
   it('CTA copy does NOT use legacy mixed-case "Register your agent — join the network"', () => {
