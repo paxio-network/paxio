@@ -1,0 +1,81 @@
+name: One-shot · Provision ADMIN_TOKEN to Hetzner backend
+
+# Manually-triggered job to write ADMIN_TOKEN secret into backend's .env file
+# on Hetzner and restart the container so the value loads. Required because
+# scheduled-crawl.yml POSTs to /api/admin/crawl with Authorization: Bearer
+# ${{ secrets.ADMIN_TOKEN }}, and the backend validates against process.env
+# ADMIN_TOKEN — both sides must match.
+#
+# Idempotent: re-running updates the value if changed; backend restart picks
+# up new value. Safe to run any time secrets.ADMIN_TOKEN is rotated.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    name: Update Hetzner .env and restart backend
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: SSH and patch backend env
+        uses: appleboy/ssh-action@v1
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: ADMIN_TOKEN
+          script: |
+            set -euo pipefail
+            cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
+
+            # Find the env file. Most likely .env per docker-compose convention.
+            if [ ! -f .env ]; then
+              echo "ERROR: .env not found at $PWD"
+              ls -la
+              exit 1
+            fi
+
+            echo "=== Patching ADMIN_TOKEN in .env ==="
+            # Atomic update: remove existing line if any, append fresh.
+            grep -v '^ADMIN_TOKEN=' .env > .env.tmp || true
+            echo "ADMIN_TOKEN=${ADMIN_TOKEN}" >> .env.tmp
+            mv .env.tmp .env
+            chmod 600 .env
+
+            # Verify (without leaking value)
+            if grep -q '^ADMIN_TOKEN=' .env; then
+              echo "✅ ADMIN_TOKEN line present in .env"
+            else
+              echo "❌ ADMIN_TOKEN line missing after patch"
+              exit 1
+            fi
+
+            echo "=== Restart backend so it loads new env ==="
+            docker compose up -d --no-deps --force-recreate backend
+
+            echo "=== Wait for healthy (60s) ==="
+            timeout 60 sh -c 'until docker inspect --format="{{.State.Health.Status}}" paxio-backend 2>/dev/null | grep -q healthy; do sleep 3; done' || {
+              echo "❌ Backend not healthy after restart"
+              docker logs paxio-backend --tail=50
+              exit 1
+            }
+
+            echo "=== Smoke: /api/admin/crawl auth check ==="
+            # POST without auth — must reject with 401 (proves ADMIN_TOKEN
+            # is now read by handler, not falling through to internal_error).
+            STATUS=$(curl -sX POST -o /dev/null -w "%{http_code}" "http://localhost/api/admin/crawl?source=mcp")
+            echo "Status without auth: $STATUS (expect 401)"
+            if [ "$STATUS" = "401" ]; then
+              echo "✅ ADMIN_TOKEN is loaded — handler rejects unauth correctly"
+            else
+              echo "⚠️  Unexpected status (got $STATUS, expected 401) — check logs"
+              docker logs paxio-backend --tail=30
+            fi
+
+            echo "=== Done ==="
