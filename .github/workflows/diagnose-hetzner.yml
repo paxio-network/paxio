@@ -1,0 +1,102 @@
+name: One-shot · Diagnose Hetzner backend state
+
+# Manually-triggered diagnostic job. SSH'es into Hetzner via the existing
+# HETZNER_SSH_KEY GH secret (write-only, only GH Actions has it) and
+# publishes runtime info to the workflow log:
+#   - docker container state (paxio-backend, paxio-postgres)
+#   - backend stderr (last 200 lines)
+#   - postgres table presence + row counts (agent_cards, crawl_runs)
+#   - env vars whitelist (TOKEN-suffixed redacted, others printed)
+#
+# Read-only: does not mutate Hetzner state. Safe to re-run.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Run diagnostic queries on Hetzner
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: SSH and gather state
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set +e  # diagnostic — keep going even on partial failures
+            cd /home/${{ secrets.HETZNER_USER }}/paxio-prod || cd ~
+
+            echo "=========================================="
+            echo "1. WHO AM I + HOST"
+            echo "=========================================="
+            whoami
+            hostname
+            pwd
+            uname -a
+
+            echo ""
+            echo "=========================================="
+            echo "2. DOCKER STATE"
+            echo "=========================================="
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | head -10
+
+            echo ""
+            echo "=========================================="
+            echo "3. BACKEND STDERR (last 200 lines)"
+            echo "=========================================="
+            docker logs paxio-backend 2>&1 | tail -200
+
+            echo ""
+            echo "=========================================="
+            echo "4. BACKEND ENV (TOKEN/SECRET redacted)"
+            echo "=========================================="
+            docker exec paxio-backend env | grep -vE '_TOKEN=|_KEY=|_SECRET=|PASSWORD=' | sort
+
+            echo ""
+            echo "=========================================="
+            echo "5. POSTGRES TABLES"
+            echo "=========================================="
+            docker exec paxio-postgres psql -U paxio -d paxio -c '\dt' || echo "psql failed"
+
+            echo ""
+            echo "=========================================="
+            echo "6. agent_cards count"
+            echo "=========================================="
+            docker exec paxio-postgres psql -U paxio -d paxio -c 'SELECT COUNT(*) AS total FROM agent_cards;' || echo "query failed"
+            docker exec paxio-postgres psql -U paxio -d paxio -c 'SELECT source, COUNT(*) FROM agent_cards GROUP BY source ORDER BY 2 DESC;' || true
+
+            echo ""
+            echo "=========================================="
+            echo "7. crawl_runs (last 5)"
+            echo "=========================================="
+            docker exec paxio-postgres psql -U paxio -d paxio -c 'SELECT id, source, started_at, duration_ms, triggered_by, summary->>'"'"'upserted'"'"' AS upserted FROM crawl_runs ORDER BY started_at DESC LIMIT 5;' || echo "query failed"
+
+            echo ""
+            echo "=========================================="
+            echo "8. /api/admin/crawl behavior — no auth (currently 500, expected 401)"
+            echo "=========================================="
+            curl -sX POST -w "\nHTTP=%{http_code}\n" "http://127.0.0.1:3001/api/admin/crawl?source=mcp" | head -c 400
+
+            echo ""
+            echo ""
+            echo "=========================================="
+            echo "9. /api/admin/crawl behavior — bad auth (expected 401)"
+            echo "=========================================="
+            curl -sX POST -H "Authorization: Bearer wrong-token" -w "\nHTTP=%{http_code}\n" "http://127.0.0.1:3001/api/admin/crawl?source=mcp" | head -c 400
+
+            echo ""
+            echo ""
+            echo "=========================================="
+            echo "10. Image SHA + uptime"
+            echo "=========================================="
+            docker inspect --format '{{.Image}}' paxio-backend | head -c 24
+            echo ""
+            docker inspect --format '{{.State.StartedAt}}' paxio-backend
+            echo ""
+            echo "=== DONE ==="
