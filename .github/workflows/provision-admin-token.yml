@@ -34,27 +34,51 @@ jobs:
             set -euo pipefail
             cd /home/${{ secrets.HETZNER_USER }}/paxio-prod
 
-            # Find the env file. Most likely .env per docker-compose convention.
-            if [ ! -f .env ]; then
-              echo "ERROR: .env not found at $PWD"
-              ls -la
-              exit 1
+            echo "=== Inventory of env-like files ==="
+            ls -la | grep -iE '\.env|config' || true
+            echo ""
+
+            # Pick the right env file. Try in order:
+            #   1. .env (docker-compose default)
+            #   2. .env.production
+            #   3. backend.env
+            ENV_FILE=""
+            for candidate in .env .env.production backend.env; do
+              if [ -f "$candidate" ]; then
+                ENV_FILE="$candidate"
+                echo "Picking $candidate as env file."
+                break
+              fi
+            done
+
+            if [ -z "$ENV_FILE" ]; then
+              # No env file present — create .env (will be picked up by docker-compose default behavior).
+              ENV_FILE=".env"
+              echo "No env file found — creating fresh $ENV_FILE."
+              touch "$ENV_FILE"
+              chmod 600 "$ENV_FILE"
             fi
 
-            echo "=== Patching ADMIN_TOKEN in .env ==="
-            # Atomic update: remove existing line if any, append fresh.
-            grep -v '^ADMIN_TOKEN=' .env > .env.tmp || true
-            echo "ADMIN_TOKEN=${ADMIN_TOKEN}" >> .env.tmp
-            mv .env.tmp .env
-            chmod 600 .env
+            echo "=== Patching ADMIN_TOKEN in $ENV_FILE ==="
+            grep -v '^ADMIN_TOKEN=' "$ENV_FILE" > "$ENV_FILE.tmp" || true
+            echo "ADMIN_TOKEN=${ADMIN_TOKEN}" >> "$ENV_FILE.tmp"
+            mv "$ENV_FILE.tmp" "$ENV_FILE"
+            chmod 600 "$ENV_FILE"
 
-            # Verify (without leaking value)
-            if grep -q '^ADMIN_TOKEN=' .env; then
-              echo "✅ ADMIN_TOKEN line present in .env"
+            if grep -q '^ADMIN_TOKEN=' "$ENV_FILE"; then
+              echo "✅ ADMIN_TOKEN line present in $ENV_FILE"
             else
               echo "❌ ADMIN_TOKEN line missing after patch"
               exit 1
             fi
+
+            echo "=== Inspect docker-compose.yml + .yml file (where backend is defined) ==="
+            for cf in docker-compose.production.yml docker-compose.yml; do
+              if [ -f "$cf" ]; then
+                echo "--- $cf (env_file or environment block for backend) ---"
+                grep -E "env_file|environment|ADMIN_TOKEN" "$cf" || echo "(no env_file/environment line found)"
+              fi
+            done
 
             echo "=== Restart backend so it loads new env ==="
             docker compose up -d --no-deps --force-recreate backend
