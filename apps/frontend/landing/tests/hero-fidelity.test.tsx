@@ -148,11 +148,13 @@ describe('M-L10.7.1 D-4 — PaeiTicker stronger dotted dividers + prominent numb
 
   it('TickerCell numeric value font-size ≥ 12 (was 10 — too small vs target)', () => {
     const src = readFileSync(resolve(LANDING, 'app', 'sections', '01-hero-b5.tsx'), 'utf8');
-    // Heuristic: find TickerCell function/component definition + fontSize on the value span
-    const tickerCellBlock = src.match(/function TickerCell[\s\S]{0,2000}?\}/);
+    // Locate TickerCell impl block — match from `function TickerCell` until next
+    // top-level `function ` declaration (greedy to next sibling component) so
+    // fontSize references inside the JSX render are included. Lazy ?\} matched
+    // only the destructuring close brace (round 2 reviewer must-fix).
+    const tickerCellBlock = src.match(/function TickerCell[\s\S]*?(?=\nfunction |\nexport function )/);
     expect(tickerCellBlock, 'TickerCell function block expected').not.toBeNull();
     if (!tickerCellBlock) return;
-    // Look for fontSize on numeric value (heuristic — may be in a span or div)
     const fontSizeMatches = tickerCellBlock[0].match(/fontSize:\s*(\d+)/g) ?? [];
     const sizes = fontSizeMatches.map((m) => parseInt(m.replace(/\D/g, ''), 10));
     const max = sizes.length > 0 ? Math.max(...sizes) : 0;
@@ -169,13 +171,25 @@ describe('M-L10.7.1 D-4 — PaeiTicker stronger dotted dividers + prominent numb
 
 describe('M-L10.7.1 D-5 — Doors section 4-column grid + Last24h stats banner', () => {
   it('hero-b5.tsx OR dedicated doors section uses 4-column grid (not 2x2)', () => {
+    // Search both .tsx sources AND landing CSS files (grid template can live in
+    // either inline style or external stylesheet — round 2 reviewer must-fix).
     const heroSrc = readFileSync(resolve(LANDING, 'app', 'sections', '01-hero-b5.tsx'), 'utf8');
     const scrollsSrc = existsSync(resolve(LANDING, 'app', 'sections', '02-scrolls-b5.tsx'))
       ? readFileSync(resolve(LANDING, 'app', 'sections', '02-scrolls-b5.tsx'), 'utf8')
       : '';
-    const combined = heroSrc + '\n' + scrollsSrc;
+    const globalsCss = readFileSync(resolve(LANDING, 'app', 'globals.css'), 'utf8');
+    const stylesDir = resolve(LANDING, 'app', 'styles');
+    let stylesCss = '';
+    if (existsSync(stylesDir)) {
+      const fs = require('node:fs') as typeof import('node:fs');
+      for (const f of fs.readdirSync(stylesDir)) {
+        if (f.endsWith('.css')) {
+          stylesCss += '\n' + readFileSync(resolve(stylesDir, f), 'utf8');
+        }
+      }
+    }
+    const combined = [heroSrc, scrollsSrc, globalsCss, stylesCss].join('\n');
 
-    // Heuristic: doors-area should have 4-column grid
     const has4Col =
       /grid-template-columns:\s*repeat\(4/.test(combined) ||
       /gridTemplateColumns:\s*['"`]repeat\(4/.test(combined);
