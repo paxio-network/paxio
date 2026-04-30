@@ -94,21 +94,24 @@ jobs:
             docker exec paxio-backend printenv ADMIN_TOKEN | head -c 12
             echo " ... (truncated)"
 
-            echo "=== Smoke (from inside container): POST /api/admin/crawl ==="
-            STATUS=$(docker exec paxio-backend sh -c \
-              'curl -sX POST -o /tmp/admin.txt -w "%{http_code}" http://localhost:3001/api/admin/crawl?source=mcp' \
-              || echo "exec_failed")
-            echo "Status without auth: $STATUS"
-            if [ "$STATUS" != "401" ]; then
-              docker exec paxio-backend cat /tmp/admin.txt 2>&1 | head -3 || true
+            echo "=== Trigger crawl via Caddy (https://api.paxio.network) ==="
+            TOKEN="${ADMIN_TOKEN}"
+            STATUS=$(curl -sX POST -H "Authorization: Bearer $TOKEN" -o /tmp/admin-resp.txt \
+                       -w "%{http_code}" "https://api.paxio.network/api/admin/crawl?source=mcp" || echo "exec_failed")
+            echo "Status with auth: $STATUS"
+            if [ "$STATUS" != "200" ] && [ "$STATUS" != "429" ]; then
+              echo "Response body:"
+              head -c 400 /tmp/admin-resp.txt
               echo ""
-              echo "=== Backend logs (tail 80, filter errors) ==="
-              docker logs paxio-backend --tail=80 2>&1 | tail -50
             fi
+
+            echo "=== Backend stderr (last 30 lines) ==="
+            docker logs paxio-backend 2>&1 | tail -30
 
             echo "=== Image SHA (verify new build deployed) ==="
             docker inspect --format '{{.Image}}' paxio-backend | head -c 24
             echo ""
-            docker inspect --format '{{.Config.Labels}}' paxio-backend | head -c 200
+            echo "=== Latest deployed commit (build label) ==="
+            docker inspect --format '{{.Config.Image}}' paxio-backend
 
             echo "=== Done ==="
