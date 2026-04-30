@@ -94,15 +94,21 @@ jobs:
             docker exec paxio-backend printenv ADMIN_TOKEN | head -c 12
             echo " ... (truncated)"
 
-            echo "=== Smoke: /api/admin/crawl direct to backend port 3001 ==="
-            STATUS=$(curl -sX POST -o /tmp/admin-resp.txt -w "%{http_code}" "http://localhost:3001/api/admin/crawl?source=mcp")
+            echo "=== Smoke (from inside container): POST /api/admin/crawl ==="
+            STATUS=$(docker exec paxio-backend sh -c \
+              'curl -sX POST -o /tmp/admin.txt -w "%{http_code}" http://localhost:3001/api/admin/crawl?source=mcp' \
+              || echo "exec_failed")
             echo "Status without auth: $STATUS"
             if [ "$STATUS" != "401" ]; then
-              echo "Response body:"
-              cat /tmp/admin-resp.txt
+              docker exec paxio-backend cat /tmp/admin.txt 2>&1 | head -3 || true
               echo ""
-              echo "=== Backend recent error logs ==="
-              docker logs paxio-backend --tail=50 2>&1 | grep -iE "admin|crawl|error|throw" | tail -20
+              echo "=== Backend logs (tail 80, filter errors) ==="
+              docker logs paxio-backend --tail=80 2>&1 | tail -50
             fi
+
+            echo "=== Image SHA (verify new build deployed) ==="
+            docker inspect --format '{{.Image}}' paxio-backend | head -c 24
+            echo ""
+            docker inspect --format '{{.Config.Labels}}' paxio-backend | head -c 200
 
             echo "=== Done ==="
