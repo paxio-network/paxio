@@ -3,8 +3,12 @@
 
 export * from './result.js';
 export * from './did.js';
-export * from './capability.js';
-export * from './crawler-source.js';
+export * from './capability.js'; // @deprecated — see agent-category.js
+export * from './crawler-source.js'; // @deprecated — see agent-source.js
+// M-L1-taxonomy — domain-based agent classification
+export * from './agent-category.js';
+export * from './agent-source.js';
+export * from './agent-framework.js';
 export * from './agent-card.js';
 export * from './errors.js';
 // Phase 0 domain contracts

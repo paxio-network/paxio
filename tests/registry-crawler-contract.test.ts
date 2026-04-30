@@ -92,6 +92,9 @@ function makeFakeStorage(): AgentStorage {
       return ok(store.size);
     },
     async countBySource(): Promise<Result<AgentCountBySource, StorageError>> {
+      // Initialize all CrawlerSource keys (legacy 6-value enum); card.source
+      // is the broader AgentSource (9-value, includes legacy aliases) so we
+      // index defensively with `?? 0` and skip entries that don't map back.
       const map: Record<CrawlerSource, number> = {
         native: 0,
         erc8004: 0,
@@ -101,7 +104,8 @@ function makeFakeStorage(): AgentStorage {
         virtuals: 0,
       };
       for (const card of store.values()) {
-        map[card.source] = (map[card.source] ?? 0) + 1;
+        const key = card.source as CrawlerSource;
+        if (key in map) map[key] = (map[key] ?? 0) + 1;
       }
       return ok(Object.freeze(map));
     },

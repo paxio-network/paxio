@@ -205,15 +205,22 @@ describe('ZodAgentPreview', () => {
     expect(ZodAgentPreview.safeParse(sampleAgent).success).toBe(true);
   });
 
-  it('enumerates all agent sources from ТЗ v2.0', () => {
+  it('enumerates all agent sources (M-L1-taxonomy canonical kebab values)', () => {
+    // M-L1-taxonomy unified storage + display sources around one canonical
+    // kebab-style enum from agent-source.js. Frontend renders via
+    // AGENT_SOURCE_LABELS mapping. Old display values ('ERC-8004', 'Fetch.ai',
+    // 'ElizaOS') become labels, not enum members.
     expect(AGENT_SOURCES).toEqual([
       'paxio-native',
-      'ERC-8004',
-      'MCP',
-      'Fetch.ai',
-      'Virtuals',
-      'ElizaOS',
-      'A2A',
+      'erc8004',
+      'a2a',
+      'mcp',
+      'fetch',
+      'virtuals',
+      'eliza',
+      // Legacy aliases retained until storage migration 003 backfill:
+      'native',
+      'fetch-ai',
     ]);
   });
 

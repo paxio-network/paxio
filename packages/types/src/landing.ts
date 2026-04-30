@@ -10,6 +10,7 @@
 // state. See docs/sprints/M01c-landing-implementation.md.
 
 import { z } from 'zod';
+import { ZodAgentSource } from './agent-source.js';
 
 // --- Hero state strip (14 live fields + indices) --------------------------------
 
@@ -86,18 +87,13 @@ export const ZodTickerLane = z.object({
 export type TickerLane = z.infer<typeof ZodTickerLane>;
 
 // --- Agent rows (preview for landing table — NOT the full Agent Card) ------------
-
-export const AGENT_SOURCES = [
-  'paxio-native',
-  'ERC-8004',
-  'MCP',
-  'Fetch.ai',
-  'Virtuals',
-  'ElizaOS',
-  'A2A',
-] as const;
-export const ZodAgentSource = z.enum(AGENT_SOURCES);
-export type AgentSource = z.infer<typeof ZodAgentSource>;
+//
+// AgentSource enum was here (display-style: 'ERC-8004', 'Fetch.ai', 'ElizaOS').
+// M-L1-taxonomy unifies it with the canonical internal `AgentSource`
+// (kebab-style 'erc8004', 'fetch', 'eliza') from agent-source.js to keep
+// one source-of-truth between storage column and API response. Frontend
+// renders display labels via AGENT_SOURCE_LABELS helper (also exported
+// from agent-source.js).
 
 export const VERIFICATION_LEVELS = ['gold', 'silver', 'basic', 'none'] as const;
 export const ZodVerificationLevel = z.enum(VERIFICATION_LEVELS);
