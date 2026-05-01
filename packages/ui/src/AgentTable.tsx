@@ -1,4 +1,5 @@
 import type { AgentPreview } from '@paxio/types';
+import { AGENT_SOURCE_LABELS } from '@paxio/types';
 import { Sparkline } from './Sparkline';
 
 interface AgentTableProps {
@@ -63,9 +64,9 @@ export function AgentTable({ agents, className }: AgentTableProps) {
               <td className="p-2">
                 <span
                   className="px-1.5 py-0.5 rounded text-[10px]"
-                  style={{ background: `${SOURCE_COLORS[agent.source] ?? '#333'}33`, color: SOURCE_COLORS[agent.source] ?? '#fff' }}
+                  style={{ background: `${SOURCE_COLORS[AGENT_SOURCE_LABELS[agent.source] ?? agent.source] ?? '#333'}33`, color: SOURCE_COLORS[AGENT_SOURCE_LABELS[agent.source] ?? agent.source] ?? '#fff' }}
                 >
-                  {agent.source}
+                  {AGENT_SOURCE_LABELS[agent.source] ?? agent.source}
                 </span>
               </td>
               <td className="p-2 text-white/60">{agent.category}</td>
