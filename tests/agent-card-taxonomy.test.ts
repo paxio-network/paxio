@@ -90,15 +90,25 @@ describe('M-L1-taxonomy — AgentCategory (11 domain-based values)', () => {
 // Group 2 — AgentSource enum (kebab canonical + legacy aliases)
 // ─────────────────────────────────────────────────────────────────────────
 
-describe('M-L1-taxonomy — AgentSource (7 canonical + 2 legacy aliases)', () => {
-  it('contains 7 canonical kebab values', () => {
+describe('M-L1-expansion — AgentSource (13 canonical + 2 legacy aliases)', () => {
+  it('contains all 13 canonical kebab values (M-L1-expansion)', () => {
+    // Direct entry
     expect(AGENT_SOURCES).toContain('paxio-native');
+    expect(AGENT_SOURCES).toContain('paxio-curated');
+    // On-chain
     expect(AGENT_SOURCES).toContain('erc8004');
     expect(AGENT_SOURCES).toContain('a2a');
-    expect(AGENT_SOURCES).toContain('mcp');
-    expect(AGENT_SOURCES).toContain('fetch');
+    expect(AGENT_SOURCES).toContain('bittensor');
     expect(AGENT_SOURCES).toContain('virtuals');
+    // Framework hubs
+    expect(AGENT_SOURCES).toContain('mcp');
     expect(AGENT_SOURCES).toContain('eliza');
+    expect(AGENT_SOURCES).toContain('langchain-hub');
+    expect(AGENT_SOURCES).toContain('fetch');
+    // Discovery
+    expect(AGENT_SOURCES).toContain('huggingface');
+    expect(AGENT_SOURCES).toContain('vercel-ai');
+    expect(AGENT_SOURCES).toContain('github-discovered');
   });
 
   it('contains 2 legacy aliases for migration 003 transition', () => {
@@ -106,18 +116,40 @@ describe('M-L1-taxonomy — AgentSource (7 canonical + 2 legacy aliases)', () =>
     expect(AGENT_SOURCES).toContain('fetch-ai' as AgentSource); // legacy → fetch
   });
 
-  it('AGENT_SOURCE_LABELS maps every canonical to display value', () => {
+  it('does NOT include x402 — payment.accepts attribute, not source', () => {
+    expect(AGENT_SOURCES).not.toContain('x402' as AgentSource);
+    expect(AGENT_SOURCES).not.toContain('x402-base' as AgentSource);
+  });
+
+  it('AGENT_SOURCE_LABELS maps every canonical kebab to display value', () => {
+    // Direct
     expect(AGENT_SOURCE_LABELS['paxio-native']).toBe('paxio-native');
+    expect(AGENT_SOURCE_LABELS['paxio-curated']).toBe('paxio-curated');
+    // On-chain
     expect(AGENT_SOURCE_LABELS.erc8004).toBe('ERC-8004');
-    expect(AGENT_SOURCE_LABELS.mcp).toBe('MCP');
-    expect(AGENT_SOURCE_LABELS.fetch).toBe('Fetch.ai');
-    expect(AGENT_SOURCE_LABELS.virtuals).toBe('Virtuals');
-    expect(AGENT_SOURCE_LABELS.eliza).toBe('ElizaOS');
     expect(AGENT_SOURCE_LABELS.a2a).toBe('A2A');
+    expect(AGENT_SOURCE_LABELS.bittensor).toBe('Bittensor');
+    expect(AGENT_SOURCE_LABELS.virtuals).toBe('Virtuals');
+    // Framework hubs
+    expect(AGENT_SOURCE_LABELS.mcp).toBe('MCP');
+    expect(AGENT_SOURCE_LABELS.eliza).toBe('ElizaOS');
+    expect(AGENT_SOURCE_LABELS['langchain-hub']).toBe('LangChain Hub');
+    expect(AGENT_SOURCE_LABELS.fetch).toBe('Fetch.ai');
+    // Discovery
+    expect(AGENT_SOURCE_LABELS.huggingface).toBe('Hugging Face');
+    expect(AGENT_SOURCE_LABELS['vercel-ai']).toBe('Vercel AI');
+    expect(AGENT_SOURCE_LABELS['github-discovered']).toBe('GitHub');
   });
 
   it('AGENT_SOURCE_LABELS is frozen (cannot be mutated at runtime)', () => {
     expect(Object.isFrozen(AGENT_SOURCE_LABELS)).toBe(true);
+  });
+
+  it('AGENT_SOURCE_LABELS covers EVERY enum value (exhaustive check)', () => {
+    for (const src of AGENT_SOURCES) {
+      expect(AGENT_SOURCE_LABELS[src]).toBeDefined();
+      expect(AGENT_SOURCE_LABELS[src].length).toBeGreaterThan(0);
+    }
   });
 });
 
