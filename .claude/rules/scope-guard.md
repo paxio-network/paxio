@@ -35,12 +35,13 @@ globs: []
 |---|---|---|---|
 | **user** | dev agents (backend-dev / frontend-dev / icp-dev / registry-dev) | architect выдал task spec → user копирует в нужную session | `architect.md::Boundaries`, `workflow.md::User → reviewer/test-runner` |
 | **user** | reviewer Phase N (post-impl review) | architect сказал «ready for review» с PR link | `workflow.md` step 6 «User: запускает reviewer Phase N» |
+| **user** | reviewer retroactive batch (после уже мерженных PR'ов без gate) | архитектор пропустил Phase N → нужен catch-up chore commit | `architect-protocol.md::§6.5 cost-of-catchup` |
 | **user** | test-runner | architect сказал «ready for testing» | `workflow.md` step 4 «User: запускает test-runner» |
-| **architect** | reviewer Phase 0 (pre-impl spec review) | ДО handoff'а user'у — единственное исключение для self-call | `architect-protocol.md::§6.5` (ONLY Phase 0, NEVER Phase N) |
+| **architect** | reviewer Phase 0 (pre-impl spec review) | ДО handoff'а user'у — единственное исключение для self-call | `architect-protocol.md::§6.5` (ONLY Phase 0, NEVER Phase N, NEVER retroactive) |
 
-**Architect не запускает devs/test-runner/reviewer-Phase-N через `Agent` tool под никаким предлогом.** Если кажется что нужен — это знак что протокол сломан, или задача декомпозирована неправильно. Output discipline: дай task spec, передай user'у, **stop**.
+**Architect не запускает devs/test-runner/reviewer-Phase-N/reviewer-retroactive через `Agent` tool под никаким предлогом.** Если кажется что нужен — это знак что протокол сломан, или задача декомпозирована неправильно. Output discipline: дай task spec, передай user'у, **stop**.
 
-**Нарушение этого правила** = повтор паттерна типа TD-30 (architect-as-X), требует governance запись в `tech-debt.md`.
+**Нарушение этого правила** = governance debt. Reviewer (user-invoked) филует TD entry в `docs/tech-debt.md`. Recurrence одного и того же класса = milestone-level mechanical enforcement (CI gate / pre-commit hook), не yet another textual rule.
 
 ## УСТАВНЫЕ ДОКУМЕНТЫ — АБСОЛЮТНЫЙ ЗАПРЕТ для ВСЕХ dev-агентов
 

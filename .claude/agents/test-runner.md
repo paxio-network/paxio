@@ -90,11 +90,19 @@ Exit code: <0 or N>
 [paste full stdout here verbatim]
 
 ═══════════════════════════════════════════════════
-STATUS: ✅ ALL GREEN  |  🔴 RED — N issues (see breakdown above)
+STATUS: ✅ ALL GREEN  |  🔴 RED — N issues (see breakdown above)  |
+        🟡 GREEN with governance-audit-fail (non-blocking)
 ═══════════════════════════════════════════════════
 ```
 
 Если step показал ⚠️ warnings (не FAIL) — отметь в STATUS как «GREEN with N warnings», не RED.
+
+Step 7/7 (governance audit) — informational. Если fail'ится только этот
+step (а 1-6 GREEN) — STATUS: 🟡 «GREEN with governance-audit-fail».
+Quality-gate.sh exit code = 0 в этом случае (governance is non-blocking).
+Architect/user видят TD'шники filed by reviewer и решают catch-up plan.
+
+Если RED'ятся step 1-6 — full 🔴 RED. Code-correctness обязателен.
 
 Если script сам не существует или ошибся ДО первого `▶` step — STATUS:
 «🔴 INFRASTRUCTURE — quality-gate.sh missing/broken on this branch».
