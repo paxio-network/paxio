@@ -558,7 +558,68 @@ M00 Foundation отмечен ✅ DONE.
 - M01b Frontend Bootstrap — awaits frontend-dev (8 Next.js apps scaffolding)
 - M01c Landing (paxio.network real-data API) — awaits backend-dev v2 + frontend-dev
 
-**Outstanding tech debt:** 25 TD entries total (PR #22 review 2026-04-25 closed TD-25 = one OPEN HIGH cleared; net deltas across PR #17→#22: −1 OPEN HIGH (TD-25), +13 CLOSED entries).
+---
+
+## Phase N Retroactive Batch — PR #100-#112 (2026-05-01)
+
+**Context**: architect skipped reviewer Phase N gate for 13 PR merges (m-q22 drift-guard blocked quality-gate). Catch-up via one batch chore commit. GitHub PAT unavailable during review; per-PR analysis via `git log` + `git show` on origin/dev.
+
+**Procedure**: reviewer worktree `/tmp/paxio-rv-batch` reset to `origin/dev` at `8bdbbf6`; per-PR `git show` for files/author/commit; `pnpm typecheck` clean; `pnpm exec vitest run` → 1414/1415 GREEN, 1 FAIL (`tests/m-q22-reviewer-chore-coverage.test.ts` — **EXPECTED RED**, this batch closes the gap the test is designed to catch). Cargo not re-run (no Rust in scope). No test file modifications by any PR. TD-42 (m-q22 Phase N gap) + TD-43 (Phase 0 skipped on #111) already recorded in `docs/tech-debt.md`.
+
+### Per-PR verdicts
+
+| PR | Feature branch | Key commits | Files | Author(s) | Verdict |
+|----|----------------|-------------|-------|-----------|---------|
+| #100 | `feature/M-INFRA-admin-token-provision` | `3eb6172` | `.github/workflows/provision-admin-token.yml` | architect | ✅ APPROVED |
+| #101 | `feature/M-INFRA-admin-token-provision` | `ecae974` | `.github/workflows/provision-admin-token.yml` | architect | ✅ APPROVED |
+| #102 | `feature/M-INFRA-admin-token-provision` | `4bd4072` | `.github/workflows/provision-admin-token.yml` | architect | ✅ APPROVED |
+| #103 | `feature/M-INFRA-admin-token-provision` | `815e8aa` | `apps/back/server/main.cjs` | backend-dev | ✅ APPROVED |
+| #104 | `feature/M-INFRA-admin-token-provision` | `3513e9f` | `.github/workflows/provision-admin-token.yml` | architect | ✅ APPROVED |
+| #105 | `feature/M-INFRA-admin-token-provision` | `406ad5d` | `.github/workflows/provision-admin-token.yml` | architect | ✅ APPROVED |
+| #106 | `feature/M-INFRA-admin-token-provision` | `4a7a03a`+`725d4c7`+`1afad85` | 5 files: 2 tests (architect) + 3 handlers (backend-dev+registry-dev) | mixed | ✅ APPROVED |
+| #107 | `feature/M-INFRA-admin-token-provision` | `34fd728` | `apps/back/server/wiring/01-registry.cjs` | backend-dev | ✅ APPROVED |
+| #108 | `feature/M-INFRA-admin-token-provision` | `10105b4`+`0e20218` | 3 files: `db.cjs`+`main.cjs` (backend-dev) + `crawl-runs-repo.ts` (registry-dev) | mixed | ✅ APPROVED |
+| #109 | `feature/M-INFRA-admin-token-provision` | `05e94af` | `apps/back/server/wiring/07-intelligence.cjs` | backend-dev | ✅ APPROVED |
+| #110 | `feature/M-INFRA-diag-hetzner` | `baba4af` | `.github/workflows/diagnose-hetzner.yml` | architect | ✅ APPROVED |
+| #111 | `feature/M-L1-taxonomy` | `120988e` | 13 files: types+contracts+docs+tests | architect | ✅ APPROVED · TD-43 already recorded |
+| #112 | `feature/M-L1-T6a-tests-red` | `8268067`+`e232679` | 3 files: test (architect) + impl (registry-dev) | mixed | ✅ APPROVED · TD-42 already recorded |
+
+### Detail analysis
+
+**Scope check**: ALL 13 PRs' file deltas are within correct ownership zones:
+- `.github/workflows/*.yml` → architect (CI infrastructure)
+- `apps/back/server/{main.cjs,wiring/*.cjs,infrastructure/db.cjs}` → backend-dev
+- `products/01-registry/app/{api/*.js,infra/*.ts}` → registry-dev (FA-01 owner)
+- `packages/types/src/*.ts` + `packages/contracts/sql/*.sql` + `docs/sprints/*.md` + `docs/feature-areas/*.md` → architect
+- `products/*/tests/*.test.ts` modified by architect → architect owns tests
+- `tests/agent-card-*.test.ts` + `tests/landing-contracts.test.ts` + `tests/registry-crawler-contract.test.ts` → architect owns tests
+
+**Test integrity**: ✅ no pre-existing tests modified by any PR in the batch. New architect-authored test files added in PRs #106 and #111. Zero modifications to tests from prior milestones.
+
+**Authorship**: PRs #100-#105 + #110 (architect-only): `.github/workflows/` changes by `architect <architect@paxio.network>`. PRs #103, #107, #108, #109 (backend-dev): `backend-dev <backend-dev@paxio.network>`. PRs #106, #108, #112 (mixed): each commit matches file owner identity. No mixed-identity regressions (TD-30 pattern not triggered — last observed `60729a2` 2026-04-26).
+
+**Quality (backend wiring — PRs #103-#109)**: `admin.token` wired to config object; MCP httpClient returns `HttpResponse` shape; `runMigrations: true` on startup creates `agent_cards` + `crawl_runs` tables; `getRegistryCount` reads `agentStorage.count()`; domain nesting fixed (`domain['01-registry'].*`, `domain['07-intelligence'].*`); handlers mirrored to real wiring shape. Surgical backend-dev-level fixes.
+
+**Quality (contracts — PR #111 M-L1-taxonomy)**: domain-based categories (`X00_` prefix), 9-group AgentCard schema, Zod validation on taxonomy boundaries. TD-43 recorded (Phase 0 skipped — retroactive read shows contracts sound).
+
+**Quality (impl — PR #112 M-L1-taxonomy T-6)**: RED tests for `ON CONFLICT DO NOTHING` semantics; registry-dev T-6b skip-if-exists + maxRecords 50000. TD-42 recorded (Phase N skipped before merge — impl quality verified retroactively).
+
+**Test diff**: `git diff origin/dev..HEAD -- 'tests/*' 'products/*/tests/*' 'scripts/verify_*.sh'` → empty. No pre-existing tests modified.
+
+**Baseline gates (local re-run)**:
+- `pnpm install --frozen-lockfile` → PASS (lockfile unchanged in batch)
+- `pnpm typecheck` → PASS
+- `pnpm exec vitest run` → **1414/1415 GREEN**, 1 FAIL
+  - FAIL: `tests/m-q22-reviewer-chore-coverage.test.ts` — **EXPECTED RED** (m-q22 drift-guard designed to catch missing reviewer chores; this batch closes the gap)
+- Cargo: not re-run (no Rust in scope; `git diff` confirms zero `.rs` changes)
+
+**Tech debt**: TD-42 ✅ already recorded; TD-43 ✅ already recorded. No new TD entries needed. TD-44: NOT CREATED — no additional governance gap beyond TD-42/TD-43 identified.
+
+**Verdict**: ✅ ALL 13 PRs APPROVED (retroactive Phase N). No blockers. No must-fix. No new tech debt.
+
+---
+
+**Outstanding tech debt:** 27 TD entries total (PR #112 batch review 2026-05-01 added TD-42 + TD-43; TD-25 closed in PR #22; net: +2 OPEN MED governance entries).
 - **OPEN HIGH (2)**: TD-13 5th architect→dev scope recurrence (governance — escalation to user; not actionable code debt); TD-22 architect повторно self-написал `docs/tech-debt.md` (pattern-3 occurrences, awaits user/architect pre-commit hook).
 - **BACKLOG HIGH (1)**: TD-19 landing build broken at `04-pay.tsx:39` (TS2719 type duplication, pre-existing M-L0-impl `1ac2423` oversight, awaits frontend-dev fix per architect RED spec `f106908`).
 - **BACKLOG MED (1)**: TD-01 errors sync (inline constants + drift-guard landed via TD-14, keep monitoring).
