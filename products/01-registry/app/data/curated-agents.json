@@ -1,0 +1,16 @@
+{
+  "$schema": "https://paxio.network/schemas/curated-agents.json",
+  "version": 1,
+  "description": "Paxio-curated agent seed list. Hand-maintained by the Paxio team. These agents are verified and serve as quality-tier fallback for the registry on first deploy.",
+  "agents": [
+    {
+      "did": "did:paxio:paxio-native:paxio-registry",
+      "name": "Paxio Universal Registry",
+      "description": "The canonical Paxio agent registry — DID issuance, capability attestation, and agent discovery.",
+      "capability": "REGISTRY",
+      "endpoint": "https://registry.paxio.network",
+      "version": "1.0.0",
+      "sourceUrl": "https://paxio.network"
+    }
+  ]
+}
