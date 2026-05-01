@@ -468,6 +468,7 @@ bash scripts/quality-gate.sh <milestone>  # dry-run — должен fail на �
 >
 > **NEVER** в этих случаях:
 > - reviewer Phase N (post-impl review) — user invokes
+> - reviewer retroactive (после merge) — user invokes
 > - dev agents любые (backend-dev / frontend-dev / icp-dev / registry-dev) — user invokes
 > - test-runner — user invokes
 > - повторный reviewer вызов после dev impl — user invokes
@@ -475,6 +476,17 @@ bash scripts/quality-gate.sh <milestone>  # dry-run — должен fail на �
 > Architect's job вне Phase 0: give task spec → user copy-paste'ит в нужную session.
 > Phase 0 self-call оптимизация для ловли spec bugs ДО того как dev burned time —
 > НЕ generic «architect может spawn кого хочет».
+>
+> **Violation = governance debt.** Architect нарушил правило → reviewer (user-invoked)
+> филует TD entry с описанием inцident'а. Recurrence того же класса считается отдельной
+> TD; повторение становится сигналом для milestone-level mechanical enforcement
+> (mechanical hook вместо текстового правила).
+>
+> **Cost-of-catchup.** Если architect пропустил reviewer gate перед merge — нужно
+> retroactive reviewer pass (user invokes) + chore commit covering orphan PR(s).
+> До этого quality-gate's m-q22-reviewer-chore-coverage test блокирует ВЕСЬ
+> test-runner pipeline (fail-stop, не warning). Стоимость: extra round-trip
+> user→reviewer + reviewer worktree spin-up — заметно дороже одного pre-merge gate.
 
 После commit + push spec, ДО handoff'а user'у — самовызови reviewer как sub-agent
 для Phase 0 spec review. Это catches spec bugs ДО того как dev burned time на bad

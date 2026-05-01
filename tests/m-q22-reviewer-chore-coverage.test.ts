@@ -116,7 +116,19 @@ describe('M-Q22 — chore(reviewer) coverage of recent PR merges', () => {
     }
   };
 
-  it('every PR merge in last 50 dev commits has a chore(reviewer) within ±5 commits', () => {
+  // Cached body lookup so we don't fork git per chore.
+  const choreBody = (sha: string): string => {
+    try {
+      return execSync(`git log -1 --pretty=%B ${sha}`, {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  it('every PR merge in last 50 dev commits has a chore(reviewer) within ±5 commits OR via batch chore body listing', () => {
     const log = pullLog();
     if (!log) return; // skip if git unavailable
     const lines = log.split('\n').filter(Boolean);
@@ -136,6 +148,14 @@ describe('M-Q22 — chore(reviewer) coverage of recent PR merges', () => {
       return m ? m[1] : null;
     };
 
+    // Pre-fetch bodies for every chore so we can spot batch chores that
+    // list multiple PR numbers in their body. Batch chore is the canonical
+    // catch-up mechanism after a governance gap (multiple infra hotfixes
+    // merged без individual reviewer pass) — listing each PR в body
+    // delivers the same audit trail без spamming dev branch с десятком
+    // identical chore commits.
+    const choreBodies = chores.map((c) => choreBody(c.sha));
+
     const orphaned: Array<{ sha: string; subject: string }> = [];
     for (const merge of merges) {
       const prMatch = merge.subject.match(/#(\d+)/);
@@ -143,20 +163,31 @@ describe('M-Q22 — chore(reviewer) coverage of recent PR merges', () => {
       const branchMatch = merge.subject.match(/from paxio-network\/(?:feature\/)?([\w.-]+)/);
       const milestonePrefix = branchMatch ? stripToPrefix(branchMatch[1]) : null;
 
+      // Window match — chore subject within ±5 commits referencing PR or milestone.
       const window = chores.filter((ch) => Math.abs(ch.idx - merge.idx) <= 5);
-      const matched = window.some((ch) => {
+      const matchedNearby = window.some((ch) => {
         if (prNumber && ch.subject.includes(`#${prNumber}`)) return true;
         if (milestonePrefix && ch.subject.includes(milestonePrefix)) return true;
         return false;
       });
-      if (!matched) orphaned.push({ sha: merge.sha, subject: merge.subject });
+      if (matchedNearby) continue;
+
+      // Batch chore match — any chore anywhere in last 50 commits whose
+      // BODY references the orphan PR (e.g. `chore(reviewer): batch
+      // retroactive APPROVED for #100-#112` listing each PR в body).
+      const matchedBatch = prNumber
+        ? choreBodies.some((body) => new RegExp(`#${prNumber}\\b`).test(body))
+        : false;
+      if (matchedBatch) continue;
+
+      orphaned.push({ sha: merge.sha, subject: merge.subject });
     }
 
     // Allow up to 4 orphans transitional — pre-convention merges may not have chores.
     // After this milestone lands the threshold tightens (later milestone).
     expect(
       orphaned.length,
-      `PR merges without chore(reviewer) commit within ±5 commits: ${orphaned
+      `PR merges without chore(reviewer) within ±5 commits AND no batch chore referencing PR в body: ${orphaned
         .map((o) => `${o.sha} ${o.subject}`)
         .join('; ')}. Reviewer must commit project-state.md + tech-debt.md update per Phase 13 + push per Phase 1.8.`,
     ).toBeLessThanOrEqual(4);

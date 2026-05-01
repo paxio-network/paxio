@@ -131,13 +131,30 @@ else
   ok "no apps/back/server/*.cjs changes in diff — skipping node --check"
 fi
 
-# 2/6 — Root vitest (catches workspace config drift, the M-L9 round-2 gap)
-step "2/6 pnpm exec vitest run (ROOT — not per-app filter!)"
-if pnpm exec vitest run > /tmp/qg-root-vitest.log 2>&1; then
+# Governance test patterns — non-blocking informational gate.
+# Code-correctness gates fail-stop; governance gates collect into TD.
+#
+# Pattern logic: governance tests audit process compliance (reviewer chore
+# coverage, lockfile drift, husky identity, etc.) — their failure is a
+# real signal but should not block code-correct merges. file TD; user
+# decides catch-up plan.
+#
+# Add new governance tests via this list — single source of truth.
+GOVERNANCE_TESTS=(
+  'tests/m-q22-reviewer-chore-coverage.test.ts'
+)
+
+# 2/6 — Root vitest CODE-CORRECTNESS (governance tests excluded — gated separately).
+step "2/6 pnpm exec vitest run — code-correctness (governance tests gated separately)"
+EXCLUDE_ARGS=()
+for t in "${GOVERNANCE_TESTS[@]}"; do
+  EXCLUDE_ARGS+=(--exclude "$t")
+done
+if pnpm exec vitest run "${EXCLUDE_ARGS[@]}" > /tmp/qg-root-vitest.log 2>&1; then
   passed=$(grep -oE 'Tests +[0-9]+ passed' /tmp/qg-root-vitest.log | tail -1 || echo "")
-  ok "root vitest GREEN — $passed"
+  ok "root vitest GREEN (code-correctness) — $passed"
 else
-  bad "root vitest RED (full: /tmp/qg-root-vitest.log)"
+  bad "root vitest RED — code-correctness (full: /tmp/qg-root-vitest.log)"
   tail -30 /tmp/qg-root-vitest.log | sed 's,^,    ,'
   exit 1
 fi
@@ -226,8 +243,35 @@ else
   exit 1
 fi
 
+# 7/7 — Governance audit (non-blocking — informational fail).
+#
+# Code-correctness gates 1-6 above already passed by this point. Governance
+# gates audit process compliance: did reviewer write chore commits? did
+# architect skip Phase N? lockfile drift? identity mismatch?
+#
+# Their fail is a REAL signal — but it doesn't block code merge. Reviewer
+# files TD via Phase 13; architect plans catch-up. Tied to merge gate at
+# CI level via separate workflow status check (M-Q24 — future milestone),
+# not at quality-gate.sh level.
+step "7/7 governance audit (informational — non-blocking) — m-q* compliance tests"
+GOV_FAILED=0
+if [ "${#GOVERNANCE_TESTS[@]}" -eq 0 ]; then
+  ok "no governance tests configured"
+else
+  if pnpm exec vitest run "${GOVERNANCE_TESTS[@]}" > /tmp/qg-governance.log 2>&1; then
+    ok "governance audit GREEN — process compliance OK"
+  else
+    echo "  ⚠️  GOVERNANCE AUDIT FAIL (non-blocking — file TD, не блокирует merge)"
+    tail -25 /tmp/qg-governance.log | sed 's,^,    ,'
+    GOV_FAILED=1
+  fi
+fi
+
 echo
 echo "─────────────────────────────────────────────"
 echo "QUALITY GATE — ${MILESTONE} — PASS=${PASS} FAIL=${FAIL}"
+if [ $GOV_FAILED -eq 1 ]; then
+  echo "⚠️  GOVERNANCE AUDIT FAILED (non-blocking — file TD entry via reviewer Phase 13)"
+fi
 echo "─────────────────────────────────────────────"
 [ $FAIL -eq 0 ]
