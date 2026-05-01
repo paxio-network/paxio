@@ -111,10 +111,21 @@ fi
 step "8. T-6 impl: SQL.upsertByDid uses DO NOTHING"
 # ---------------------------------------------------------------------------
 
-if grep -A12 "upsertByDid:" products/01-registry/app/infra/postgres-storage.ts | grep -q "DO NOTHING"; then
-  ok "postgres-storage upsertByDid → DO NOTHING"
+# Extract the upsertByDid SQL block from `upsertByDid:` line to the next
+# standalone backtick-comma line (closing the template literal). Robust
+# vs INSERT column count growth (M-L1-taxonomy T-2 expanded INSERT from
+# 12 to 56 params — fixed -A12 window broke).
+upsert_block=$(awk '
+  /upsertByDid:[[:space:]]*`/ { flag=1 }
+  flag { print }
+  flag && /^[[:space:]]*`,/ { exit }
+' products/01-registry/app/infra/postgres-storage.ts)
+
+if echo "$upsert_block" | grep -q "DO NOTHING" && \
+   ! echo "$upsert_block" | grep -q "DO UPDATE SET"; then
+  ok "postgres-storage upsertByDid → DO NOTHING (no DO UPDATE SET)"
 else
-  bad "postgres-storage still uses DO UPDATE SET"
+  bad "postgres-storage upsertByDid not using DO NOTHING semantics"
 fi
 
 # ---------------------------------------------------------------------------
