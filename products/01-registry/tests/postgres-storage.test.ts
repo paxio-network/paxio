@@ -135,17 +135,24 @@ describe('createPostgresStorage.upsert', () => {
     pool = makeFakePool();
   });
 
-  it('emits ON CONFLICT (did) DO NOTHING SQL with all 12 params (M-L1-taxonomy T-6)', async () => {
+  it('emits ON CONFLICT (did) DO NOTHING SQL with all 56 params (M-L1-taxonomy T-6 + T-2)', async () => {
     // M-L1-taxonomy T-6: skip-if-exists semantics — registered DIDs are
-    // skipped silently so crawler естественно идёт «вперёд» (старые
-    // записи не перезатираются каждый cron tick).
+    //   skipped silently so crawler естественно идёт «вперёд» (старые
+    //   записи не перезатираются каждый cron tick).
+    // M-L1-taxonomy T-2: INSERT carries 56 params covering legacy 12
+    //   columns + 44 new taxonomy columns (category, capabilities[],
+    //   framework, wallet_*, payment_*, sla_*, reputation_*, security_*,
+    //   compliance_*, ecosystem_*, developer_*) per migration
+    //   packages/contracts/sql/003_taxonomy.sql.
     const storage = await createPostgresStorage({ pool });
     const r = await storage.upsert(sampleCard);
     expect(r.ok).toBe(true);
     expect(pool.calls.length).toBe(1);
     expect(pool.calls[0]!.sql).toMatch(/ON CONFLICT \(did\) DO NOTHING/);
     expect(pool.calls[0]!.sql).not.toMatch(/DO UPDATE SET/);
-    expect(pool.calls[0]!.params.length).toBe(12);
+    expect(pool.calls[0]!.params.length).toBe(56);
+    // Legacy positional asserts (params[0..11] retain their meaning —
+    // migration 003 appended new columns; existing positions stable).
     expect(pool.calls[0]!.params[0]).toBe(sampleCard.did);
     expect(pool.calls[0]!.params[1]).toBe(sampleCard.name);
     expect(pool.calls[0]!.params[6]).toBe(sampleCard.source);

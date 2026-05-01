@@ -70,7 +70,7 @@ globs: []
 
 ### Testing (5 rules)
 
-- **C31 [R54]** TEST-FIRST: architect RED → dev GREEN, NEVER modify tests ([testing.md](testing.md))
+- **C31 [R54]** TEST-FIRST: architect RED → dev GREEN. Architect owns test contract — modifies as needed (new RED specs, contract evolution per milestone task table). Dev НИКОГДА не модифицирует тесты — только реализует impl до GREEN ([testing.md](testing.md))
 - **C32 [R56]** Test naming: `should VERB when CONDITION` ([testing.md](testing.md))
 - **C33 [R98]** Rust tests inline `#[cfg(test)] mod tests {}`, factories named `create_test_<thing>` ([testing.md](testing.md))
 - **C34 [R100]** `#[tokio::test]` ТОЛЬКО для async, `#[test]` для sync ([testing.md](testing.md))
