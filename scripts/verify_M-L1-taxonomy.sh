@@ -122,10 +122,15 @@ step "9. Live API — admin/crawl with auth (expect 200 or 429)"
 # ---------------------------------------------------------------------------
 
 ADMIN_TOKEN="${ADMIN_TOKEN:-1BL5hxqLZF7nQpPvcN8BNcOlrMLmwyiARVI00y8Xr18}"
+# `|| HTTP_CODE="000"` MUST be OUTSIDE the $() — if it's inside, curl's
+# stdout (the http_code via -w) and echo's "000" both get captured into
+# HTTP_CODE when curl fails partway through (saw "429000" empirically
+# during M-L1-taxonomy round 1).
 HTTP_CODE=$(curl -sX POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -w "%{http_code}" -o /tmp/m-l1-tax-crawl.txt \
+  -o /tmp/m-l1-tax-crawl.txt \
+  -w "%{http_code}" \
   "https://api.paxio.network/api/admin/crawl?source=mcp" \
-  --max-time 120 || echo "000")
+  --max-time 120 2>/dev/null) || HTTP_CODE="000"
 if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "429" ]; then
   ok "/api/admin/crawl auth → $HTTP_CODE"
 else
