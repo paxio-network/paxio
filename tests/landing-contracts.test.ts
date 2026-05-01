@@ -205,20 +205,30 @@ describe('ZodAgentPreview', () => {
     expect(ZodAgentPreview.safeParse(sampleAgent).success).toBe(true);
   });
 
-  it('enumerates all agent sources (M-L1-taxonomy canonical kebab values)', () => {
-    // M-L1-taxonomy unified storage + display sources around one canonical
-    // kebab-style enum from agent-source.js. Frontend renders via
-    // AGENT_SOURCE_LABELS mapping. Old display values ('ERC-8004', 'Fetch.ai',
-    // 'ElizaOS') become labels, not enum members.
+  it('enumerates all agent sources (M-L1-expansion canonical kebab values)', () => {
+    // M-L1-expansion adds 6 sources to M-L1-taxonomy's 7:
+    //   paxio-curated, bittensor, langchain-hub, huggingface, vercel-ai,
+    //   github-discovered.
+    // Total 13 canonical + 2 legacy aliases.
     expect(AGENT_SOURCES).toEqual([
+      // Direct entry
       'paxio-native',
+      'paxio-curated',
+      // On-chain
       'erc8004',
       'a2a',
-      'mcp',
-      'fetch',
+      'bittensor',
       'virtuals',
+      // Framework hubs
+      'mcp',
       'eliza',
-      // Legacy aliases retained until storage migration 003 backfill:
+      'langchain-hub',
+      'fetch',
+      // Discovery
+      'huggingface',
+      'vercel-ai',
+      'github-discovered',
+      // Legacy aliases retained until cleanup migration:
       'native',
       'fetch-ai',
     ]);
