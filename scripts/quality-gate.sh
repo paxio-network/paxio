@@ -218,19 +218,50 @@ fi
 
 # 6/6 — Acceptance script for milestone.
 # Canonical: scripts/verify_<milestone>.sh (e.g. verify_M-L9.sh).
-# Fallback: scripts/verify_*.sh with grep header `# M-L9 acceptance` etc.
-# This handles legacy descriptive names like verify_landing_design_port.sh.
-step "6/6 bash scripts/verify_${MILESTONE}.sh (or fallback)"
+# Fallback chain (M-Q27 — task-tag → parent-milestone fallback):
+#   1. exact: verify_<TAG>.sh
+#   2. parent-tag: strip `-T<digits>(.<digits>)*[a-z]*` suffix → try verify_<PARENT>.sh
+#      (так dev report on `M-L1-T2` resolves to `verify_M-L1-expansion.sh` через
+#       `verify_M-L1-T2.sh` MISS → strip `-T2` → check verify_M-L1.sh + handle
+#       milestone family parent verify_M-L1-expansion.sh)
+#   3. header-grep: any verify_*.sh с `# <TAG>` или `# <PARENT>` в header
+step "6/6 bash scripts/verify_${MILESTONE}.sh (or parent-tag/header fallback)"
 ACC="scripts/verify_${MILESTONE}.sh"
 if [ ! -f "$ACC" ]; then
-  # Look for any verify_*.sh with milestone tag in its header comment.
+  # Step 2: parent-tag fallback. Strip `-T<N>` suffix to find milestone-level
+  # acceptance script. Examples:
+  #   M-L1-T2          → M-L1
+  #   M-L1-T2.5        → M-L1
+  #   M-L1-T2-impl     → M-L1
+  #   M-Q26            → M-Q26 (no suffix to strip)
+  PARENT_TAG=$(echo "$MILESTONE" | sed -E 's/-T[0-9]+([._-][[:alnum:]]+)*$//')
+  if [ "$PARENT_TAG" != "$MILESTONE" ]; then
+    # Try canonical of parent OR any verify_<PARENT>*.sh family
+    parent_candidate="scripts/verify_${PARENT_TAG}.sh"
+    if [ -f "$parent_candidate" ]; then
+      ACC="$parent_candidate"
+      echo "  (parent-tag fallback: $MILESTONE → $PARENT_TAG → $ACC)"
+    else
+      # Family search: verify_<PARENT>-*.sh covers expansions like
+      # verify_M-L1-expansion.sh для parent M-L1
+      family=$(ls scripts/verify_${PARENT_TAG}-*.sh 2>/dev/null | head -1 || true)
+      if [ -n "$family" ] && [ -f "$family" ]; then
+        ACC="$family"
+        echo "  (family fallback: $MILESTONE → $PARENT_TAG-* → $ACC)"
+      fi
+    fi
+  fi
+fi
+
+# Step 3: header-grep fallback (legacy descriptive names + cross-milestone tags).
+if [ ! -f "$ACC" ]; then
   fallback=$(grep -lE "^# *${MILESTONE}\b|^# *${MILESTONE} acceptance" scripts/verify_*.sh 2>/dev/null | head -1 || true)
   if [ -n "$fallback" ] && [ -f "$fallback" ]; then
     ACC="$fallback"
-    echo "  (canonical $MILESTONE not found — using fallback $ACC)"
+    echo "  (header fallback: $MILESTONE matched in $ACC)"
   else
-    bad "no acceptance script at $ACC (and no fallback with '# $MILESTONE' header)"
-    echo "    (architect must create scripts/verify_${MILESTONE}.sh for this milestone)"
+    bad "no acceptance script at $ACC (no parent-tag, family, or header fallback)"
+    echo "    (architect must create scripts/verify_${MILESTONE}.sh OR ensure parent-tag mapping resolves)"
     exit 1
   fi
 fi
