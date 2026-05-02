@@ -13,3 +13,6 @@ export * from './a2a.js';
 export * from './mcp.js';
 export * from './fetch-ai.js';
 export * from './virtuals.js';
+// M-L1-expansion T-2: paxio-curated source — manual seed JSON (foundation
+// models, premier SaaS agents). Pre-committed DIDs (no crawler discovery).
+export * from './paxio-curated.js';
