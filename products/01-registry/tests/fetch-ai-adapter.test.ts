@@ -45,22 +45,63 @@ describe('M-L1-expansion createFetchAiAdapter — factory', () => {
   });
 });
 
-// TD-34: skip behaviour-driven tests until registry-dev T-4 lands real impl.
-// Stubs return empty AsyncIterable so these tests RED. Registry-dev removes
-// `.skip` when wiring REST pagination in domain/sources/fetch-ai.ts.
-describe.skip('M-L1-expansion FetchAi fetchAgents — Agentverse REST pagination', () => {
-  it('GETs /v1/search/agents with offset/limit', async () => {
-    const calls: string[] = [];
+// M-L1-T3b: contract evolved after PR #120 production smoke (2026-05-02).
+// Real Agentverse API rejects GET with 405 Method Not Allowed; requires
+//   POST /v1/search/agents
+//   Content-Type: application/json
+//   { search_text: '', filters: {}, sort: 'relevancy', direction: 'asc',
+//     offset, limit }
+// Adapter previously sent GET with offset/limit in query string → silent
+// 405 → catch-and-return → processed:0. Tests now un-skipped + updated to
+// assert POST + body shape so registry-dev's GREEN impl matches reality.
+describe('M-L1-T3b FetchAi fetchAgents — Agentverse REST pagination', () => {
+  it('POSTs /v1/search/agents with offset+limit in JSON body', async () => {
+    const calls: Array<{
+      url: string;
+      method: 'GET' | 'POST';
+      body?: unknown;
+      headers?: Record<string, string>;
+    }> = [];
     const httpClient: HttpClient = {
       async fetch(req) {
-        calls.push(req.url);
+        calls.push({
+          url: req.url,
+          method: req.method,
+          body: req.body,
+          headers: req.headers,
+        });
         return { status: 200, headers: new Map(), body: { agents: [] } };
       },
     };
     const adapter = createFetchAiAdapter({ httpClient });
     for await (const _ of adapter.fetchAgents()) { /* noop */ }
-    expect(calls[0]).toMatch(/agentverse\.ai\/v1\/search\/agents/);
-    expect(calls[0]).toMatch(/(offset|limit)/);
+
+    // URL: agentverse.ai/v1/search/agents (no query params — offset/limit go in body)
+    expect(calls[0].url).toMatch(/agentverse\.ai\/v1\/search\/agents/);
+    expect(calls[0].url).not.toMatch(/[?&](offset|limit)=/);
+
+    // Method: POST (GET returns 405 from real API)
+    expect(calls[0].method).toBe('POST');
+
+    // Headers: JSON content-type (case-insensitive lookup)
+    const headers = calls[0].headers ?? {};
+    const ctKey = Object.keys(headers).find(
+      (k) => k.toLowerCase() === 'content-type',
+    );
+    expect(ctKey).toBeDefined();
+    expect(headers[ctKey!]).toMatch(/application\/json/i);
+
+    // Body: required keys present with valid types (architect contract)
+    const body = calls[0].body as Record<string, unknown>;
+    expect(typeof body).toBe('object');
+    expect(typeof body.search_text).toBe('string');
+    expect(typeof body.filters).toBe('object');
+    expect(typeof body.sort).toBe('string');
+    expect(typeof body.direction).toBe('string');
+    expect(typeof body.offset).toBe('number');
+    expect(typeof body.limit).toBe('number');
+    expect(body.offset).toBe(0); // first page
+    expect(body.limit).toBeGreaterThan(0);
   });
 
   it('yields one record per agent in page', async () => {
