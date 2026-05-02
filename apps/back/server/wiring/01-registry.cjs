@@ -83,6 +83,19 @@ const wireRegistryDomain = (rawDomain, deps) => {
               },
             },
           }
+        : source === 'fetch-ai'
+        ? {
+            httpClient: {
+              fetch: async ({ url, method, body, headers }) => {
+                const r = await fetch(url, { method, body, headers });
+                const responseHeaders = new Map();
+                r.headers.forEach((v, k) => { responseHeaders.set(k, v); });
+                let parsedBody = null;
+                try { parsedBody = await r.json(); } catch { parsedBody = null; }
+                return { status: r.status, headers: responseHeaders, body: parsedBody };
+              },
+            },
+          }
         : source === 'paxio-curated'
         ? {
             curatedAgentsPath: require('node:path').join(
