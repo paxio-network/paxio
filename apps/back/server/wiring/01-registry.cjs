@@ -39,7 +39,10 @@ const NOOP_AGENT_STORAGE = Object.freeze({
   }),
 });
 
-const CRAWLER_SOURCES = ['native', 'erc8004', 'a2a', 'mcp', 'fetch-ai', 'virtuals'];
+const CRAWLER_SOURCES = [
+  'native', 'erc8004', 'a2a', 'mcp', 'fetch-ai', 'virtuals',
+  'paxio-curated',  // M-L1-T2
+];
 
 const wireRegistryDomain = (rawDomain, deps) => {
   // Build crawlerAdapters map from raw sources (mcp, erc8004, a2a, fetch-ai, virtuals).
@@ -58,6 +61,8 @@ const wireRegistryDomain = (rawDomain, deps) => {
       createAdapter = src['fetch-ai'].createFetchAiAdapter;
     } else if (source === 'virtuals' && src.virtuals) {
       createAdapter = src.virtuals.createVirtualsAdapter;
+    } else if (source === 'paxio-curated' && src['paxio-curated']) {
+      createAdapter = src['paxio-curated'].createPaxioCuratedAdapter;
     }
     if (createAdapter) {
       // Stubs use fetch (global), MCP uses injected httpClient.
@@ -77,6 +82,15 @@ const wireRegistryDomain = (rawDomain, deps) => {
                 return { status: r.status, headers, body };
               },
             },
+          }
+        : source === 'paxio-curated'
+        ? {
+            curatedAgentsPath: require('node:path').join(
+              __dirname, '..', '..', '..',
+              'products', '01-registry', 'app', 'data',
+              'curated-agents.json',
+            ),
+            fs: require('node:fs/promises'),
           }
         : {};
       crawlerAdapters[source] = createAdapter(adapterDeps);
