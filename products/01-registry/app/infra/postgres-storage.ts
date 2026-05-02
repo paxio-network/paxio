@@ -225,12 +225,20 @@ const MIGRATION_003_TAXONOMY = `
 --
 -- Existing 3230 rows: backfilled \`category='AI & ML'\`.
 
--- Step 1 — drop old \`capability\` and \`source\` CHECK constraints
+-- Step 1 — drop ALL constraints this migration ADD's later (M-Q26 idempotency)
 ALTER TABLE agent_cards
-  DROP CONSTRAINT IF EXISTS agent_cards_capability_check;
-
-ALTER TABLE agent_cards
-  DROP CONSTRAINT IF EXISTS agent_cards_source_check;
+  DROP CONSTRAINT IF EXISTS agent_cards_capability_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_source_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_category_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_framework_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_wallet_status_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_payment_facilitator_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_sla_uptime_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_reputation_score_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_security_badge_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_compliance_eu_ai_act_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_compliance_data_handling_check,
+  DROP CONSTRAINT IF EXISTS agent_cards_ecosystem_network_check;
 
 -- Step 2 — backfill source enum (legacy → canonical)
 UPDATE agent_cards SET source = 'paxio-native' WHERE source = 'native';
