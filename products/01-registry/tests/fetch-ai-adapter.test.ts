@@ -27,19 +27,38 @@ const fakeHttp = (responses: ReadonlyArray<HttpResponse>): HttpClient => {
   };
 };
 
+// M-L1-T3c (2026-05-03): fixture mirrors REAL Agentverse API response shape.
+// Schema rewrite — see packages/types/src/sources/fetch-ai.ts. All fields
+// match curl POST /v1/search/agents response observed against live API.
 const validAgent = {
-  address: 'fetch1' + 'a'.repeat(38),
+  address: 'agent1' + 'a'.repeat(58),
+  prefix: 'test-agent',
   name: 'Test agent',
   description: 'A test',
+  readme: '',
+  protocols: [],
+  avatar_href: null,
+  total_interactions: 0,
+  recent_interactions: 0,
+  recent_verified_interactions: 0,
+  recent_success_verified_interactions: 0,
+  rating: 4.5,             // 0..5 scale (NOT 0..100). Adapter scales × 20.
+  status: 'active',         // → isOnline=true via fetchAiStatusToOnline
+  unresponsive: false,
+  type: 'hosted',
+  featured: false,
   category: 'finance',
-  registeredAt: 1714000000000,  // Unix epoch ms (ZodFetchAiAgent schema)
-  profileUrl: 'https://agentverse.ai/profile/test',
-  tags: [],
-  isOnline: false,
-  reputationScore: null,
+  system_wide_tags: ['ai', 'trading'],
+  geo_location: null,
+  handle: null,
+  domain: null,
+  metadata: null,
+  last_updated: '2025-07-02T09:19:17Z',
+  created_at: '2025-07-02T09:19:17Z',
+  recent_success_rate: null,
+  recent_eval_success_rate: null,
+  owner: '34ee31a80edb390dd0ccc1c12a17918cff09073b6d047932',
 };
-
-// Separate ISO-string fixture for any tests that explicitly test string→Date coercion (future).
 
 describe('M-L1-expansion createFetchAiAdapter — factory', () => {
   it('returns frozen adapter with sourceName=fetch-ai + methods', () => {
@@ -113,7 +132,7 @@ describe('M-L1-T3b FetchAi fetchAgents — Agentverse REST pagination', () => {
   it('yields one record per agent in page', async () => {
     const adapter = createFetchAiAdapter({
       httpClient: fakeHttp([
-        { status: 200, headers: new Map(), body: { agents: [validAgent, { ...validAgent, address: 'fetch1' + 'b'.repeat(38) }] } },
+        { status: 200, headers: new Map(), body: { agents: [validAgent, { ...validAgent, address: 'agent1' + 'b'.repeat(58) }] } },
         { status: 200, headers: new Map(), body: { agents: [] } },
       ]),
     });
@@ -186,8 +205,9 @@ describe('M-L1-T3b FetchAi fetchAgents — Agentverse REST pagination', () => {
           body: {
             agents: [
               validAgent,
-              { address: 'invalid-no-fetch1', name: 'bad', registeredAt: '2026-04-20T10:00:00.000Z' },
-              { ...validAgent, address: 'fetch1' + 'c'.repeat(38) },
+              // Invalid: wrong address prefix (no agent1...) → AGENTVERSE_ADDRESS regex rejects.
+              { ...validAgent, address: 'wrong1' + 'b'.repeat(58) },
+              { ...validAgent, address: 'agent1' + 'c'.repeat(58) },
             ],
           },
         },
@@ -233,22 +253,70 @@ describe('M-L1-T3b FetchAi fetchAgents — Agentverse REST pagination', () => {
   });
 });
 
-// TD-34: skip — same as erc8004 toCanonical, fixture-vs-stub-Zod drift.
-// Registry-dev T-4 will reconcile.
-describe.skip('M-L1-expansion FetchAi toCanonical — pure (regression check)', () => {
-  it('produces AgentCard from valid FetchAiAgent', () => {
+// M-L1-T3c: un-skipped + assertions verify projection from raw API response
+// shape to canonical AgentCard. Real Agentverse fields are snake_case +
+// ISO strings + 0..5 rating; adapter projects to canonical AgentCard.
+describe('M-L1-T3c FetchAi toCanonical — raw → canonical projection', () => {
+  it('produces AgentCard from valid raw Agentverse record', () => {
     const adapter = createFetchAiAdapter({ httpClient: fakeHttp([]) });
     const result = adapter.toCanonical(validAgent);
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.source).toBe('fetch-ai');
-      expect(result.value.did).toMatch(/^did:paxio:fetch-ai:/);
-    }
+    if (!result.ok) return;
+    const card = result.value;
+    expect(card.source).toBe('fetch-ai');
+    expect(card.externalId).toBe(validAgent.address);
+    // DID format: did:paxio:fetch-ai:<address>
+    expect(card.did).toMatch(/^did:paxio:fetch-ai:agent1/);
+    // Created — ISO string preserved (raw `created_at` projected to canonical `createdAt`)
+    expect(card.createdAt).toBe(validAgent.created_at);
+    // sourceUrl: constructed agentverse profile URL
+    expect(card.sourceUrl).toBe(
+      `https://agentverse.ai/agents/details/${validAgent.address}`,
+    );
+    // Display name: from name (non-empty) — fallback chain not exercised here
+    expect(card.name).toBe(validAgent.name);
   });
 
-  it('returns parse_error on invalid input', () => {
+  it('uses prefix as display name when name is empty', () => {
     const adapter = createFetchAiAdapter({ httpClient: fakeHttp([]) });
-    const result = adapter.toCanonical({ address: 'not-fetch', name: 'bad', registeredAt: 'now' });
+    const result = adapter.toCanonical({
+      ...validAgent,
+      name: '',
+      prefix: 'fallback-name',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.name).toBe('fallback-name');
+  });
+
+  it('synthesises name from address when both name and prefix empty', () => {
+    const adapter = createFetchAiAdapter({ httpClient: fakeHttp([]) });
+    const result = adapter.toCanonical({
+      ...validAgent,
+      name: '',
+      prefix: null,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.name).toContain('agent ');
+  });
+
+  it('returns parse_error on invalid raw input (address regex fail)', () => {
+    const adapter = createFetchAiAdapter({ httpClient: fakeHttp([]) });
+    const result = adapter.toCanonical({
+      ...validAgent,
+      address: 'wrong1' + 'a'.repeat(58),
+    } as unknown as FetchAiAgent);
     expect(result.ok).toBe(false);
+  });
+
+  it('preserves description (truncated to 1000 chars)', () => {
+    const adapter = createFetchAiAdapter({ httpClient: fakeHttp([]) });
+    const result = adapter.toCanonical({
+      ...validAgent,
+      description: 'A'.repeat(2000),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.description !== undefined) {
+      expect(result.value.description.length).toBeLessThanOrEqual(1000);
+    }
   });
 });

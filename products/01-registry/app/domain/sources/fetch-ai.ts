@@ -19,6 +19,8 @@ import {
   type Result,
   ok,
   err,
+  fetchAiProfileUrl,
+  fetchAiDisplayName,
 } from '@paxio/types';
 import type {
   CrawlerSourceAdapter,
@@ -90,7 +92,15 @@ const CAPABILITY_KEYWORDS: ReadonlyArray<{
 ]);
 
 const inferCapability = (raw: FetchAiAgent): Capability => {
-  const haystack = `${raw.name} ${raw.category ?? ''} ${raw.description ?? ''} ${raw.tags.join(' ')}`;
+  const haystack = [
+    raw.name,
+    raw.category ?? '',
+    raw.description ?? '',
+    (raw.system_wide_tags ?? []).join(' '),
+    (raw.protocols ?? []).join(' '),
+  ]
+    .join(' ')
+    .toLowerCase();
   for (const rule of CAPABILITY_KEYWORDS) {
     if (rule.patterns.some((rx) => rx.test(haystack))) return rule.capability;
   }
@@ -233,17 +243,16 @@ export const createFetchAiAdapter = (
     const r = parsed.data;
     const card: AgentCard = {
       did: buildDid(r.address),
-      name: r.name,
-      ...(r.description !== undefined
+      name: fetchAiDisplayName(r),
+      ...(r.description.length > 0
         ? { description: r.description.slice(0, 1000) }
         : {}),
       capability: inferCapability(r),
-      ...(r.endpoint !== undefined ? { endpoint: r.endpoint } : {}),
       version: '0.0.1',
-      createdAt: new Date(r.registeredAt).toISOString(),
+      createdAt: r.created_at,
       source: sourceName,
       externalId: r.address,
-      sourceUrl: r.profileUrl,
+      sourceUrl: fetchAiProfileUrl(r.address),
     };
     return ok(card);
   };
