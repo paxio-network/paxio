@@ -13,7 +13,7 @@
 //   GET /api/intelligence/movers?window=24h    → MarketMoversWindow
 
 import { z } from 'zod';
-import { ZodCrawlerSource } from './crawler-source.js';
+import { ZodCrawlerSource } from './crawler-source';
 
 // ---------------------------------------------------------------------------
 // PaeiSnapshot — composite + 5 subindices + adoption + market structure

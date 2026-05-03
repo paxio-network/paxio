@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { ZodDid } from './did.js';
-import { ZodCapability } from './capability.js'; // @deprecated — kept for backward compat
-import { ZodCrawlerSource } from './crawler-source.js'; // @deprecated — superseded by ZodAgentSource
-import { ZodAgentCategory } from './agent-category.js';
-import { ZodAgentSource } from './agent-source.js';
-import { ZodAgentFramework } from './agent-framework.js';
+import { ZodDid } from './did';
+import { ZodCapability } from './capability'; // @deprecated — kept for backward compat
+import { ZodCrawlerSource } from './crawler-source'; // @deprecated — superseded by ZodAgentSource
+import { ZodAgentCategory } from './agent-category';
+import { ZodAgentSource } from './agent-source';
+import { ZodAgentFramework } from './agent-framework';
 
 // AgentCard — canonical schema (M-L1-taxonomy v3).
 //

@@ -3,8 +3,8 @@
 // See docs/feature-areas/FA-01-registry-architecture.md §4.
 
 import { z } from 'zod';
-import { ZodDid } from './did.js';
-import { ZodAgentCard } from './agent-card.js';
+import { ZodDid } from './did';
+import { ZodAgentCard } from './agent-card';
 
 // --- POST /registry/register ---
 

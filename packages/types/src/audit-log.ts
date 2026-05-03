@@ -2,8 +2,8 @@
 // Append-only log with cryptographic chain. Each entry carries hash(prev || payload).
 
 import { z } from 'zod';
-import { ZodDid } from './did.js';
-import { ZodAsset } from './wallet.js';
+import { ZodDid } from './did';
+import { ZodAsset } from './wallet';
 
 // --- Action types logged ---
 

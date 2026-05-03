@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ZodCapability } from '../capability.js';
+import { ZodCapability } from '../capability';
 
 // `paxio-curated` source — manually maintained seed list of verified agents.
 //
