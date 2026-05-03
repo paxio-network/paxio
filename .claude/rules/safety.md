@@ -150,8 +150,8 @@ POSIX rule: **chmod requires owner OR root**. Group membership
 
 ```bash
 cd /home/nous/paxio
-git worktree add /tmp/paxio-<session> -b feature/M-XX-name origin/dev
-cd /tmp/paxio-<session>
+git worktree add /home/nous/paxio-worktrees/<session> -b feature/M-XX-name origin/dev
+cd /home/nous/paxio-worktrees/<session>
 pnpm install                  # owns its own node_modules/
 ```
 

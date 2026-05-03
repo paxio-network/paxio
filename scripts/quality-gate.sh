@@ -32,9 +32,9 @@ case "$ROOT" in
     echo "    Fix:"
     echo "      cd /home/nous/paxio"
     echo "      git fetch origin"
-    echo "      git worktree add /tmp/paxio-test-${MILESTONE} feature/<branch> 2>/dev/null \\"
-    echo "        || git worktree add /tmp/paxio-test-${MILESTONE} --detach origin/<branch>"
-    echo "      cd /tmp/paxio-test-${MILESTONE}"
+    echo "      git worktree add /home/nous/paxio-worktrees/test-${MILESTONE} feature/<branch> 2>/dev/null \\"
+    echo "        || git worktree add /home/nous/paxio-worktrees/test-${MILESTONE} --detach origin/<branch>"
+    echo "      cd /home/nous/paxio-worktrees/test-${MILESTONE}"
     echo "      pnpm install"
     echo "      bash scripts/quality-gate.sh ${MILESTONE}"
     exit 1

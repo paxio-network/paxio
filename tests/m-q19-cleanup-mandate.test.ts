@@ -61,7 +61,8 @@ describe('M-Q19 — test-runner.md Step 0 own-worktree mandate', () => {
 
   it('Step 0 has concrete bash recipe for worktree create', () => {
     const c = readFile('.claude/agents/test-runner.md');
-    expect(c).toMatch(/git worktree add \/tmp\/paxio-test-/);
+    // TD-worktree-path (2026-05-03): /home/nous/paxio-worktrees/test-* parent.
+    expect(c).toMatch(/git worktree add \/home\/nous\/paxio-worktrees\/test-/);
     expect(c).toMatch(/pnpm install/);
   });
 
@@ -111,7 +112,9 @@ describe('M-Q19 — quality-gate.sh shared-checkout refusal', () => {
 
   it('refusal provides recovery commands (git worktree add + pnpm install)', () => {
     const c = readFile('scripts/quality-gate.sh');
-    expect(c).toMatch(/git worktree add \/tmp\/paxio-test/);
+    // TD-worktree-path (2026-05-03): /home/nous/paxio-worktrees/test-* parent,
+    // was /tmp/paxio-test-* pre-TD.
+    expect(c).toMatch(/git worktree add \/home\/nous\/paxio-worktrees\/test-/);
     expect(c).toMatch(/pnpm install/);
   });
 });

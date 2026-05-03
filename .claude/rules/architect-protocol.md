@@ -40,26 +40,32 @@ Worktree даёт **separate HEAD per session**, **isolated branch**, **own node
 
 ```bash
 cd /home/nous/paxio
+mkdir -p /home/nous/paxio-worktrees                                 # parent dir, persistent
 git fetch origin
-git worktree add /tmp/paxio-<milestone-name> -b feature/M-XX-name origin/dev
-cd /tmp/paxio-<milestone-name>
+git worktree add /home/nous/paxio-worktrees/<milestone-name> -b feature/M-XX-name origin/dev
+cd /home/nous/paxio-worktrees/<milestone-name>
 git config user.name architect
 git config user.email architect@paxio.network
 pnpm install                     # fresh node_modules в worktree, no chmod conflicts
 ```
 
+**Path convention (TD-worktree-path, 2026-05-03):** все session worktrees живут под единым parent
+`/home/nous/paxio-worktrees/<session>` — НЕ в `/tmp/paxio-*` (старая convention) и НЕ в
+корне `/home/nous/paxio-*` (флэт layout засорял home). Существующие worktrees из
+`/tmp/paxio-*` остаются до merge их PR'ов; новые создаются в новом parent.
+
 Worktree даёт **separate HEAD per session** — твоя ветка изолирована от
 любых checkout'ов в `/home/nous/paxio`.
 
 Где `<milestone-name>` — короткое уникальное имя сессии (например `mq3`,
-`m-l1-launch`, `td35-fix`). НЕ переиспользуй существующие имена `/tmp/paxio-*`
+`m-l1-launch`, `td35-fix`). НЕ переиспользуй существующие имена `/home/nous/paxio-worktrees/*`
 от других сессий — `git worktree list` покажет занятые.
 
 ### 0.3 — Cleanup после merge
 
 ```bash
 cd /home/nous/paxio                              # вернуться в main checkout
-git worktree remove --force /tmp/paxio-<name>    # удалит каталог + запись
+git worktree remove --force /home/nous/paxio-worktrees/<name>    # удалит каталог + запись
 git worktree prune                               # если каталог удалён руками
 ```
 
@@ -604,8 +610,8 @@ Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запуск
 
   Setup (4 строки):
     cd /home/nous/paxio
-    git worktree add /tmp/paxio-<dev>-<task> -B feature/<task> origin/dev
-    cd /tmp/paxio-<dev>-<task>
+    git worktree add /home/nous/paxio-worktrees/<dev>-<task> -B feature/<task> origin/dev
+    cd /home/nous/paxio-worktrees/<dev>-<task>
     git config user.email <dev>@paxio.network && pnpm install
 
   Read ONLY (1-2 файла):
@@ -648,13 +654,13 @@ Test-runner reported:
 
 Setup (alive worktree if exists, else fresh):
   # alive:
-  cd /tmp/paxio-<existing-session>
+  cd /home/nous/paxio-worktrees/<existing-session>
   git pull origin feature/<branch>
   
   # fresh:
   cd /home/nous/paxio
-  git worktree add /tmp/paxio-<dev>-<task>-r2 -B feature/<branch> origin/feature/<branch>
-  cd /tmp/paxio-<dev>-<task>-r2
+  git worktree add /home/nous/paxio-worktrees/<dev>-<task>-r2 -B feature/<branch> origin/feature/<branch>
+  cd /home/nous/paxio-worktrees/<dev>-<task>-r2
   git config user.name <dev>
   git config user.email <dev>@paxio.network
   pnpm install
