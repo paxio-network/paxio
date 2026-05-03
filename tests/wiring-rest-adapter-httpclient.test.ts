@@ -120,6 +120,66 @@ describe('wireRegistryDomain — REST adapter httpClient injection', () => {
     }
   });
 
+  it('M-L1-T3d: fetch-ai httpClient.fetch JSON.stringifies object body before native fetch', async () => {
+    // Production bug 2026-05-03: wiring passed body as JS object to native fetch.
+    // Node's fetch coerces object to "[object Object]" string → Agentverse rejects
+    // (parses as JSON, fails) → adapter sees empty agents → processed:0 silent zero.
+    //
+    // Fix: wiring wraps body with JSON.stringify before native fetch call.
+    const mock = makeMockSource();
+    const rawDomain = {
+      '01-registry': {
+        sources: {
+          'fetch-ai': { createFetchAiAdapter: mock.factory },
+        },
+      },
+    };
+
+    let capturedInit: RequestInit | null = null;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      capturedInit = init ?? null;
+      return {
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ agents: [] }),
+      } as Response;
+    }) as typeof globalThis.fetch;
+
+    try {
+      wireRegistryDomain(rawDomain, {});
+      const deps = mock.captured as {
+        httpClient: {
+          fetch: (req: {
+            url: string;
+            method: 'POST';
+            body: unknown;
+            headers?: Record<string, string>;
+          }) => Promise<unknown>;
+        };
+      };
+
+      await deps.httpClient.fetch({
+        url: 'https://example.invalid/v1/search/agents',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { search_text: '', offset: 0, limit: 100 },
+      });
+
+      expect(capturedInit, 'native fetch must be called with init').not.toBeNull();
+      // CRITICAL: body passed to native fetch MUST be a JSON string, NOT an object.
+      // Node's fetch coerces objects via String() → "[object Object]" → server 400.
+      expect(typeof capturedInit!.body).toBe('string');
+      // Round-trip the JSON string and verify shape preserved
+      const parsed = JSON.parse(capturedInit!.body as string);
+      expect(parsed.search_text).toBe('');
+      expect(parsed.offset).toBe(0);
+      expect(parsed.limit).toBe(100);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('paxio-curated still receives curatedAgentsPath + fs (regression guard)', () => {
     const mock = makeMockSource();
     const rawDomain = {
