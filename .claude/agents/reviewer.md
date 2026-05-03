@@ -215,7 +215,7 @@ tree мог их закоммитить без явного intent. Per-session 
 
 ```bash
 cd /home/nous/paxio
-git worktree remove --force /tmp/paxio-rev-<session>
+git worktree remove --force /home/nous/paxio-worktrees/rev-<session>
 git worktree prune
 ```
 

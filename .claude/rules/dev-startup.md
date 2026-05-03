@@ -36,7 +36,7 @@ You implement a SPECIFIC task assigned by architect. Do NOT browse for work.
 6. **Cleanup worktree after merge** (M-Q19 mandate). When architect confirms merge, run:
    ```bash
    cd /home/nous/paxio
-   git worktree remove --force /tmp/paxio-<your-session>
+   git worktree remove --force /home/nous/paxio-worktrees/<your-session>
    git worktree prune
    ```
    Stale worktrees pollute disk + cross-user EPERM (test-runner sees broken cache). `--force` needed because Paxio uses git submodules. **Don't remove your own worktree until architect's «merged» — that's where reviewer/test-runner re-checks impl.**
