@@ -10,7 +10,7 @@
 // state. See docs/sprints/M01c-landing-implementation.md.
 
 import { z } from 'zod';
-import { ZodAgentSource } from './agent-source.js';
+import { ZodAgentSource } from './agent-source';
 
 // --- Hero state strip (14 live fields + indices) --------------------------------
 

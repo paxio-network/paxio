@@ -12,7 +12,7 @@
 // и инжектируется в scheduler factory.
 
 import { z } from 'zod';
-import { ZodCrawlerSource } from './crawler-source.js';
+import { ZodCrawlerSource } from './crawler-source';
 
 export const ZodCronTickConfig = z.object({
   /**
@@ -59,20 +59,20 @@ export type CronTickConfig = z.infer<typeof ZodCronTickConfig>;
  * Discriminated union для exhaustive logging + monitoring.
  */
 export type SchedulerTickDecision =
-  | { kind: 'triggered'; source: import('./crawler-source.js').CrawlerSource }
+  | { kind: 'triggered'; source: import('./crawler-source').CrawlerSource }
   | {
       kind: 'skipped_rate_limit';
-      source: import('./crawler-source.js').CrawlerSource;
+      source: import('./crawler-source').CrawlerSource;
       lastRunAt: string;
       msUntilNextEligible: number;
     }
   | {
       kind: 'skipped_disabled';
-      source: import('./crawler-source.js').CrawlerSource;
+      source: import('./crawler-source').CrawlerSource;
     }
   | {
       kind: 'skipped_concurrency';
-      source: import('./crawler-source.js').CrawlerSource;
+      source: import('./crawler-source').CrawlerSource;
       activeRuns: number;
     }
   | { kind: 'no_sources_due' };

@@ -3,7 +3,7 @@
 // @paxio/sdk + http-proxy + MCP server. Keep names in sync with the .did file.
 
 import { z } from 'zod';
-import { ZodDid } from './did.js';
+import { ZodDid } from './did';
 
 // --- Asset enum ---
 

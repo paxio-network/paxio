@@ -3,8 +3,8 @@
 // (Secrets Scanner is TS-side in M24 per FA-04 §9).
 
 import { z } from 'zod';
-import { ZodDid } from './did.js';
-import { ZodTransactionIntent } from './wallet.js';
+import { ZodDid } from './did';
+import { ZodTransactionIntent } from './wallet';
 
 // --- Decision ---
 

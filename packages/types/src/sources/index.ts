@@ -8,11 +8,11 @@
 // Adding a new source: drop a `<source>.ts` file in this directory, add the
 // enum entry in `../agent-source.ts`, and re-export here.
 
-export * from './erc8004.js';
-export * from './a2a.js';
-export * from './mcp.js';
-export * from './fetch-ai.js';
-export * from './virtuals.js';
+export * from './erc8004';
+export * from './a2a';
+export * from './mcp';
+export * from './fetch-ai';
+export * from './virtuals';
 // M-L1-expansion T-2: paxio-curated source — manual seed JSON (foundation
 // models, premier SaaS agents). Pre-committed DIDs (no crawler discovery).
-export * from './paxio-curated.js';
+export * from './paxio-curated';

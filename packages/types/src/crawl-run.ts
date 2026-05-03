@@ -8,7 +8,7 @@
 //   - debugging (сравнение successive runs same source)
 
 import { z } from 'zod';
-import { ZodCrawlerSource } from './crawler-source.js';
+import { ZodCrawlerSource } from './crawler-source';
 
 export const ZodCrawlRunTrigger = z.enum(['cron', 'manual', 'startup']);
 export type CrawlRunTrigger = z.infer<typeof ZodCrawlRunTrigger>;
