@@ -79,16 +79,18 @@ describe('M-Q10 — scope-guard.md manual-load + dev-startup.md absorbs hard rul
     expect(globs).toMatch(/platform\/canister-shared/);
   });
 
-  it('dev-startup.md contains Five Hard Rules block (Three → Five in M-Q16; was «Three Hard Rules» pre-M-Q16)', () => {
-    // M-Q16 expanded Three → Five Hard Rules. New rules 4-5 cover drop-by-amend
+  it('dev-startup.md contains Five Hard Rules block (Three → Five in M-Q16; Rule 3 wording updated by TD-dev-push)', () => {
+    // M-Q16 expanded Three → Five Hard Rules. Rules 4-5 cover drop-by-amend
     // (PR #74 incident) + full-baseline-before-готово (registry-dev T-3 round 1).
-    // Detailed pins live in tests/m-q16-dev-startup-hardening.test.ts; here only
-    // the original 3 + heading update.
+    // TD-dev-push (2026-05-03) reworded Rule 3: devs CAN push feature/* now,
+    // restriction is on `gh pr create` and pushes to dev/main.
     const content = readFile('.claude/rules/dev-startup.md');
     expect(content).toMatch(/Five Hard Rules/i);
     expect(content).toMatch(/NEVER touch other agents'\s*files/i);
     expect(content).toMatch(/NEVER modify tests/i);
-    expect(content).toMatch(/NEVER\s+`?git push`?/i);
+    // Rule 3 — gh pr create forbidden, plus dev/main push forbidden via pre-push hook
+    expect(content).toMatch(/NEVER\s+`?gh pr create`?/i);
+    expect(content).toMatch(/feature\/\*/);
   });
 
   it('dev-startup.md contains SCOPE VIOLATION REQUEST escalation template', () => {

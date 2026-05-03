@@ -83,10 +83,15 @@ describe('M-Q22 — scope-guard.md push permissions table', () => {
     expect(tableBlock![0]).toMatch(/docs\/tech-debt\.md/);
   });
 
-  it('dev-style agents still NO push (backend-dev / frontend-dev / icp-dev / registry-dev / test-runner)', () => {
+  it('dev-style agents push feature/* only; test-runner stays NO push (TD-dev-push, 2026-05-03)', () => {
     const c = readFile('.claude/rules/scope-guard.md');
-    const tableBlock = c.match(/Push permissions[\s\S]{0,2000}/);
-    expect(tableBlock![0]).toMatch(/backend-dev.*frontend-dev.*icp-dev.*registry-dev.*test-runner|NO.*local commits only/);
+    const tableBlock = c.match(/Push permissions[\s\S]{0,2500}/);
+    expect(tableBlock, 'push permissions section expected').not.toBeNull();
+    // Devs (backend-dev/frontend-dev/icp-dev/registry-dev) can push feature/* only
+    expect(tableBlock![0]).toMatch(/backend-dev.*frontend-dev.*icp-dev.*registry-dev[\s\S]{0,300}feature\/\*/);
+    expect(tableBlock![0]).toMatch(/CANNOT push.*dev.*main|cannot push to dev/i);
+    // test-runner remains read-only
+    expect(tableBlock![0]).toMatch(/test-runner[\s\S]{0,200}NO|read-only/i);
   });
 
   it('--force push to main/dev still forbidden for all agents', () => {

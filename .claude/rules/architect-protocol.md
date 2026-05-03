@@ -619,9 +619,13 @@ Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запуск
   Verify (3 команды):
     pnpm typecheck
     pnpm exec vitest run products/01-registry/tests/erc8004-adapter.test.ts
-    git status
+    pnpm exec vitest run                                         # full baseline
 
-  Commit local + report.
+  Commit + push feature/* + report:
+    git commit -m "..."
+    git push origin feature/<branch>          # OK per .husky/pre-push (TD-dev-push)
+    Reply: «готово» + worktree path + commit sha + remote head + baseline result.
+    NO `gh pr create` — architect/user owns PR creation.
 ```
 
 #### Правила slim spec:
@@ -632,6 +636,45 @@ Dev-агенты (backend-dev, frontend-dev, icp-dev, registry-dev) запуск
 4. **3 verify команды max** на финальной проверке. Полный quality-gate запускает test-runner отдельно ПОСЛЕ.
 5. **NO «прочитать docs/sprints/M0X.md»** в required reads. Spec в test файле + reference в mcp.ts достаточно для импла одного адаптера.
 6. **Commit message в spec'е** — short conventional, без многоэтажных explanation в body.
+7. **Push instructions explicit** (TD-dev-push, 2026-05-03). Dev session ends with `git push origin feature/<branch>` then «готово» — pre-push hook (`.husky/pre-push`) lets devs push `feature/*` only, mechanically blocks `dev`/`main`. Architect no longer pulls + pushes between dev «готово» and test-runner — that bottleneck removed.
+
+#### Fix-iteration template (after test-runner RED on PR)
+
+```
+You are <dev>. Task: fix-iteration on PR #<N> after test-runner RED.
+
+Test-runner reported:
+  <verbatim RED output>
+
+Setup (alive worktree if exists, else fresh):
+  # alive:
+  cd /tmp/paxio-<existing-session>
+  git pull origin feature/<branch>
+  
+  # fresh:
+  cd /home/nous/paxio
+  git worktree add /tmp/paxio-<dev>-<task>-r2 -B feature/<branch> origin/feature/<branch>
+  cd /tmp/paxio-<dev>-<task>-r2
+  git config user.name <dev>
+  git config user.email <dev>@paxio.network
+  pnpm install
+
+Read: <files architect points at + the RED log>
+
+Fix the SPECIFIC failure. Don't refactor.
+
+Verify (3 commands):
+  pnpm typecheck
+  pnpm exec vitest run <target>
+  pnpm exec vitest run                       # full baseline
+
+Commit + push feature/* + report:
+  git commit -m "fix(<scope>): <what fixed> (round-N)"
+  git push origin feature/<branch>
+  Reply «готово round-N» + commit sha + verification.
+```
+
+3-rounds-then-architect rule: after 3 RED'ов подряд — escalate to architect for spec/contract review (test может быть неправильным, не impl).
 7. **Skills allowlist в spec'е (CRITICAL после M-Q11 + PR #68 revert).** Dev-агенты больше не auto-load'ят skills из frontmatter (overflow на MiniMax-M2.7). Architect ОБЯЗАН включить в spec строку:
 
    ```

@@ -122,7 +122,12 @@ feature/* → dev → main
 - **feature/\*** — одна фича/milestone, создаётся от `dev`.
 - **dev** — рабочая интеграционная ветка.
 - **main** — релиз (tagged `v*`).
-- **Git push / PR creation = только architect + user.** Dev-агенты работают **только локально**: `git commit` → «готово». `git push`, `gh pr create`, `gh api` запрещены для devs.
+- **Push policy** (TD-dev-push, mechanically enforced by `.husky/pre-push`):
+  - **architect + user** push anywhere
+  - **devs** (backend / frontend / icp / registry) push their own `feature/*` branches mid-PR after «готово» — CANNOT push `dev` or `main`
+  - **reviewer** narrow push to `dev` for chore commits (project-state + tech-debt only)
+  - **test-runner** read-only (no push)
+  - **PR creation (`gh pr create`)** = architect + user only
 - **Two merge gates** (см. `.claude/rules/scope-guard.md`):
   - **`feature/* → dev`**: architect мержит сам после reviewer APPROVED + must-fix закрыты + CI green.
   - **`dev → main`**: ТОЛЬКО после явного OK от user с PR номером.
