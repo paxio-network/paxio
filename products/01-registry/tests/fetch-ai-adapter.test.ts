@@ -32,8 +32,14 @@ const validAgent = {
   name: 'Test agent',
   description: 'A test',
   category: 'finance',
-  registeredAt: '2026-04-20T10:00:00.000Z',
+  registeredAt: 1714000000000,  // Unix epoch ms (ZodFetchAiAgent schema)
+  profileUrl: 'https://agentverse.ai/profile/test',
+  tags: [],
+  isOnline: false,
+  reputationScore: null,
 };
+
+// Separate ISO-string fixture for any tests that explicitly test string→Date coercion (future).
 
 describe('M-L1-expansion createFetchAiAdapter — factory', () => {
   it('returns frozen adapter with sourceName=fetch-ai + methods', () => {
@@ -128,7 +134,8 @@ describe('M-L1-T3b FetchAi fetchAgents — Agentverse REST pagination', () => {
         return { status: 200, headers: new Map(), body: { agents: [] } };
       },
     };
-    const adapter = createFetchAiAdapter({ httpClient });
+    // pageSize=1 ensures each response fills its page → pagination advances.
+    const adapter = createFetchAiAdapter({ httpClient, pageSize: 1 });
     let count = 0;
     for await (const _ of adapter.fetchAgents()) count += 1;
     expect(count).toBe(3);
