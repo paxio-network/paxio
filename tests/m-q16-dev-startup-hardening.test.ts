@@ -48,9 +48,12 @@ describe('M-Q16 — Five Hard Rules (extended from Three)', () => {
     expect(c, 'rule 2 must extend TESTS SACRED to include drop-by-amend').toMatch(/drop-by-amend/);
   });
 
-  it('Rule 3 — never git push or gh pr', () => {
+  it('Rule 3 — never gh pr create / never push dev/main (TD-dev-push allows feature/* push)', () => {
     const c = readDevStartup();
-    expect(c).toMatch(/3\.\s*NEVER `?git push`?/);
+    // Rule 3 now restricts gh pr create + dev/main pushes; feature/* push is allowed.
+    expect(c).toMatch(/3\.\s*NEVER `?gh pr create`?/);
+    expect(c).toMatch(/feature\/\*/);
+    expect(c).toMatch(/pre-push/);
   });
 
   it('Rule 4 — NEVER amend/rebase on commits authored by others (PR #74 incident)', () => {
@@ -148,14 +151,14 @@ describe('M-Q16 — Step 5 clean-tree + full-baseline checks', () => {
 });
 
 describe('M-Q16 — file size + budget sanity', () => {
-  it('dev-startup.md stays under 6 KB (auto-load budget — was 2 KB pre-Q16, target ≤ 6 KB)', () => {
-    // Pre-M-Q16 baseline: ~2 KB. M-Q16 adds 5 Hard Rules + P0 invariants
-    // + verify steps. Cap at 6 KB to keep auto-load tight while covering
-    // restored invariants. Pre-M-Q13 dev got 22-31 KB of rules per turn —
-    // this is still ~4× cheaper.
+  it('dev-startup.md stays under 7 KB (auto-load budget — was 6 KB pre-TD-dev-push, +~300 bytes for push policy update)', () => {
+    // Pre-M-Q16 baseline: ~2 KB. M-Q16 added Five Hard Rules + P0 invariants.
+    // TD-dev-push (2026-05-03) extended push instructions for feature/* push.
+    // Cap at 7 KB. Pre-M-Q13 dev got 22-31 KB of rules per turn —
+    // this is still ~3-4× cheaper.
     const bytes = readFileSync(DEV_STARTUP).byteLength;
     expect(bytes, `dev-startup.md is ${bytes} bytes — too heavy for per-turn auto-load`).toBeLessThanOrEqual(
-      6144,
+      7168,
     );
   });
 

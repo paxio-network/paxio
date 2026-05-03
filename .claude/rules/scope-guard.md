@@ -108,16 +108,24 @@ Hook запускается локально (`.husky/_/husky.sh` инжекти
 - `git push --force` к `main` / `dev` — **ЗАПРЕЩЕНО для всех агентов всегда, без исключений**, даже с user OK
 - dev / reviewer / test-runner **никогда** не мержат куда бы то ни было
 
-### Push permissions — narrow exceptions
+### Push permissions
 
 | Agent | Push allowed | Scope |
 |---|---|---|
 | **architect** | YES | feature branches + `dev` (chore/fix commits) + initiating PRs |
 | **user** | YES | any branch (manual operations, release flow) |
-| **reviewer** | YES — narrow | `origin/dev` ONLY for commits whose diff touches only `docs/project-state.md` + `docs/tech-debt.md`. Any other file in the push diff = scope violation. Closes friction class «reviewer commits chore in own worktree, architect must cherry-pick to publish». |
-| backend-dev / frontend-dev / icp-dev / registry-dev / test-runner | NO | local commits only — architect handles publication |
+| **reviewer** | YES — narrow | `origin/dev` ONLY for commits whose diff touches only `docs/project-state.md` + `docs/tech-debt.md`. Any other file in the push diff = scope violation. |
+| **backend-dev / frontend-dev / icp-dev / registry-dev** | YES — `feature/*` only | own work after «готово» — push to `feature/<branch>` mid-PR. CANNOT push `dev` or `main`. Mechanically enforced by `.husky/pre-push` (TD-dev-push). |
+| **test-runner** | NO | quality gate is read-only — architect / dev publish their own work |
 
-`git push --force` to `main` / `dev` is blocked for all agents regardless. Reviewer's allowed push is plain `git push origin dev` after `git pull --rebase origin dev`.
+`git push --force` to `main` / `dev` is blocked for all agents regardless (architect+user included). Pre-push hook checks ancestry: if remote SHA exists and is not ancestor of local SHA, reject as non-fast-forward.
+
+### Why devs push their own feature branches (TD-dev-push, 2026-05-03)
+
+Before TD-dev-push, devs were `commit-only` — every «готово» required architect to pull + push, creating an architect bottleneck on every dev cycle. The historical reason was credential-leak isolation, but mechanical pre-push enforcement (`.husky/pre-push`) gives the same guarantee:
+- Compromised dev session can only push `feature/*` (architect's gate-1 merge still catches malicious code before it reaches `dev`)
+- `dev` and `main` remain architect-only, force-push remains blocked for everyone
+- Single-machine multi-agent setup means credential isolation between architect and dev is ceremonial; the real guard is the merge gate
 
 ### Зачем разделение
 

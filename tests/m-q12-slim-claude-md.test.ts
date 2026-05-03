@@ -23,8 +23,8 @@ const ROOT = resolve(__dirname, '..');
 const claude = readFileSync(resolve(ROOT, 'CLAUDE.md'), 'utf8');
 
 describe('M-Q12 — CLAUDE.md slim profile (eager-load reduction)', () => {
-  it('CLAUDE.md ≤ 7700 chars (was ~12000 chars pre-M-Q12)', () => {
-    expect(claude.length).toBeLessThanOrEqual(7700);
+  it('CLAUDE.md ≤ 8500 chars (was 7700 pre-TD-dev-push; +~700 chars for push-policy block)', () => {
+    expect(claude.length).toBeLessThanOrEqual(8500);
   });
 
   it('CLAUDE.md ≥ 5500 chars (not over-stripped — must keep 7-section minimum)', () => {

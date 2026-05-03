@@ -198,7 +198,13 @@ feature/* → dev → main
 - **feature/\*** — одна фича, создаётся от dev
 - **dev** — рабочая интеграционная ветка
 - **main** — релизная (tagged v*)
-- **Push + PR creation = architect + user.** Dev-агенты (`backend-dev`, `frontend-dev`, `icp-dev`, `registry-dev`) работают только локально: commit → «готово». Они НЕ делают `git push`, НЕ создают PR, НЕ вызывают `gh *`. Architect после hand-off делает `git push` + `gh pr create` от своего имени (cм. «Git Policy» в `.claude/agents/<dev>.md`). Это убирает credential leak surface + единый audit trail + architect ревьюит diff до публикации.
+- **Push policy** (TD-dev-push, mechanically enforced by `.husky/pre-push`):
+  - **architect + user** push anywhere
+  - **devs** (backend / frontend / icp / registry) push their own `feature/*` branches mid-PR after «готово» — CANNOT push `dev` or `main`
+  - **reviewer** narrow push to `dev` for chore commits (project-state + tech-debt only)
+  - **test-runner** read-only (no push)
+  - **PR creation (`gh pr create` / `gh pr edit` / `gh api`)** = architect + user only
+  - Trade-off resolved: dev push'ит сам = no architect bottleneck on every dev cycle; merge gate (architect autonomous merge to dev only after reviewer APPROVED + CI green) catches malicious code from compromised dev session before it reaches dev/main
 - **Two merge gates** (см. `scope-guard.md::GIT & MERGE`):
   - **`feature/* → dev`**: architect мержит **сам автоматически** после reviewer APPROVED + must-fix закрыты + CI green. Не нужен OK от user. Снимает round-trip bottleneck для параллельных milestones.
   - **`dev → main`**: ТОЛЬКО после явного OK от user с PR номером. Релиз = продуктовое решение.

@@ -26,12 +26,12 @@ You implement a SPECIFIC task assigned by architect. Do NOT browse for work.
    - Server syntax check — `apps/back/server/**/*.cjs` → `bash scripts/server-syntax-check.sh` (`node --check`; typecheck handles only `.ts`, vitest skips `main.cjs`)
    Non-zero = fix before «готово».
 
-5. **Commit local + clean-tree check**. Before saying «готово»:
+5. **Commit + push feature branch + clean-tree check**. Before saying «готово»:
    - `pnpm exec vitest run` (FULL baseline, NOT just target test) — catches regression in adjacent files
    - `git status --porcelain` must be empty — untracked = scope violation, escalate
    - `git diff --cached` review — confirm only your scope files
-   - NO `git push`, NO `gh pr` — architect handles
-   - Reply: «готово» + worktree path + commit hash + full baseline result
+   - `git push origin feature/<your-branch>` — push your work. Pre-push hook (`.husky/pre-push`) lets devs push `feature/*` only; rejects `dev`/`main` mechanically. PR creation (`gh pr create`) stays architect+user only.
+   - Reply: «готово» + worktree path + commit hash + remote sha after push + full baseline result
 
 6. **Cleanup worktree after merge** (M-Q19 mandate). When architect confirms merge, run:
    ```bash
@@ -45,7 +45,7 @@ You implement a SPECIFIC task assigned by architect. Do NOT browse for work.
 
 1. NEVER touch other agents' files (file ownership table in `CLAUDE.md`).
 2. NEVER modify tests / acceptance scripts (architect-owned spec) — this includes **drop-by-amend**: `git commit --amend` / `git rebase -i` that erases an architect-authored test commit is the same violation as deleting the file.
-3. NEVER `git push` or `gh pr` (architect handles publication).
+3. NEVER `gh pr create` / `gh pr edit` / `gh api` — PR creation is architect+user. `git push` only to your own `feature/*` branch (mechanically enforced by `.husky/pre-push`); pushing `dev` or `main` is rejected by hook.
 4. NEVER `git commit --amend` / `git rebase -i` on commits whose author ≠ you. If a fix is needed on top of architect's RED test or another agent's code — make a NEW commit, not amend. Drop-by-amend caused PR #74 round-2 reject.
 5. NEVER reply «готово» without `pnpm exec vitest run` (full baseline). Target-test-only run misses regressions in adjacent test files (registry-dev round 1 incident with `stub-adapters.test.ts`).
 
