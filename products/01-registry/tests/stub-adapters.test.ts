@@ -146,46 +146,25 @@ describe('a2a adapter — sourceName + toCanonical (post-T-3-round2)', () => {
 // ---------------------------------------------------------------------------
 // Fetch.ai
 // ---------------------------------------------------------------------------
+//
+// M-L1-T3c (2026-05-03): fetch-ai is no longer a stub — real Agentverse REST
+// adapter ships in this milestone. Comprehensive coverage moved to
+// products/01-registry/tests/fetch-ai-adapter.test.ts (factory + pagination
+// + error handling + toCanonical projection). Block kept here as a thin
+// integration smoke (factory is part of canonical adapters listed by name).
 
-const validFetchAi: FetchAiAgent = {
-  address: 'fetch1q2e3r4t5y6u7i8o9p0asdfghjklzxcvbnmqwerty1234',
-  name: 'Fetch Agent',
-  tags: [],
-  profileUrl: 'https://agentverse.ai/agents/fetch1q2e3r4t5y',
-  registeredAt: 1714000000000,
-  reputationScore: null,
-  isOnline: false,
-};
-
-describe('fetch-ai stub adapter', () => {
-  const adapter = createFetchAiAdapter();
+describe('fetch-ai real adapter (smoke)', () => {
+  const adapter = createFetchAiAdapter({ httpClient: { fetch: async () => ({ status: 200, headers: new Map(), body: { agents: [] } }) } });
 
   it('sourceName=fetch-ai and frozen', () => {
     expect(adapter.sourceName).toBe('fetch-ai');
     expect(Object.isFrozen(adapter)).toBe(true);
   });
 
-  it('fetchAgents yields zero (stub)', async () => {
+  it('fetchAgents yields zero from empty mock httpClient', async () => {
     const collected: FetchAiAgent[] = [];
     for await (const r of adapter.fetchAgents()) collected.push(r);
     expect(collected.length).toBe(0);
-  });
-
-  it('toCanonical projects valid agent with source=fetch-ai', () => {
-    const r = adapter.toCanonical(validFetchAi);
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.value.source).toBe('fetch-ai');
-      expect(r.value.did).toBe(`did:paxio:fetch-ai:${validFetchAi.address}`);
-      expect(r.value.externalId).toBe(validFetchAi.address);
-      expect(r.value.sourceUrl).toBe(validFetchAi.profileUrl);
-    }
-  });
-
-  it('toCanonical returns parse_error on invalid bech32 address', () => {
-    const r = adapter.toCanonical({ ...validFetchAi, address: 'not-bech32' });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.code).toBe('parse_error');
   });
 });
 

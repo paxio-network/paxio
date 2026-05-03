@@ -161,44 +161,51 @@ describe('M-L1 — MCP server descriptor schema', () => {
   });
 });
 
-describe('M-L1 — Fetch.ai agent schema', () => {
+describe('M-L1-T3c — Fetch.ai (Agentverse) raw API schema', () => {
+  // Mirrors REAL Agentverse response (verified 2026-05-03 via curl POST
+  // /v1/search/agents). See packages/types/src/sources/fetch-ai.ts header.
   const valid = {
-    address:
-      'fetch1q2e3r4t5y6u7i8o9p0asdfghjklzxcvbnmqwerty1234',
+    address: 'agent1q000e4kxnlv0rwcms3al3vfpaa2fy83x6jtrz79ghfq9d87n79cpwaj8695',
+    prefix: 'test-agent',
     name: 'Fetch Test Agent',
     description: 'A Fetch.ai agent',
+    readme: '',
+    protocols: ['chat'],
+    rating: 4.5,
+    status: 'active',
+    unresponsive: false,
+    type: 'hosted',
+    featured: false,
     category: 'finance',
-    tags: ['trading', 'defi'],
-    endpoint: 'https://agent.fetch.ai/rpc',
-    profileUrl: 'https://agentverse.ai/agents/fetch1q2e3r4t5y',
-    registeredAt: 1714000000000,
-    reputationScore: 85,
-    isOnline: true,
+    system_wide_tags: ['trading', 'defi'],
+    last_updated: '2025-07-02T09:19:17Z',
+    created_at: '2025-07-02T09:19:17Z',
+    owner: '34ee31a80edb390dd0ccc1c12a17918cff09073b6d047932',
   };
 
-  it('parses a valid Fetch.ai agent', () => {
+  it('parses a valid Agentverse agent record', () => {
     expect(ZodFetchAiAgent.safeParse(valid).success).toBe(true);
   });
 
-  it('rejects invalid bech32 address', () => {
-    const bad = { ...valid, address: 'not-a-fetch-address' };
+  it('rejects invalid agent address (non-agent1 prefix)', () => {
+    const bad = { ...valid, address: 'fetch1' + 'a'.repeat(45) };
     expect(ZodFetchAiAgent.safeParse(bad).success).toBe(false);
   });
 
-  it('rejects non-URL profileUrl', () => {
-    const bad = { ...valid, profileUrl: 'example.com' };
+  it('rejects non-ISO created_at', () => {
+    const bad = { ...valid, created_at: '2025-07-02 09:19:17' };
     expect(ZodFetchAiAgent.safeParse(bad).success).toBe(false);
   });
 
-  it('allows null reputationScore', () => {
-    const fresh = { ...valid, reputationScore: null };
-    expect(ZodFetchAiAgent.safeParse(fresh).success).toBe(true);
+  it('tolerates unknown fields (passthrough for forward-compat)', () => {
+    const withExtra = { ...valid, future_field: 'whatever' };
+    expect(ZodFetchAiAgent.safeParse(withExtra).success).toBe(true);
   });
 
-  it('isOnline defaults to false when omitted', () => {
-    const { isOnline: _o, ...rest } = valid;
+  it('defaults rating to 0 when omitted', () => {
+    const { rating: _r, ...rest } = valid;
     const parsed = ZodFetchAiAgent.parse(rest);
-    expect(parsed.isOnline).toBe(false);
+    expect(parsed.rating).toBe(0);
   });
 });
 

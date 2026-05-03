@@ -45,12 +45,17 @@ Total ~10K agents in API (verified offset cap = 9999, 2026-05-03).
 
 ## Готово когда
 
-1. `products/01-registry/tests/fetch-ai-adapter.test.ts` GREEN — 14/14 tests pass:
+1. `products/01-registry/tests/fetch-ai-adapter.test.ts` GREEN — 14/14 tests:
    - 1 factory + 7 pagination/error-handling + 5 toCanonical projection + 1 misc
-   - Includes new T-3c projection tests: AgentCard from raw, name fallback chain, description truncation, parse_error on bad address regex
-2. `pnpm typecheck` clean.
-3. `pnpm exec vitest run` baseline GREEN (no regression).
-4. Production smoke (post-merge): `gh workflow run "Scheduled · Crawl MCP" -f source=fetch-ai` returns `processed > 0` and agent count rises by ~10K.
+2. `tests/registry-source-adapters.test.ts` GREEN — 5/5 schema tests in
+   `M-L1-T3c — Fetch.ai (Agentverse) raw API schema` describe (architect updated
+   fixtures to new schema in same commit; impl alone makes them GREEN).
+3. `products/01-registry/tests/stub-adapters.test.ts` GREEN — 2/2 smoke tests
+   in `fetch-ai real adapter (smoke)` describe (architect simplified to
+   factory + zero-yield smoke since real-impl tests live in fetch-ai-adapter.test.ts).
+4. `pnpm typecheck` clean.
+5. `pnpm exec vitest run` baseline GREEN — full 1442+ passing, ZERO failed.
+6. Production smoke (post-merge): `gh workflow run "Scheduled · Crawl MCP" -f source=fetch-ai` returns `processed > 0` and agent count rises by ~10K.
 
 ## Architecture Requirements
 

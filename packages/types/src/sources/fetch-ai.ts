@@ -51,8 +51,10 @@ import { z } from 'zod';
 // status → isOnline, rating × 20 → reputationScore 0..100, etc.).
 
 // Agentverse-hosted agent address (NOT native fetch1 wallet).
-// Prefix is `agent1` followed by 38-58 lowercase alphanumeric chars (bech32-like).
-const AGENTVERSE_ADDRESS = /^agent1[a-z0-9]{38,58}$/;
+// Prefix `agent1` + 50-64 lowercase alphanumeric chars (bech32-like).
+// Real production addresses observed up to 59 body chars (65 total length);
+// upper bound 64 leaves headroom without admitting obvious garbage.
+const AGENTVERSE_ADDRESS = /^agent1[a-z0-9]{50,64}$/;
 
 export const ZodFetchAiAgent = z
   .object({
