@@ -1,8 +1,10 @@
 // Fetch.ai (Agentverse) crawler adapter — REAL impl (FA-01, M-L1).
 //
 // Agentverse REST API (no auth required):
-//   GET https://agentverse.ai/v1/search/agents?offset=&limit=100
-// Pagination via offset/limit; terminates on empty `agents` array.
+//   POST https://agentverse.ai/v1/search/agents
+//   Content-Type: application/json
+//   Body: { search_text, filters, sort, direction, offset, limit }
+// Pagination via offset/limit in JSON body; terminates on empty `agents` array.
 // SAFETY_MAX_PAGES=200 prevents runaway on bad upstream.
 // 429 → Retry-After delay, then continue or abort.
 // 5xx → single retry, then abort gracefully.
@@ -143,14 +145,26 @@ export const createFetchAiAdapter = (
 
     while (pageCount < SAFETY_MAX_PAGES) {
       pageCount += 1;
-      const url = `${baseUrl}/v1/search/agents?offset=${offset}&limit=${pageSize}`;
+      const url = `${baseUrl}/v1/search/agents`;
 
       let response: HttpResponse | undefined;
 
       // Retry-on-5xx loop: attempt once, retry once on 5xx.
       outer: for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          response = await deps.httpClient.fetch({ url, method: 'GET' });
+          response = await deps.httpClient.fetch({
+            url,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              search_text: '',
+              filters: {},
+              sort: 'relevancy',
+              direction: 'asc',
+              offset,
+              limit: pageSize,
+            },
+          });
         } catch {
           // Network error — abort gracefully; caller can re-run later.
           return;
