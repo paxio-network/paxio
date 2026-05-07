@@ -87,7 +87,14 @@ const wireRegistryDomain = (rawDomain, deps) => {
         ? {
             httpClient: {
               fetch: async ({ url, method, body, headers }) => {
-                const r = await fetch(url, { method, body, headers });
+                // Serialize body to JSON string when it is an object.
+                // Node's native fetch coerces objects via String() → "[object Object]"
+                // → Agentverse rejects with 400.
+                const serializedBody =
+                  body !== undefined && body !== null && typeof body === 'object'
+                    ? JSON.stringify(body)
+                    : body;
+                const r = await fetch(url, { method, body: serializedBody, headers });
                 const responseHeaders = new Map();
                 r.headers.forEach((v, k) => { responseHeaders.set(k, v); });
                 let parsedBody = null;
