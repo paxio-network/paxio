@@ -93,6 +93,31 @@ const sampleCard: AgentCard = {
 };
 
 describe('createPostgresStorage — factory contract', () => {
+  it('runs MIGRATION_004 after MIGRATION_003 when runMigrations=true', async () => {
+    // M-L1-T3g: source CHECK constraint is expanded from 7 (M-L1-taxonomy)
+    // to 13 canonical + 2 legacy values. MIGRATION_004_SOURCE_EXPANSION
+    // must run on every startup AFTER MIGRATION_003_TAXONOMY so that
+    // container restarts do not revert the constraint to the narrow set.
+    // Without 004 wired inline, every restart re-runs 003 and blocks
+    // fetch-ai source inserts (9226 storageErrors on 2026-05-07).
+    const pool = makeFakePool();
+    await createPostgresStorage({ pool, runMigrations: true });
+    const allSql = pool.calls.map((c) => c.sql);
+    // At minimum: 001 + 003 + 004 (may be more if pool returns extra rows).
+    expect(allSql.length).toBeGreaterThanOrEqual(3);
+    // 003 runs first (taxonomy adds the source CHECK).
+    const idx003 = allSql.findIndex((s) =>
+      s.includes('MIGRATION_003') || s.includes('agent_cards_category_check'),
+    );
+    expect(idx003).toBeGreaterThanOrEqual(0);
+    // 004 runs after 003 — DROP CONSTRAINT IF EXISTS agent_cards_source_check
+    // is the first statement in MIGRATION_004_SOURCE_EXPANSION.
+    const sqlAfter003 = allSql.slice(idx003).join(' ');
+    expect(sqlAfter003).toMatch(
+      /DROP CONSTRAINT IF EXISTS agent_cards_source_check/,
+    );
+  });
+
   it('returns a frozen object that implements AgentStorage', async () => {
     const pool = makeFakePool();
     const storage = await createPostgresStorage({ pool });

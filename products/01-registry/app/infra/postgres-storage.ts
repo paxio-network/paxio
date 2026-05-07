@@ -194,6 +194,61 @@ CREATE TRIGGER set_agent_cards_updated_at
     EXECUTE FUNCTION trigger_set_timestamp();
 `;
 
+// MIGRATION_004_SOURCE_EXPANSION — mirrors packages/contracts/sql/004_source_expansion.sql.
+// Idempotent: uses DROP CONSTRAINT IF EXISTS so it is safe to run on every
+// startup after MIGRATION_003_TAXONOMY. Expands the source CHECK constraint from
+// 7 canonical values (M-L1-taxonomy) to 13 canonical + 2 legacy values, adding
+// support for multi-source-slug adapters (e.g. fetch-ai, native).
+const MIGRATION_004_SOURCE_EXPANSION = `
+ALTER TABLE agent_cards
+  DROP CONSTRAINT IF EXISTS agent_cards_source_check;
+
+ALTER TABLE agent_cards
+  ADD CONSTRAINT agent_cards_source_check CHECK (
+    source IN (
+      'paxio-native',
+      'paxio-curated',
+      'erc8004',
+      'a2a',
+      'bittensor',
+      'virtuals',
+      'mcp',
+      'eliza',
+      'langchain-hub',
+      'fetch',
+      'huggingface',
+      'vercel-ai',
+      'github-discovered',
+      'native',
+      'fetch-ai'
+    )
+  );
+
+ALTER TABLE crawl_runs
+  DROP CONSTRAINT IF EXISTS crawl_runs_source_check;
+
+ALTER TABLE crawl_runs
+  ADD CONSTRAINT crawl_runs_source_check CHECK (
+    source IN (
+      'paxio-native',
+      'paxio-curated',
+      'erc8004',
+      'a2a',
+      'bittensor',
+      'virtuals',
+      'mcp',
+      'eliza',
+      'langchain-hub',
+      'fetch',
+      'huggingface',
+      'vercel-ai',
+      'github-discovered',
+      'native',
+      'fetch-ai'
+    )
+  );
+`;
+
 // MIGRATION_003_TAXONOMY — mirrors packages/contracts/sql/003_taxonomy.sql.
 // Single source of truth for the SQL; inline copy here for VM-sandbox-friendly
 // startup migration (no file-system access required). All statements are
@@ -514,6 +569,7 @@ export const createPostgresStorage = async (
     try {
       await deps.pool.query(MIGRATION_001_AGENT_CARDS);
       await deps.pool.query(MIGRATION_003_TAXONOMY);
+      await deps.pool.query(MIGRATION_004_SOURCE_EXPANSION);
     } catch (e) {
       // Migration failure is fatal — surface as db_unavailable so callers
       // can decide to abort startup.
