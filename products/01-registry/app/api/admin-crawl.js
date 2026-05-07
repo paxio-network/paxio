@@ -73,6 +73,12 @@
       adapter: srcAdapter,
       storage: reg.agentStorage,
       maxRecords: 50000,
+      // M-L1-T3i: wrap sandbox console (Pino: ctx-first) to match
+      // CrawlerLogger contract (msg-first, ctx-second).
+      logger: {
+        info: (msg, ctx) => console.info(ctx ?? {}, msg),
+        warn: (msg, ctx) => console.warn(ctx ?? {}, msg),
+      },
     });
     const finishedAt = new Date(clk()).toISOString();
     const durationMs = clk() - startTs;
