@@ -28,6 +28,8 @@ export const CRAWLER_SOURCES = [
   'mcp', // MCP server registry (Anthropic directory + Smithery.ai)
   'fetch-ai', // Fetch.ai Agentverse — https://agentverse.ai
   'virtuals', // Virtuals Protocol ACP registry — https://virtuals.io
+  'paxio-curated', // M-L1-T2: manual seed JSON (foundation models, premier SaaS agents)
+  'huggingface', // M-L1-T10: huggingface.co model hub (~600K models)
 ] as const;
 
 export type CrawlerSource = (typeof CRAWLER_SOURCES)[number];

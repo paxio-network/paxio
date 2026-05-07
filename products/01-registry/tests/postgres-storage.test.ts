@@ -423,7 +423,7 @@ describe('createPostgresStorage.count', () => {
 });
 
 describe('createPostgresStorage.countBySource', () => {
-  it('returns frozen complete map with all 6 buckets', async () => {
+  it('returns frozen complete map with all 8 buckets', async () => {
     const pool = makeFakePool();
     pool.setNextResult({
       rows: [
@@ -443,8 +443,10 @@ describe('createPostgresStorage.countBySource', () => {
         'a2a',
         'erc8004',
         'fetch-ai',
+        'huggingface',
         'mcp',
         'native',
+        'paxio-curated',
         'virtuals',
       ]);
       expect(r.value['native']).toBe(5);

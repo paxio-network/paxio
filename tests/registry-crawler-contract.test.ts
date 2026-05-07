@@ -102,6 +102,8 @@ function makeFakeStorage(): AgentStorage {
         mcp: 0,
         'fetch-ai': 0,
         virtuals: 0,
+        'paxio-curated': 0,
+        huggingface: 0,
       };
       for (const card of store.values()) {
         const key = card.source as CrawlerSource;
@@ -210,7 +212,7 @@ describe('M-L1 — AgentStorage port', () => {
     }
   });
 
-  it('countBySource returns a complete map (all 6 keys)', async () => {
+  it('countBySource returns a complete map (all 8 keys)', async () => {
     const storage = makeFakeStorage();
     await storage.upsert(sampleCard);
     const result = await storage.countBySource();
@@ -221,8 +223,10 @@ describe('M-L1 — AgentStorage port', () => {
         'a2a',
         'erc8004',
         'fetch-ai',
+        'huggingface',
         'mcp',
         'native',
+        'paxio-curated',
         'virtuals',
       ]);
       // Card we upserted is erc8004 so that bucket must be 1
