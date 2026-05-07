@@ -1,14 +1,19 @@
-name: Scheduled · Crawl MCP
+name: Scheduled · Crawl Sources
 
-# M-L1-launch — every 6 hours, fire POST /api/admin/crawl?source=mcp
-# against api.paxio.network so the registry stays fresh and landing
-# numbers reflect current MCP server count.
+# M-L1-T3h — every 6 hours, fire POST /api/admin/crawl per source via parallel jobs.
 #
-# Manual trigger via workflow_dispatch (inputs.source). Default cron
-# uses MCP because it's the only adapter with real impl in M-L1-impl
-# MVP. After M-L1-expansion lands real adapters for erc8004/a2a/
-# fetch-ai/virtuals — duplicate this job per source or expand the
-# matrix here.
+# Sources with REAL adapters in production (verified yielding agents):
+#   - mcp           ~3260 agents (Smithery REST)
+#   - fetch-ai      ~9200 agents (Agentverse REST)
+#   - paxio-curated  ~3 agents (manual seed JSON)
+#
+# Stub sources (erc8004, a2a, virtuals) excluded from cron until real
+# adapters land — they yield empty AsyncIterable and would only burn
+# crawl_runs rows + Actions minutes per tick. Available via
+# workflow_dispatch for manual probing.
+#
+# Future sources (T-7 eliza / T-10 huggingface / T-12 github-discovered etc)
+# add a new entry to the matrix once their adapter merges.
 
 on:
   schedule:
@@ -22,33 +27,35 @@ on:
         type: choice
         options:
           - mcp
+          - fetch-ai
+          - paxio-curated
           - erc8004
           - a2a
-          - fetch-ai
           - virtuals
 
-concurrency:
-  # If a previous run is still going (e.g. MCP page response slow),
-  # cancel it — a 6h-old in-flight crawl is no longer useful.
-  group: scheduled-crawl-${{ github.event.inputs.source || 'mcp' }}
-  cancel-in-progress: true
-
 jobs:
-  crawl:
-    name: Trigger crawl on api.paxio.network
+  # Scheduled tick: parallel matrix across all 3 working sources.
+  crawl-scheduled:
+    if: github.event_name == 'schedule'
+    name: Crawl ${{ matrix.source }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # MCP Smithery has ~7K records; ~30 min worst case
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [mcp, fetch-ai, paxio-curated]
+    concurrency:
+      group: scheduled-crawl-${{ matrix.source }}
+      cancel-in-progress: true
     steps:
-      - name: POST /api/admin/crawl
+      - name: POST /api/admin/crawl?source=${{ matrix.source }}
         env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
-          SOURCE: ${{ github.event.inputs.source || 'mcp' }}
+          SOURCE: ${{ matrix.source }}
         run: |
           if [ -z "$ADMIN_TOKEN" ]; then
-            echo "::error::ADMIN_TOKEN secret not configured"
-            exit 1
+            echo "::error::ADMIN_TOKEN secret not configured"; exit 1
           fi
-
           echo "Crawling source=$SOURCE on api.paxio.network..."
           response=$(curl -sfS -X POST \
             -H "Authorization: Bearer $ADMIN_TOKEN" \
@@ -56,16 +63,45 @@ jobs:
             --max-time 2700 \
             "https://api.paxio.network/api/admin/crawl?source=$SOURCE")
           echo "$response"
-
-          # Extract HTTP code from last line — fail if not 200 or 429.
-          # (429 = rate-limited = previous run still recent; not a CI failure)
           http_code=$(echo "$response" | grep -oE 'HTTP_CODE=[0-9]+' | tail -1 | cut -d= -f2)
           if [ "$http_code" = "200" ]; then
             echo "✅ crawl completed for source=$SOURCE"
           elif [ "$http_code" = "429" ]; then
-            echo "⚠️  rate-limited — previous run < 5min ago; this is OK"
-            exit 0
+            echo "⚠️  rate-limited — previous run < 5min ago; OK"; exit 0
           else
-            echo "::error::unexpected HTTP code $http_code"
-            exit 1
+            echo "::error::unexpected HTTP code $http_code"; exit 1
+          fi
+
+  # Manual dispatch: single source picked by user.
+  crawl-manual:
+    if: github.event_name == 'workflow_dispatch'
+    name: Crawl ${{ github.event.inputs.source }} (manual)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: manual-crawl-${{ github.event.inputs.source }}
+      cancel-in-progress: true
+    steps:
+      - name: POST /api/admin/crawl?source=${{ github.event.inputs.source }}
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          SOURCE: ${{ github.event.inputs.source }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "::error::ADMIN_TOKEN secret not configured"; exit 1
+          fi
+          echo "Crawling source=$SOURCE on api.paxio.network..."
+          response=$(curl -sfS -X POST \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            -w "\nHTTP_CODE=%{http_code}\nTIME=%{time_total}s\n" \
+            --max-time 2700 \
+            "https://api.paxio.network/api/admin/crawl?source=$SOURCE")
+          echo "$response"
+          http_code=$(echo "$response" | grep -oE 'HTTP_CODE=[0-9]+' | tail -1 | cut -d= -f2)
+          if [ "$http_code" = "200" ]; then
+            echo "✅ crawl completed for source=$SOURCE"
+          elif [ "$http_code" = "429" ]; then
+            echo "⚠️  rate-limited — previous run < 5min ago; OK"; exit 0
+          else
+            echo "::error::unexpected HTTP code $http_code"; exit 1
           fi
