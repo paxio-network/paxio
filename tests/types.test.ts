@@ -36,6 +36,31 @@ describe('ZodDid', () => {
     expect(ZodDid.safeParse('did:paxio::0x1a').success).toBe(false);
   });
 
+  // M-L1-T3f: multi-word source slugs (hyphens in network segment) MUST
+  // parse — fetch-ai, paxio-curated, langchain-hub, vercel-ai,
+  // github-discovered are valid networks per canonical AgentSource enum.
+  it('accepts did:paxio:fetch-ai:agent1q000... (hyphen in network)', () => {
+    expect(
+      ZodDid.safeParse(
+        'did:paxio:fetch-ai:agent1q000e4kxnlv0rwcms3al3vfpaa2fy83x6jtrz79ghfq9d87n79cpwaj8695',
+      ).success,
+    ).toBe(true);
+  });
+
+  it('accepts did:paxio:paxio-curated:slug-id', () => {
+    expect(ZodDid.safeParse('did:paxio:paxio-curated:slug-id').success).toBe(
+      true,
+    );
+  });
+
+  it('accepts did:paxio:langchain-hub:foo', () => {
+    expect(ZodDid.safeParse('did:paxio:langchain-hub:foo').success).toBe(true);
+  });
+
+  it('rejects underscore in network (still strict on separator)', () => {
+    expect(ZodDid.safeParse('did:paxio:fetch_ai:foo').success).toBe(false);
+  });
+
   it('isDid narrows type for valid DID', () => {
     expect(isDid('did:paxio:base:0x1')).toBe(true);
   });

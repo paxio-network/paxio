@@ -6,12 +6,17 @@ import { z } from 'zod';
 //   did:paxio:base:0x1a2b3c...
 //   did:paxio:icp:rdmx6-jaaaa-aaaaa-aaadq-cai
 //   did:paxio:bitcoin:bc1q8dn72...
+//   did:paxio:fetch-ai:agent1q000...     ← multi-word source slug
+//   did:paxio:paxio-curated:slug-id      ← multi-word source slug
 //
 // See FA-01 Registry spec for full details.
 
 export type Did = string;
 
-const DID_REGEX = /^did:paxio:[a-z0-9]+:[a-zA-Z0-9._-]+$/;
+// Network segment: lowercase alphanumerics + hyphens. Multi-word source
+// slugs (fetch-ai, paxio-curated, langchain-hub, vercel-ai, github-discovered)
+// are valid networks per AgentSource canonical enum.
+const DID_REGEX = /^did:paxio:[a-z0-9-]+:[a-zA-Z0-9._-]+$/;
 
 export const ZodDid = z
   .string()
