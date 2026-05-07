@@ -527,10 +527,10 @@ export const createPostgresStorage = async (
     // --- M-L1-taxonomy new fields (003 migration) ---
     // Capabilities group
     const cat = card.category;
-    const caps = card.capabilities ?? undefined;
-    const inTypes = card.inputTypes ?? undefined;
-    const outTypes = card.outputTypes ?? undefined;
-    const langs = card.languages ?? undefined;
+    const caps = card.capabilities;
+    const inTypes = card.inputTypes;
+    const outTypes = card.outputTypes;
+    const langs = card.languages;
     const fw = card.framework;
     // Identification extras
     const claimed = card.claimed;
@@ -544,7 +544,7 @@ export const createPostgresStorage = async (
     const walletVerified = w?.verified;
     // Payment
     const p = card.payment;
-    const paymentAccepts = p?.accepts ?? undefined;
+    const paymentAccepts = p?.accepts;
     const paymentPreferred = p?.preferred;
     const paymentFacilitator = p?.facilitator;
     const paymentFacilitatorVerified = p?.facilitatorVerified;
@@ -583,13 +583,16 @@ export const createPostgresStorage = async (
     const ecoChainId = eco?.chainId;
     const ecoErc8004 = eco?.erc8004TokenId;
     const ecoOpenSource = eco?.openSource;
-    const ecoClients = eco?.compatibleClients ?? undefined;
+    const ecoClients = eco?.compatibleClients;
     // Developer
     const dev = card.developer;
     const devName = dev?.name;
     const devVerified = dev?.verified;
     const devUrl = dev?.url;
 
+    // M-L1-T3e: CHECK-constrained columns must receive SQL DEFAULT-equivalent
+    // enum values (not NULL/undefined) — pg's CHECK constraints reject NULL.
+    // Other optional columns use `?? null` (pg 8.x deprecates undefined).
     return [
       card.did,           // $1
       card.name,          // $2
@@ -604,19 +607,19 @@ export const createPostgresStorage = async (
       card.createdAt,     // $11
       JSON.stringify(card),    // $12
       cat ?? null,        // $13 — category
-      caps ?? undefined,   // $14 — capabilities
-      inTypes ?? undefined, // $15 — input_types
-      outTypes ?? undefined, // $16 — output_types
-      langs ?? undefined,  // $17 — languages
-      fw ?? undefined,     // $18 — framework
+      caps ?? null,        // $14 — capabilities
+      inTypes ?? null,     // $15 — input_types
+      outTypes ?? null,    // $16 — output_types
+      langs ?? null,       // $17 — languages
+      fw ?? 'unknown',     // $18 — framework (CHECK constraint, SQL DEFAULT 'unknown')
       claimed ?? false,    // $19 — claimed
       owner ?? null,      // $20 — owner
-      walletStatus ?? undefined, // $21 — wallet_status
+      walletStatus ?? 'none', // $21 — wallet_status (CHECK constraint, SQL DEFAULT 'none')
       walletAddresses,     // $22 — wallet_addresses
       walletVerified ?? false,  // $23 — wallet_verified
-      paymentAccepts ?? undefined, // $24 — payment_accepts
+      paymentAccepts ?? null, // $24 — payment_accepts
       paymentPreferred ?? null,   // $25 — payment_preferred
-      paymentFacilitator ?? undefined, // $26 — payment_facilitator
+      paymentFacilitator ?? 'unknown', // $26 — payment_facilitator (CHECK constraint, SQL DEFAULT 'unknown')
       paymentFacilitatorVerified ?? false, // $27 — payment_facilitator_verified
       pricing,            // $28 — pricing
       slaP50 ?? null,      // $29 — sla_p50_ms
@@ -629,21 +632,21 @@ export const createPostgresStorage = async (
       repDelivery ?? null, // $36 — reputation_delivery_rate
       repDispute ?? null,  // $37 — reputation_dispute_rate
       secOwasp ?? null,    // $38 — security_owasp_score
-      secBadge ?? undefined, // $39 — security_badge_level
+      secBadge ?? 'none',  // $39 — security_badge_level (CHECK constraint, SQL DEFAULT 'none')
       secLastScanned ?? null, // $40 — security_last_scanned
       secGuardConn ?? false,   // $41 — security_guard_connected
       secGuardInc ?? 0,       // $42 — security_guard_incidents_30d
-      compEuAiAct ?? undefined,  // $43 — compliance_eu_ai_act
+      compEuAiAct ?? null,    // $43 — compliance_eu_ai_act
       compEuAiActExp ?? null,    // $44 — compliance_eu_ai_act_expires
       compOwaspCert ?? false,    // $45 — compliance_owasp_cert
       compIso42001 ?? null,     // $46 — compliance_iso42001
       compKyaCert ?? false,      // $47 — compliance_kya_cert
-      compDataHandling ?? undefined, // $48 — compliance_data_handling
-      ecoNetwork ?? undefined,   // $49 — ecosystem_network
+      compDataHandling ?? null,  // $48 — compliance_data_handling
+      ecoNetwork ?? null,        // $49 — ecosystem_network
       ecoChainId ?? null,        // $50 — ecosystem_chain_id
       ecoErc8004 ?? null,        // $51 — ecosystem_erc8004_token_id
       ecoOpenSource ?? null,     // $52 — ecosystem_open_source
-      ecoClients ?? undefined,   // $53 — ecosystem_compatible_clients
+      ecoClients ?? null,        // $53 — ecosystem_compatible_clients
       devName ?? null,           // $54 — developer_name
       devVerified ?? false,      // $55 — developer_verified
       devUrl ?? null,            // $56 — developer_url
