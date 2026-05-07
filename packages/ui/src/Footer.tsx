@@ -1,25 +1,25 @@
 /**
- * M-L10.3 — `<Footer>` B5 shell component (refactored from M-L9 placeholder).
+ * M-L10.3 + M-L10.7.3 — `<Footer>` B5 shell component.
  * Server-component-friendly — no client hooks.
  *
  * Spec: docs/sprints/M-L10.3-shell-components.md
- * Design source: docs/design/paxio-b5/Paxio-B5.html lines 100-154 (page-foot)
+ * Design source: docs/design/paxio-b5/Paxio-B5.html lines 101-160 (page-foot)
  */
 
 interface FooterProps {
-  /** Copyright year. Defaults to 2026 (server-side computed per M-L9 fix). */
+  /** Copyright year. Defaults to 2026 (server-side computed). */
   year?: number;
 }
 
 // ─── SVG Mark (same as Header) ───────────────────────────────────────────────
-function PaxioMark({ size = 20 }: { size?: number }) {
+function FootMark({ size = 20 }: { size?: number }) {
   return (
     <svg
       viewBox="0 0 40 40"
       width={size}
       height={size}
       aria-hidden="true"
-      style={{ display: 'inline-block', verticalAlign: '-3px', marginRight: '8px' }}
+      style={{ flexShrink: 0 }}
     >
       <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
         <line x1="6" y1="10" x2="22" y2="6" />
@@ -44,135 +44,55 @@ function PaxioMark({ size = 20 }: { size?: number }) {
 export function Footer({ year = 2026 }: FooterProps) {
   return (
     <footer id="page-foot">
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-          padding: '48px clamp(24px, 4vw, 56px) 40px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 2fr',
-          gap: '48px',
-          borderTop: '1.5px solid var(--ink-0)',
-          background: 'var(--paper-1)',
-        }}
-      >
+      <div className="foot-inner">
         {/* Brand block */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
-            <PaxioMark size={20} />
-            <span
-              style={{
-                fontFamily: 'var(--f-display)',
-                fontWeight: 600,
-                fontSize: '16px',
-                color: 'var(--ink-0)',
-              }}
-            >
-              Paxio
-            </span>
+        <div className="foot-brand">
+          <div className="foot-mark">
+            <FootMark size={20} />
+            <span>Paxio</span>
           </div>
-          <p style={{ fontFamily: 'var(--f-sans)', fontSize: '13px', color: 'var(--ink-2)', margin: 0, lineHeight: 1.5 }}>
-            Financial OS for the agentic economy.
-          </p>
+          <div className="foot-tagline">Financial OS for the agentic economy.</div>
         </div>
 
-        {/* 3 link columns */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '32px',
-          }}
-        >
+        {/* 3-column sitemap */}
+        <div className="foot-cols">
           {/* Product */}
           <div>
-            <div style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: '12px' }}>
-              Product
-            </div>
-            <nav aria-label="Product links" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { href: 'https://registry.paxio.network', label: 'Registry' },
-                { href: 'https://wallet.paxio.network', label: 'Wallet' },
-                { href: 'https://pay.paxio.network', label: 'Pay / FAP' },
-                { href: 'https://radar.paxio.network', label: 'Radar' },
-              ].map(({ href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  style={{ fontFamily: 'var(--f-sans)', fontSize: '13px', color: 'var(--ink-1)' }}
-                >
-                  {label}
-                </a>
-              ))}
+            <div className="foot-h">Product</div>
+            <nav aria-label="Product links">
+              <a href="https://registry.paxio.network">Registry</a>
+              <a href="https://wallet.paxio.network">Wallet</a>
+              <a href="https://pay.paxio.network">Pay / FAP</a>
+              <a href="https://radar.paxio.network">Radar</a>
             </nav>
           </div>
 
           {/* Builders */}
           <div>
-            <div style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: '12px' }}>
-              Builders
-            </div>
-            <nav aria-label="Builder links" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { href: 'https://docs.paxio.network', label: 'Docs' },
-                { href: '#quickstart', label: 'SDK · 60s' },
-                { href: 'https://github.com/paxio-network', label: 'GitHub' },
-                { href: 'https://status.paxio.network', label: 'Status' },
-              ].map(({ href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  style={{ fontFamily: 'var(--f-sans)', fontSize: '13px', color: 'var(--ink-1)' }}
-                >
-                  {label}
-                </a>
-              ))}
+            <div className="foot-h">Builders</div>
+            <nav aria-label="Builder links">
+              <a href="https://docs.paxio.network">Docs</a>
+              <a href="#quickstart">SDK · 60s</a>
+              <a href="https://github.com/paxio-network">GitHub</a>
+              <a href="https://status.paxio.network">Status</a>
             </nav>
           </div>
 
           {/* Company */}
           <div>
-            <div style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: '12px' }}>
-              Company
-            </div>
-            <nav aria-label="Company links" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { href: '/manifesto', label: 'Manifesto' },
-                { href: '/blog', label: 'Blog' },
-                { href: '/careers', label: 'Careers' },
-                { href: 'mailto:hi@paxio.network', label: 'Contact' },
-              ].map(({ href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  style={{ fontFamily: 'var(--f-sans)', fontSize: '13px', color: 'var(--ink-1)' }}
-                >
-                  {label}
-                </a>
-              ))}
+            <div className="foot-h">Company</div>
+            <nav aria-label="Company links">
+              <a href="/manifesto">Manifesto</a>
+              <a href="/blog">Blog</a>
+              <a href="/careers">Careers</a>
+              <a href="mailto:hi@paxio.network">Contact</a>
             </nav>
           </div>
         </div>
       </div>
 
       {/* Legal block */}
-      <div
-        style={{
-          maxWidth: '1440px',
-          margin: '0 auto',
-          padding: '16px clamp(24px, 4vw, 56px)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '8px',
-          background: 'var(--paper-1)',
-          borderTop: '1px solid var(--line-soft)',
-          fontFamily: 'var(--f-sans)',
-          fontSize: '12px',
-          color: 'var(--ink-3)',
-        }}
-      >
+      <div className="foot-legal">
         <span>© {year} Paxio GmbH · Berlin</span>
         <span>This preview displays projected metrics. Real-time data enabled on launch.</span>
       </div>
