@@ -16,3 +16,5 @@ export * from './virtuals';
 // M-L1-expansion T-2: paxio-curated source — manual seed JSON (foundation
 // models, premier SaaS agents). Pre-committed DIDs (no crawler discovery).
 export * from './paxio-curated';
+// M-L1-T10: huggingface — public API, top-N by trending score (~600K surface).
+export * from './huggingface';

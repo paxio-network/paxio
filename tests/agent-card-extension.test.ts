@@ -71,7 +71,7 @@ describe('M-L1 — AgentCard provenance extension', () => {
   });
 
   describe('CrawlerSource enum', () => {
-    it('includes all 6 known sources', () => {
+    it('includes all 8 known sources (M-L1-T2 added paxio-curated; M-L1-T10 added huggingface)', () => {
       expect([...CRAWLER_SOURCES]).toEqual([
         'native',
         'erc8004',
@@ -79,6 +79,8 @@ describe('M-L1 — AgentCard provenance extension', () => {
         'mcp',
         'fetch-ai',
         'virtuals',
+        'paxio-curated',
+        'huggingface',
       ]);
     });
 
