@@ -170,6 +170,50 @@ describe('createPostgresStorage.upsert', () => {
     expect(pool.calls[0]!.sql).toBe(pool.calls[1]!.sql);
   });
 
+  it('M-L1-T3e: upsertParams provides defaults for CHECK-constrained columns when AgentCard fields absent', async () => {
+    // Production bug 2026-05-07: fetch-ai crawl returns processed:9226 storageErrors:9226.
+    // Root cause: pg CHECK constraints on framework/wallet_status/payment_facilitator/
+    // security_badge_level/payment_facilitator/ecosystem_network/compliance_data_handling
+    // /compliance_eu_ai_act DO NOT allow NULL — only enum values. Adapter doesn't populate
+    // these (Zod-optional in AgentCard). upsertParams used `?? undefined` → pg → NULL →
+    // CHECK violation on every insert.
+    //
+    // Fix: upsertParams MUST emit DEFAULT-equivalent values (e.g. 'unknown'/'none')
+    // matching SQL DEFAULT for those columns, not undefined.
+    const storage = await createPostgresStorage({ pool });
+    await storage.upsert(sampleCard);
+    expect(pool.calls.length).toBe(1);
+    const params = pool.calls[0]!.params;
+
+    // SQL position → CHECK-constrained column → expected default
+    const checkConstrainedDefaults: ReadonlyArray<{
+      readonly position: number;     // 1-based per SQL $N
+      readonly column: string;
+      readonly expected: string;
+    }> = [
+      { position: 18, column: 'framework',            expected: 'unknown' },
+      { position: 21, column: 'wallet_status',        expected: 'none' },
+      { position: 26, column: 'payment_facilitator',  expected: 'unknown' },
+      { position: 39, column: 'security_badge_level', expected: 'none' },
+    ];
+
+    for (const { position, column, expected } of checkConstrainedDefaults) {
+      const value = params[position - 1];
+      expect(
+        value,
+        `param[$${position}] (${column}) should be '${expected}' (SQL DEFAULT) when AgentCard does not set it; got ${JSON.stringify(value)} which would fail CHECK constraint`,
+      ).toBe(expected);
+    }
+
+    // No undefined values anywhere — pg 8.x deprecates undefined params.
+    for (let i = 0; i < params.length; i += 1) {
+      expect(
+        params[i],
+        `param[$${i + 1}] is undefined — would be coerced to NULL or rejected by pg`,
+      ).not.toBeUndefined();
+    }
+  });
+
   it('returns validation_error on malformed AgentCard', async () => {
     const storage = await createPostgresStorage({ pool });
     const bad = { ...sampleCard, did: 'not-a-did' as Did };
