@@ -89,6 +89,13 @@ const makeSandbox = (overrides: Partial<{
 
   return {
     config: { admin: { token: adminToken } },
+    // Pino-style logger mock (ctx-first, msg-second). M-L1-T3i: handler MUST
+    // bind this to runCrawler logger arg via msg/ctx-swap wrapper.
+    console: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
     errors: {
       AuthError: class AuthError extends Error {
         constructor(msg?: string) { super(msg); this.name = 'AuthError'; }
@@ -219,6 +226,40 @@ describe('M-L1-launch POST /api/admin/crawl — happy path', () => {
     expect(recordArgs.source).toBe('mcp');
     expect(recordArgs.triggeredBy).toBe('manual');
     expect(recordArgs.summary.source).toBe('mcp');
+  });
+
+  it('M-L1-T3i: passes a logger to runCrawler so storage errors are observable', async () => {
+    // Production diagnosis 2026-05-07: fetch-ai pipeline took 8 iterations to
+    // fix because admin-crawl.js called runCrawler WITHOUT passing a logger.
+    // crawler.ts line 71: `const logger = deps.logger ?? noopLogger;` —
+    // noop swallows ALL logger.warn('crawler_storage_error', ...) calls.
+    // Result: 9226 silent storageErrors with zero diagnostics in `docker logs`.
+    //
+    // This test asserts handler injects the sandbox-bound `console` as logger,
+    // wrapped to match CrawlerLogger contract (msg-first, ctx-second; Pino
+    // uses ctx-first). Future bugs surface in container stdout via Pino
+    // level=warn entries instead of dying silently.
+    const sb = makeSandbox();
+    const handler = await loadHandler(sb);
+    if (!handler) return;
+
+    await handler.method({
+      query: { source: 'mcp' },
+      headers: { authorization: 'Bearer test-admin-token' },
+    });
+
+    const callArgs = sb.domain['01-registry'].crawler.runCrawler.mock.calls[0][0];
+    expect(callArgs.logger, 'logger MUST be passed to runCrawler').toBeDefined();
+    expect(typeof callArgs.logger.info).toBe('function');
+    expect(typeof callArgs.logger.warn).toBe('function');
+
+    // Probe that the wrapper forwards to sandbox console (msg-first, ctx-second
+    // → console.info/warn(ctx, msg) Pino-style).
+    callArgs.logger.warn('test-event', { foo: 'bar' });
+    expect(sb.console.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ foo: 'bar' }),
+      'test-event',
+    );
   });
 
   it('returns 200 with summary + durationMs JSON', async () => {
